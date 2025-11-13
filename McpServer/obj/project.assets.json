@@ -1862,11 +1862,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\zeast\\source\\repos\\McpServer\\McpServer.csproj",
+      "projectUniqueName": "C:\\Users\\zeast\\Desktop\\codex\\McpServer\\McpServer.csproj",
       "projectName": "McpServer",
-      "projectPath": "C:\\Users\\zeast\\source\\repos\\McpServer\\McpServer.csproj",
+      "projectPath": "C:\\Users\\zeast\\Desktop\\codex\\McpServer\\McpServer.csproj",
       "packagesPath": "C:\\Users\\zeast\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\zeast\\source\\repos\\McpServer\\obj\\",
+      "outputPath": "C:\\Users\\zeast\\Desktop\\codex\\McpServer\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

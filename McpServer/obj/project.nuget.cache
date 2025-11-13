@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "S/Zv3HQ60ZU=",
+  "dgSpecHash": "xBt//mHd9c0=",
   "success": true,
-  "projectFilePath": "C:\\Users\\zeast\\source\\repos\\McpServer\\McpServer.csproj",
+  "projectFilePath": "C:\\Users\\zeast\\Desktop\\codex\\McpServer\\McpServer.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\zeast\\.nuget\\packages\\closedxml\\0.105.0\\closedxml.0.105.0.nupkg.sha512",
     "C:\\Users\\zeast\\.nuget\\packages\\closedxml.parser\\2.0.0\\closedxml.parser.2.0.0.nupkg.sha512",
