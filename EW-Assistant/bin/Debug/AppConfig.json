@@ -1,0 +1,7 @@
+{
+  "CsvRootPath": "C:\\Users\\zeast\\Desktop\\T66 修改库存查询\\T66-S1-TCT Auto\\Data\\生产数据\\小时产量",
+  "AutoURL": "http://172.16.50.239/v1/workflows/run",
+  "AutoKey": "app-SILWQ8KWmwNQkw1dcD5xCtaJ",
+  "ChatURL": "http://172.16.50.239/v1/chat-messages",
+  "ChatKey": "app-RxUdTvm0wICtCEdOpBF5v5UB"
+}

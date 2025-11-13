@@ -1,0 +1,190 @@
+﻿using ModelContextProtocol.Server;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.PortableExecutable;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+
+[McpServerToolType]
+public static class Tool
+{
+    [McpServerTool, Description("Get the current time for a city")]
+    public static string GetCurrentTime(string city) =>
+        $"It is {DateTime.Now.Hour}:{DateTime.Now.Minute} in {city}.";
+
+    [McpServerTool, Description("Open 'This PC' in Explorer")]
+    public static string OpenThisPC()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "shell:MyComputerFolder",
+                UseShellExecute = true
+            });
+            return "已打开此电脑";
+        }
+        catch (Exception ex)
+        {
+            return "打开失败: " + ex.Message;
+        }
+    }
+    [McpServerTool, Description("Clear machine alarms，对机台设备报警进行消除")]
+    public static async Task<string> ClearMachineAlarms()
+    {
+        return await SendCommand(
+    action: "ClearMachineAlarms",
+    actionName: "机台报警消除");
+    }
+
+    [McpServerTool, Description("Reset the Machine，初始化、复位机台设备")]
+    public static async Task<string> ResetMachine()
+    {
+        return await SendCommand(
+   action: "ResetMachine",
+   actionName: "设备复位");
+    }
+
+    [McpServerTool, Description("Start the Machine，启动机台设备")]
+    public static async Task<string> StartMachine()
+    {
+        return await SendCommand(
+action: "StartMachine",
+actionName: "设备启动");
+    }
+
+    [McpServerTool, Description("Pause the Machine，暂停机台设备")]
+    public static async Task<string> PauseMachine()
+    {
+        return await SendCommand(
+action: "PauseMachine",
+actionName: "设备暂停");
+    }
+    [McpServerTool, Description("VisionCalibrateMachine，视觉标定机台设备")]
+    public static async Task<string> VisionCalibrateMachine()
+    {
+        return await SendCommand(
+action: "VisionCalibrateMachine",
+actionName: "视觉标定");
+    }
+    [McpServerTool, Description("QuickInspection，一键点检")]
+    public static async Task<string> QuickInspectionMachine()
+    {
+        return await SendCommand(
+action: "QuickInspectionMachine",
+actionName: "一键点检");
+    }
+
+    // === 基础配置 ===
+    private const string ApiBaseUrl = "http://127.0.0.1:8081"; // 统一命令入口
+    private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly JsonSerializerOptions JsonOpt = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = false
+    };
+
+    public class CommandTarget
+    {
+        public string Station { get; set; }  // 如 "T66-01"
+        public string Device { get; set; }  // 如 "IO1" / "CamA" / "AxisX"
+        public string Axis { get; set; }  // 可选
+        public string Fixture { get; set; }  // 可选
+    }
+
+    public class CommandRequest
+    {
+        public string Action { get; set; }                      // 动作名：如 "Machine.Start" / "IO.Switch"
+        public CommandTarget Target { get; set; }               // 目标对象（可选）
+        public Dictionary<string, object> Params { get; set; }  // 任意参数（可嵌套）
+    }
+
+    public class CommandResponse   // 按你的后端返回结构可调整
+    {
+        public string Status { get; set; }   // "ok"/"error"/"accepted"/...
+        public string Message { get; set; }
+        public object Data { get; set; }
+    }
+
+    // 小工具：快速构建参数字典（忽略 null）
+    public static Dictionary<string, object> PD(params (string Key, object Value)[] items)
+    {
+        var d = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (k, v) in items) if (v != null) d[k] = v;
+        return d;
+    }
+    // === 通用发送（带每次调用超时）===
+    public static async Task<string> SendCommand(
+        string action,
+        string actionName,
+        Dictionary<string, object> args = null,
+        int timeoutMs = 5000,
+        CommandTarget target = null)
+    {
+        try
+        {
+            var req = new CommandRequest
+            {
+                Action = action,
+                Target = target,
+                Params = args
+            };
+
+            var json = JsonSerializer.Serialize(req, JsonOpt);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var httpReq = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl) { Content = content };
+
+            // 建议在 HttpClient 初始化时设置：
+            // _http.Timeout = Timeout.InfiniteTimeSpan;  // 让 CTS 完全接管超时
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
+
+            // 1) 发送请求（含超时）
+            using var resp = await _http.SendAsync(
+                httpReq,
+                HttpCompletionOption.ResponseHeadersRead, // 先等到响应头
+                cts.Token
+            ).ConfigureAwait(false);
+
+            // 2) 读取响应体（再次做超时保护，兼容旧框架）
+            var readTask = resp.Content.ReadAsStringAsync();
+            var finished = await Task.WhenAny(readTask, Task.Delay(timeoutMs, cts.Token)).ConfigureAwait(false);
+            if (finished != readTask)
+                return $"{actionName}超时（>{timeoutMs}ms，读取响应超时）";
+
+            var text = await readTask.ConfigureAwait(false);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                try
+                {
+                    var r = JsonSerializer.Deserialize<CommandResponse>(text, JsonOpt);
+                    if (r != null && string.Equals(r.Status, "ok", StringComparison.OrdinalIgnoreCase))
+                        return $"{actionName}成功: {(string.IsNullOrEmpty(r.Message) ? "OK" : r.Message)}";
+                }
+                catch { /* 非标准JSON则直接透传 */ }
+
+                return $"{actionName}成功: {text}";
+            }
+            else
+            {
+                return $"{actionName}失败, HTTP 状态码: {resp.StatusCode}, 返回: {text}";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return $"{actionName}超时（>{timeoutMs}ms）";
+        }
+        catch (Exception ex)
+        {
+            return $"{actionName}请求异常: {ex.Message}";
+        }
+    }
+
+}
+

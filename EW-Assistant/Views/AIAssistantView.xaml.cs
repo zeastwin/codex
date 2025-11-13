@@ -1,0 +1,884 @@
+﻿using EW_Assistant.Services;
+using EW_Assistant.Settings;
+using MdXaml;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+using static System.Net.Mime.MediaTypeNames;
+using System.Collections.Concurrent;   
+
+namespace EW_Assistant.Views
+{
+    public interface IAiResultSink
+    {
+        MessageItem AddBotMarkdown(string md);
+    }
+}
+namespace EW_Assistant.Views
+{
+    public partial class AIAssistantView : UserControl, INotifyPropertyChanged, IAiResultSink
+    {
+        // 全局可用的接收器实例（程序启动时就创建，不随页面切换而销毁）
+        public static AIAssistantView GlobalInstance { get; internal set; }
+
+        // ====== 对外数据源（绑定）======
+        public ObservableCollection<MessageItem> Messages { get; } = new();
+        // === 新增：Dify配置（可从外部注入/绑定）===
+
+        public string ChatUserId { get; set; } = "abc-123"; // 保证唯一即可
+        public string WorkflowId { get; set; } = null;      // 选填，如需锁定特定工作流版本
+
+        private DifyChatAdapter _dify;
+
+
+        private string _inputText;
+        public string InputText
+        {
+            get => _inputText;
+            set { _inputText = value; OnPropertyChanged(nameof(InputText)); }
+        }
+        public enum StepStatus { Pending, Running, Done, Error }
+
+
+        private sealed class StreamState
+        {
+            // 后台线程只往队列丢 token；UI 线程独享 UiBuilder
+            public readonly ConcurrentQueue<string> Tokens = new ConcurrentQueue<string>();
+            public string ReplaceSnapshot; // 若有整段替换，这里暂存（原子交换）
+            public readonly StringBuilder UiBuilder = new StringBuilder(1024); // 仅 UI 线程访问
+            public UiCoalescer Flusher;
+        }
+
+
+        private readonly Dictionary<MessageItem, StreamState> _streamStates = new Dictionary<MessageItem, StreamState>();
+        private UiCoalescer _scrollCoalescer;
+
+        public class ProgressItem : INotifyPropertyChanged
+        {
+            private StepStatus _status;
+            private string _durationText;
+
+            public string Title { get; set; }
+            public StepStatus Status { get => _status; set { _status = value; OnPropertyChanged(nameof(Status)); } }
+            public DateTime? StartAt { get; set; }
+            public string DurationText { get => _durationText; set { _durationText = value; OnPropertyChanged(nameof(DurationText)); } }
+
+            public void MarkRunning()
+            {
+                Status = StepStatus.Running;
+                StartAt = DateTime.Now;
+                DurationText = string.Empty;
+            }
+
+            public void MarkDone(double? elapsedSeconds = null)
+            {
+                Status = StepStatus.Done;
+                if (elapsedSeconds.HasValue)
+                    DurationText = $" ({elapsedSeconds.Value:0.######}s)";
+                else if (StartAt.HasValue)
+                    DurationText = $" ({(DateTime.Now - StartAt.Value).TotalSeconds:0.######}s)";
+            }
+
+            public event PropertyChangedEventHandler PropertyChanged;
+            protected void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        }
+        public ObservableCollection<ProgressItem> ProgressItems { get; } = new();
+        private string _currentRunningTitle;
+        public string CurrentRunningTitle
+        {
+            get => _currentRunningTitle;
+            set { _currentRunningTitle = value; OnPropertyChanged(nameof(CurrentRunningTitle)); }
+        }
+
+        private bool _isProgressVisible;
+        public bool IsProgressVisible
+        {
+            get => _isProgressVisible;
+            set { _isProgressVisible = value; OnPropertyChanged(nameof(IsProgressVisible)); }
+        }
+
+        // 复用 HttpClient，避免套接字耗尽
+        private static readonly HttpClient s_http = new HttpClient
+        {
+            Timeout = Timeout.InfiniteTimeSpan
+        };
+
+        // ====== 流式对接：外部实现推流 ======
+        // 发送消息时触发；外部在回调中使用 e.AppendToken(...) 逐步推送 token
+        public event EventHandler<StreamRequestEventArgs> StreamRequested;
+
+        private CancellationTokenSource _cts;
+
+
+
+
+        public AIAssistantView()
+        {
+            InitializeComponent();
+            DataContext = this;
+            GlobalInstance = this;
+
+            // 欢迎消息（可删）
+          //  AddBotMarkdown("你好！这里是 **AI 对话** 组件（UserControl）。\n\n- 支持 **Markdown** 渲染\n- 支持 **流式** 追加\n- 外部通过 `StreamRequested` 推 token 即可");
+
+            // 初始化 Dify 适配器（复用你已有的静态 HttpClient）
+            _dify = new DifyChatAdapter(s_http, ConfigService.Current.ChatURL, ConfigService.Current.ChatKey, ChatUserId);
+
+            // 绑定外部流事件（把“外部实现推流”用 Dify 来实现）
+            this.StreamRequested += OnStreamRequested_Dify;
+            Loaded += (_, __) => ScrollToEnd(); // 首次显示时把视图滚到末尾
+
+        }
+
+        private async void OnStreamRequested_Dify(object sender, StreamRequestEventArgs e)
+        {
+            try
+            {
+                // 打开进度卡片
+                ProgressReset();
+
+                await _dify.SendStreamingAsync(
+                    query: e.Input,
+                    ct: e.CancellationToken,
+                    onToken: e.AppendToken,
+                    onReplaceAll: e.ReplaceAll,
+                    onComplete: e.Complete,
+                    inputs: new Dictionary<string, object>(),
+                    workflowId: WorkflowId,
+                    autoGenerateName: true,
+                    files: null,
+                    onEvent: HandleDifyEvent   // ⬅️ 关键：驱动可视化
+                );
+            }
+            catch (TaskCanceledException) { /* 用户中断 */ }
+            catch (Exception ex)
+            {
+                e.AppendToken($"\n\n> ❌ 调用失败：{ex.Message}\n");
+                e.Complete?.Invoke();
+                AddOrUpdateStep("错误", running: false, done: false, asError: true);
+                ProgressDoneAndHideSoon();
+            }
+        }
+
+        private readonly Dictionary<string, ProgressItem> _progressIndex = new();
+
+        private void ProgressReset()
+        {
+            ProgressItems.Clear();
+            _progressIndex.Clear();
+            CurrentRunningTitle = string.Empty;
+            IsProgressVisible = true;
+        }
+
+        private void ProgressDoneAndHideSoon()
+        {
+            // 1～1.5s 后隐藏（避免“闪一下”）
+            var _ = Task.Run(async () =>
+            {
+                await Task.Delay(1200);
+                Dispatcher.Invoke(() => IsProgressVisible = false);
+            });
+        }
+
+        private void HandleDifyEvent(string evt, Newtonsoft.Json.Linq.JObject obj)
+        {
+            // 所有 UI 更新都走 UI 线程
+            if (!Dispatcher.CheckAccess()) { Dispatcher.Invoke(() => HandleDifyEvent(evt, obj)); return; }
+
+            switch (evt)
+            {
+                case "workflow_started":
+                    ProgressReset();
+                    // 可选：显示“开始”
+                    AddOrUpdateStep("开始", running: false, done: true, elapsed: 0.02);
+                    break;
+
+                case "node_started":
+                    {
+                        var title = (string)obj["data"]?["title"] ?? "Node";
+                        CurrentRunningTitle = title;
+                        AddOrUpdateStep(title, running: true, done: false);
+                        break;
+                    }
+
+                case "node_finished":
+                    {
+                        var title = (string)obj["data"]?["title"] ?? "Node";
+                        CurrentRunningTitle = string.Empty;
+
+                        double? elapsed = null;
+                        var elapsedToken = obj["data"]?["elapsed_time"];
+                        if (elapsedToken != null && double.TryParse(elapsedToken.ToString(), out var sec))
+                            elapsed = sec;
+
+                        AddOrUpdateStep(title, running: false, done: true, elapsed: elapsed);
+                        break;
+                    }
+
+                case "workflow_finished":
+                    // 流程图走完，但 LLM 可能还在 message 流。
+                    // 不马上隐藏，等 message_end 再隐藏更自然。
+                    break;
+
+                case "message_end":
+                    // 回复结束，1.2s 后隐藏
+                    ProgressDoneAndHideSoon();
+                    break;
+
+                case "error":
+                    AddOrUpdateStep("错误", running: false, done: false, elapsed: null, asError: true);
+                    CurrentRunningTitle = string.Empty;
+                    break;
+
+                    // 其余：message/message_file/tts/ping...不用管
+            }
+        }
+
+        private void AddOrUpdateStep(string title, bool running, bool done, double? elapsed = null, bool asError = false)
+        {
+            if (!_progressIndex.TryGetValue(title, out var item))
+            {
+                item = new ProgressItem { Title = title, Status = StepStatus.Pending };
+                ProgressItems.Add(item);
+                _progressIndex[title] = item;
+            }
+
+            if (asError)
+            {
+                item.Status = StepStatus.Error;
+                return;
+            }
+
+            if (running)
+            {
+                item.MarkRunning();
+                return;
+            }
+
+            if (done)
+            {
+                item.MarkDone(elapsed);
+                return;
+            }
+        }
+
+        // ====== 发送/停止（你已有） ======
+
+        private async void StopBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _cts?.Cancel();
+            // 额外通知 Dify 停止当前 task（尽量非阻塞）
+            _ = _dify?.TryStopAsync();
+        }
+
+        // ====== 发送与停止 ======
+        private async void SendBtn_Click(object sender, RoutedEventArgs e) => await SendCurrentAsync();
+
+        private async Task SendCurrentAsync()
+        {
+            var text = (InputText ?? "").Trim();
+            if (string.IsNullOrEmpty(text)) return;
+        
+            // 在开启新一轮对话前执行限量清空
+            MaybeAutoClearBeforeNewTurn();
+
+            AddUserMarkdown(text);
+            InputText = string.Empty;
+
+            var bot = AddBotMarkdown(string.Empty);
+
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+            var args = new StreamRequestEventArgs(
+       input: text,
+       ct: _cts.Token,
+       appendToken: token => AppendAssistantToken(bot, token),
+       replaceAll: md => ReplaceAssistantMarkdown(bot, md),
+       complete: () => Dispatcher.BeginInvoke(new Action(() => CompleteAssistantMessage(bot)), DispatcherPriority.Background)
+   );
+
+
+            if (StreamRequested != null)
+            {
+                // 交由外部驱动：SSE/分片回调 AppendToken
+                StreamRequested.Invoke(this, args);
+            }
+            else
+            {
+                // 无外部实现时，做一个假流演示（可删）
+                await FakeStreamAsync(bot,
+                    "这是 **Markdown** _流式_ 回复示例：\n\n1. 第一段文字\n2. `代码` 与链接\n\n> 支持引用块\n\n完成。",
+                    10);
+            }
+        }
+        private async Task SendCurrentAsyncByInfo(string text)
+        {
+            // 在开启新一轮对话前执行限量清空
+            MaybeAutoClearBeforeNewTurn();
+
+            var bot = AddBotMarkdown(string.Empty);
+
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+            var args = new StreamRequestEventArgs(
+    input: text,
+    ct: _cts.Token,
+    appendToken: token => AppendAssistantToken(bot, token),
+    replaceAll: md => ReplaceAssistantMarkdown(bot, md),
+    complete: () => Dispatcher.BeginInvoke(new Action(() => CompleteAssistantMessage(bot)), DispatcherPriority.Background)
+);
+
+
+            if (StreamRequested != null)
+            {
+                // 交由外部驱动：SSE/分片回调 AppendToken
+                StreamRequested.Invoke(this, args);
+            }
+            else
+            {
+                // 无外部实现时，做一个假流演示（可删）
+                await FakeStreamAsync(bot,
+                    "这是 **Markdown** _流式_ 回复示例：\n\n1. 第一段文字\n2. `代码` 与链接\n\n> 支持引用块\n\n完成。",
+                    10);
+            }
+        }
+        private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // Shift+Enter 换行；Enter 发送
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            {
+                e.Handled = true;
+                _ = SendCurrentAsync();
+            }
+        }
+        public int HistoryLimit { get; set; } = 10;
+
+        private void MaybeAutoClearBeforeNewTurn()
+        {
+            if (Messages.Count >= HistoryLimit)
+            {
+                ClearAll(); // 仅清空UI；如果你集成了 Dify，可在 ClearAll 里顺便重置会话（见下）
+            }
+        }
+        
+
+        // ====== 假流示例（本地分片）======
+        private async Task FakeStreamAsync(MessageItem target, string fullText, int chunks)
+        {
+            chunks = Math.Max(1, chunks);
+            int len = fullText.Length;
+            int step = Math.Max(1, len / chunks);
+            for (int i = 0; i < len; i += step)
+            {
+                if (_cts?.IsCancellationRequested == true) break;
+                var piece = fullText.Substring(i, Math.Min(step, len - i));
+                AppendAssistantToken(target, piece);
+                await Task.Delay(60);
+            }
+        }
+
+        // ====== 消息操作 ======
+        public void AddUserMarkdown(string md)
+        {
+            Messages.Add(new MessageItem
+            {
+                IsUser = true,
+                Timestamp = DateTime.Now,
+                Markdown = md,
+                StreamText = null,
+                IsFinal = true         // ← 直接进入 Markdown 渲染
+            });
+            ScrollToEnd();
+        }
+
+
+        /// <summary>新增机器人消息并返回引用（如需你在外部手动管理）。</summary>
+        public MessageItem AddBotMarkdown(string md)
+        {
+            var msg = new MessageItem
+            {
+                IsUser = false,
+                Timestamp = DateTime.Now,
+                // 流式阶段显示轻量文本：把初始内容放入 StreamText；不填 Markdown
+                StreamText = md,
+                Markdown = null,
+                IsFinal = false
+            };
+            Messages.Add(msg);
+
+            var st = new StreamState();
+            if (!string.IsNullOrEmpty(md)) st.UiBuilder.Append(md);
+
+            st.Flusher = new UiCoalescer(Dispatcher, TimeSpan.FromMilliseconds(50), () =>
+            {
+                var snap = Interlocked.Exchange(ref st.ReplaceSnapshot, null);
+                if (snap != null)
+                {
+                    st.UiBuilder.Length = 0;
+                    st.UiBuilder.Append(snap);
+                }
+                string piece;
+                while (st.Tokens.TryDequeue(out piece))
+                    st.UiBuilder.Append(piece);
+
+                // 流式阶段只更新轻量文本（TextBlock）
+                msg.StreamText = st.UiBuilder.ToString();
+                ScrollToEndThrottled();
+            });
+
+            _streamStates[msg] = st;
+            ScrollToEndThrottled();
+            return msg;
+        }
+
+
+
+
+        public void AppendAssistantToken(MessageItem target, string token)
+        {
+            if (target == null) return;
+
+            StreamState st;
+            if (!_streamStates.TryGetValue(target, out st))
+            {
+                // 兜底：若没建流态，退回到 UI 线程直接附加（不建议，但保证不崩）
+                if (!Dispatcher.CheckAccess())
+                {
+                    Dispatcher.BeginInvoke(new Action(() => AppendAssistantToken(target, token)), DispatcherPriority.Background);
+                    return;
+                }
+                target.Markdown = (target.Markdown ?? string.Empty) + token;
+                target.Touch();
+                ScrollToEndThrottled();
+                return;
+            }
+
+            st.Tokens.Enqueue(token);   // 后台线程只入队
+            st.Flusher.Request();       // 触发 UI 合并器（50ms 内最多刷一次）
+        }
+
+
+
+        /// <summary>直接替换整条机器人消息 markdown（如服务端有段落级合并）。</summary>
+        public void ReplaceAssistantMarkdown(MessageItem target, string markdown)
+        {
+            if (target == null) return;
+
+            StreamState st;
+            if (!_streamStates.TryGetValue(target, out st))
+            {
+                if (!Dispatcher.CheckAccess())
+                {
+                    Dispatcher.BeginInvoke(new Action(() => ReplaceAssistantMarkdown(target, markdown)), DispatcherPriority.Background);
+                    return;
+                }
+                target.Markdown = markdown;
+                target.Touch();
+                ScrollToEndThrottled();
+                return;
+            }
+
+            // 原子设置“整段替换”快照，交由 UI 线程一次性覆盖
+            Interlocked.Exchange(ref st.ReplaceSnapshot, markdown);
+            st.Flusher.Request();
+        }
+
+        private void CompleteAssistantMessage(MessageItem target)
+        {
+            if (target == null) return;
+
+            StreamState st;
+            if (_streamStates.TryGetValue(target, out st))
+            {
+                st.Flusher.Dispose();
+
+                var snap = Interlocked.Exchange(ref st.ReplaceSnapshot, null);
+                if (snap != null)
+                {
+                    st.UiBuilder.Length = 0;
+                    st.UiBuilder.Append(snap);
+                }
+                string piece;
+                while (st.Tokens.TryDequeue(out piece))
+                    st.UiBuilder.Append(piece);
+
+                // 关键：完成时才给 Markdown，并切换 IsFinal
+                var finalText = st.UiBuilder.ToString();
+                target.Markdown = finalText;
+                target.StreamText = null;   // 可置空以节省内存
+                target.IsFinal = true;      // 触发模板切换到 MdXaml
+
+                _streamStates.Remove(target);
+            }
+
+            ScrollToEnd();
+        }
+
+
+        public void ClearAll()
+        {
+            foreach (var kv in _streamStates.Values)
+            {
+                try { if (kv.Flusher != null) kv.Flusher.Dispose(); } catch { }
+            }
+            _streamStates.Clear();
+
+            Messages.Clear();
+        }
+
+
+
+
+        // ====== INotifyPropertyChanged ======
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+
+        private void QuickReportBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var date = DateTime.Today.ToString("yyyy-MM-dd"); // 建议用采集地时区
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"生成 **今天（{{DATE}}）0–24 点** 的客户版 **产量/良率/稼动率** 日报。只输出 **Markdown**；禁止输出代码块、JSON、工具调用日志或多余说明。");
+            sb.AppendLine();
+            sb.AppendLine("【这是单独一台设备数据】");
+            sb.AppendLine("【必须按此取数】");
+            sb.AppendLine("1) 仅调用 MCP 工具：GetHourlyStats(date=\"{DATE}\", startHour=0, endHour=24) 获取逐小时数据（hour, pass, fail, total, yield）。");
+            sb.AppendLine("2) 在工具返回的基础上自行计算并用于报告：");
+            sb.AppendLine("   - day_pass = Σpass；day_fail = Σfail；day_total = day_pass + day_fail；");
+            sb.AppendLine("   - day_yield = day_pass / day_total（百分比，保留2位）；");
+            sb.AppendLine("   - active_hours = 统计 total > 0 的小时数；");
+            sb.AppendLine("   - active_rate = active_hours / 24（百分比，保留2位，作为“近似稼动率”）；");
+            sb.AppendLine("   - 峰值小时 = 非零 total 的 Top-1~3 小时（含产量数）；");
+            sb.AppendLine("   - 低谷小时 = 非零 total 的 Bottom-1~3 小时（含产量数）；");
+            sb.AppendLine("   - 最长连续停机窗口 = 将 total=0 的相邻小时合并，取持续时间最长的一段（格式示例：“03:00–07:00，4小时”）；");
+            sb.AppendLine("   - 波动指数 CV = 标准差(total) / 均值(total)（百分比，保留2位）；");
+            sb.AppendLine();
+            sb.AppendLine("【排版模板（章节顺序固定、全部必须出现）】");
+            sb.AppendLine("# 今日产能日报（{DATE}）");
+            sb.AppendLine();
+            sb.AppendLine("## 概览指标");
+            sb.AppendLine("| 指标 | 数值 |");
+            sb.AppendLine("|---|---:|");
+            sb.AppendLine("| PASS（良品） | {day_pass 千分位} |");
+            sb.AppendLine("| FAIL（不良） | {day_fail 千分位} |");
+            sb.AppendLine("| 总产量 | {day_total 千分位} |");
+            sb.AppendLine("| **良率** | **{day_yield 两位百分比}** |");
+            sb.AppendLine("| **活跃小时** | **{active_hours} 小时** |");
+            sb.AppendLine("| **近似稼动率** | **{active_rate 两位百分比}** |");
+            sb.AppendLine("| 峰值小时 | {例如 “10:00–11:00（1,024件）” 等 1–3 个} |");
+            sb.AppendLine("| 最长停机窗口 | {如无则写“无”} |");
+            sb.AppendLine("| 波动指数（CV） | {两位百分比} |");
+            sb.AppendLine();
+            sb.AppendLine("> 注：近似稼动率=有产出小时数/24，用于日常管理直观参考。");
+            sb.AppendLine();
+            sb.AppendLine("## 逐小时明细");
+            sb.AppendLine("> 0–23 点必须全覆盖；若某小时工具未返回，按 PASS=0, FAIL=0, Total=0, Yield=0% 填充。");
+            sb.AppendLine();
+            sb.AppendLine("| 时段 | PASS | FAIL | 总量 | 良率(%) | 备注 |");
+            sb.AppendLine("|---|---:|---:|---:|---:|---|");
+            sb.AppendLine("（逐行渲染以下行模板，共24行）逐小时表格“必须严格按 hours 数组逐行渲染”，不得跳过 0 产出小时、不得合并区间；表格行数必须等于 hours 的长度（正常为 24 行）。");
+            sb.AppendLine("| {HH}:00–{HH+1}:00 | {pass 千分位} | {fail 千分位} | {total 千分位} | {yield 两位} | {标签} |");
+            sb.AppendLine();
+            sb.AppendLine("**标签判定（从强到弱，按需叠加，空格分隔）：**");
+            sb.AppendLine("- total = 0 → `—停机/无产出`");
+            sb.AppendLine("- 非零 total 的 Top-3 → `↑峰值`");
+            sb.AppendLine("- 非零 total 的 Bottom-3 → `↓低谷`");
+            sb.AppendLine("- yield < 85% → `★低良率`");
+            sb.AppendLine("- yield ≥ 98% → `✓稳定`");
+            sb.AppendLine();
+            sb.AppendLine("**合计行（表末尾追加一行）：**");
+            sb.AppendLine("| **合计** | **ΣPASS** | **ΣFAIL** | **ΣTotal** | **{day_yield 两位}%** | **活跃 {active_hours}/24** |");
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.AppendLine("## 产能与良率诊断");
+            sb.AppendLine("- 基于峰值/低谷/停机窗口/低良率时段，给出 **5–8 条**业务可读的洞见与改善建议（例如：排班与交接、点检/快速换线、治具维护、程序/工艺参数优化、备料节拍、在制/WIP 管控等）。");
+            sb.AppendLine("- 语气客观，避免开发术语。");
+            sb.AppendLine();
+            sb.AppendLine("## 注意事项");
+            sb.AppendLine("- 如存在缺失 CSV、解析异常或跨天数据空洞，请逐条列出；若无则写“无”。");
+            sb.AppendLine();
+            sb.AppendLine("【格式与风格要求】");
+            sb.AppendLine("- 所有数值使用 **千分位**；百分比 **保留2位**；时间统一 `HH:00`。");
+            sb.AppendLine("- 中文商务表述，避免“一句话结论”、避免开发字段名。");
+            sb.AppendLine("- **必须**渲染完整 24 行小时表与“合计行”；不可省略章节。");
+            sb.AppendLine();
+            sb.AppendLine("【失败兜底】");
+            sb.AppendLine("- 如工具报错或无数据，仍按本模板输出各章节：表格填 0；并在“注意事项”中写明原因。");
+            sb.AppendLine();
+            sb.AppendLine("【可选增强】");
+            sb.AppendLine("- 若存在报警工具（GetHourlyAlarms / QueryAlarms），追加一节：");
+            sb.AppendLine("  ## 报警关联（概览）");
+            sb.AppendLine("  - 按小时统计报警条数，标注与“停机/低谷”重合的时段，列出示例原因；若无该工具则跳过本节。");
+
+            var prompt = sb.ToString().Replace("{DATE}", date);
+            try { MainWindow.PostProgramInfo("AI生成报表中，请稍候", "info"); } catch { }
+            SendCurrentAsyncByInfo(prompt);
+        }
+
+        private void QuickAlarmReportBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var date = DateTime.Today.ToString("yyyy-MM-dd"); // 建议用采集地时区
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"生成 **今天（{{DATE}}）0–24 点** 的客户版 **报警日报**。只输出 **Markdown**；禁止输出代码块、JSON、工具调用日志或多余说明。");
+            sb.AppendLine();
+            sb.AppendLine("【这是单独一台设备数据】");
+            sb.AppendLine("【必须按此取数】");
+            sb.AppendLine("1) 仅调用 MCP 工具：");
+            sb.AppendLine("   - GetHourlyProdWithAlarms(date=\"{DATE}\", startHour=0, endHour=24)  // 获取逐小时：pass/fail/total/yield + alarmCount/alarmDurationSec/topAlarmCode");
+            sb.AppendLine("   - （可选增强）GetAlarmImpactSummary(startDate=\"{DATE}\", endDate=\"{DATE}\", window=\"\")  // 获取报警秒数↔产量/良率相关性与低良率小时集合");
+            sb.AppendLine("   - （可选增强）GetTopAlarmsDuringLowYield(startDate=\"{DATE}\", endDate=\"{DATE}\", threshold=95, window=\"\")");
+            sb.AppendLine("2) 在工具返回的基础上自行计算并用于报告：");
+            sb.AppendLine("   - 逐小时（0..23）：count=alarmCount，seconds=alarmDurationSec，avg_s=seconds/max(1,count)；");
+            sb.AppendLine("   - day_count=Σcount，day_seconds=Σseconds，avg_per_alarm=day_seconds/max(1,day_count)；");
+            sb.AppendLine("   - active_hours = 统计 seconds>0 的小时数；");
+            sb.AppendLine("   - 峰值/低谷：在 seconds>0 的小时中取 Top1~3 和 Bottom1~3（“HH:00–HH+1:00（xhym/条）”）；");
+            sb.AppendLine("   - 最长连续无报警窗口：把 seconds=0 的相邻小时合并，输出最长区间（如“03:00–07:00，4小时”）；");
+            sb.AppendLine("   - 波动指数 CV = std(seconds of nonzero hours) / mean(nonzero hours)，均值=0 记 0%。");
+            sb.AppendLine();
+            sb.AppendLine("【排版模板（顺序固定、全部必须出现）】");
+            sb.AppendLine("# 今日报警日报（{DATE}）");
+            sb.AppendLine();
+            sb.AppendLine("## 概览指标");
+            sb.AppendLine("| 指标 | 数值 |");
+            sb.AppendLine("|---|---:|");
+            sb.AppendLine("| 报警条数 | {day_count 千分位} |");
+            sb.AppendLine("| 报警总时长 | {day_seconds 转 xhym 或 ms} |");
+            sb.AppendLine("| 平均单次(秒) | {avg_per_alarm 一位} |");
+            sb.AppendLine("| 活跃小时 | {active_hours}/24 |");
+            sb.AppendLine("| 峰值小时 | {非零秒 Top1~3，例：“10:00–11:00（2h07m/10次）”} |");
+            sb.AppendLine("| 最长连续无报警窗口 | {如无则写“无”} |");
+            sb.AppendLine("| 波动指数（CV） | {两位百分比} |");
+            sb.AppendLine();
+            sb.AppendLine("## 逐小时明细");
+            sb.AppendLine("> 0–23 点必须全覆盖；缺数据的小时按 count=0, seconds=0, avg_s=0 填充。");
+            sb.AppendLine();
+            sb.AppendLine("| 时段 | 报警条数 | 报警总时长 | 平均单次(s) | Top报警代码 | 备注 |");
+            sb.AppendLine("|---|---:|---:|---:|---|---|");
+            sb.AppendLine("（严格渲染 24 行；不得跳过 0 值小时，不得合并区间）");
+            sb.AppendLine("| {HH}:00–{HH+1}:00 | {count 千分位} | {seconds 时分秒} | {avg_s 一位} | {topAlarmCode} | {标签} |");
+            sb.AppendLine();
+            sb.AppendLine("**标签判定（从强到弱，可叠加）：**");
+            sb.AppendLine("- count=0 或 seconds=0 → `—无报警`");
+            sb.AppendLine("- 非零秒 Top-3 → `↑高频`");
+            sb.AppendLine("- 非零秒 Bottom-3 → `↓低频`");
+            sb.AppendLine("- avg_s ≥ 300 → `★长报警`");
+            sb.AppendLine("- avg_s ≤ 30 → `✓短报警`");
+            sb.AppendLine();
+            sb.AppendLine("**合计行（表末尾追加）：**");
+            sb.AppendLine("| **合计** | **Σcount** | **Σseconds** | **{avg_per_alarm 一位}** |  | **活跃 {active_hours}/24** |");
+            sb.AppendLine();
+            sb.AppendLine("## 分类与低良率聚焦");
+            sb.AppendLine("- 若已调用 GetTopAlarmsDuringLowYield：列出低良率小时聚合的 Top 代码（按总时长降序）。");
+            sb.AppendLine("- 否则：基于逐小时结果按 topAlarmCode 聚合，输出 Top5（代码 — 总时长/条数）。");
+            sb.AppendLine();
+            sb.AppendLine("## 关键报警内容分析（机理→诊断→建议）");
+            sb.AppendLine("如可获取 Content 字段则进行规范化与近似聚合（去时间戳/流水号，大小写与空白规范化；编辑距离或包含聚类，Top10）。若无法获取 Content，则以代码级别给出代表含义。");
+            sb.AppendLine();
+            sb.AppendLine("| 关联代码/代表内容 | 条数 | 总时长 | 典型机理 | 快速排查 |");
+            sb.AppendLine("|---|---:|---:|---|---|");
+            sb.AppendLine("（逐行填充；机理/排查需结合数据特征与文本线索，不可空泛）");
+            sb.AppendLine();
+            sb.AppendLine("**判别与推断要点（用于产出上表“机理/排查”）：**");
+            sb.AppendLine("- 换线/首件/交接集中 → 机理：参数/标定漂移；排查：治具零点复核、模板/阈值校对。");
+            sb.AppendLine("- 同一工位/同一代码占比高 → 机理：单点瓶颈/部件老化；排查：真空/气压/电机/传感器自检与日志。");
+            sb.AppendLine("- 短频高发、时长短 → 机理：误报/阈值过严/抖动；排查：去抖/重试策略与告警分级。");
+            sb.AppendLine("- 低频但超长 → 机理：卡滞/对位失败/上游断料；排查：机械间隙/润滑、相机/光源、物料监控与补料。");
+            sb.AppendLine("- 与温度/时段相关 → 机理：热漂/环境干扰；排查：预热、屏蔽与稳压、环境阈值联动。");
+            sb.AppendLine("- 通讯类（握手/ACK/心跳） → 机理：重试不足或阻塞；排查：超时/重发策略与错误码上报路径。");
+            sb.AppendLine();
+            sb.AppendLine("## 处理措施建议（可执行的行动清单）");
+            sb.AppendLine("请输出 **5–10 条**，按“性价比优先级”排序，用表格给出可落地闭环：");
+            sb.AppendLine();
+            sb.AppendLine("| 关联内容/类别 | 具体措施  | 预计完成 | 风险 | 验证指标 | 预期收益 |");
+            sb.AppendLine("|---|---|---|---|---|---|"); // ← 修复：6列对应6个分隔符
+            sb.AppendLine("- L1 示例：清洁/紧固/复位、传感器与接插件检查、阈值复核、快速旁路策略；");
+            sb.AppendLine("- L2 示例：去抖与阈值优化、模板/参数重训、冗余/稳压/屏蔽、异常分级与重试、日志与监测点新增；");
+            sb.AppendLine("- 验证指标示例：真空建立时间、取放成功率、对位置信度、通讯重试率、回零成功率、报警总时长/条数。");
+            sb.AppendLine();
+            sb.AppendLine("## 复盘与预防");
+            sb.AppendLine("- 5 Whys（简要）、点检与保养项、阈值/告警升级规则、次日复核点（需量化）。");
+            sb.AppendLine();
+            sb.AppendLine("## 异常与注意事项");
+            sb.AppendLine("- 如存在工具报错、CSV 缺失或跨天空洞，请逐条列出；若无则写“无”。");
+            sb.AppendLine("- 若调用了 GetAlarmImpactSummary，请简述相关性 r（alarmSeconds_vs_total / alarmSeconds_vs_yield）及业务含义。");
+            sb.AppendLine();
+            sb.AppendLine("【格式与防呆】");
+            sb.AppendLine("- 数值 **千分位**；百分比 **两位**；时长用 `xhym` 或 `ms`；时间统一 `HH:00`。");
+            sb.AppendLine("- **严禁编造**：所有数值必须来自工具返回；**24 行小时表不可缺**；无数据也要完整输出各章节并在“异常与注意事项”说明原因。");
+
+            var prompt = sb.ToString().Replace("{DATE}", date);
+
+            try { MainWindow.PostProgramInfo("AI生成报警报表中，请稍候", "info"); } catch { }
+            SendCurrentAsyncByInfo(prompt);
+        }
+
+        // 低良率扫描（当天，阈值可调） —— 升级版
+        private void BtnLowYield_Click(object sender, RoutedEventArgs e)
+        {
+            var d = TodayStr();        // 若你没有 TodayStr()，可改为 DateTime.Today.ToString("yyyy-MM-dd")
+            var threshold = 95;        // 可绑定到 UI
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"生成 **{d}** 的【低良率小时扫描（阈值 {threshold}%）】报告。");
+            sb.AppendLine("只输出 **Markdown**；禁止代码块、JSON、工具调用日志或多余说明。");
+            sb.AppendLine();
+            sb.AppendLine("【必须按此取数】");
+            sb.AppendLine($"仅调用：GetTopAlarmsDuringLowYield(startDate=\"{d}\", endDate=\"{d}\", threshold={threshold}, window=\"\")。");
+            sb.AppendLine("使用工具返回 rows（命中小时）与 top（聚合代码）；严禁编造。");
+            sb.AppendLine();
+            sb.AppendLine("【派生计算】");
+            sb.AppendLine("- avg_s = alarmSeconds / max(1, alarmCount)（秒，保留1位）。");
+            sb.AppendLine("- 标签规则：avg_s≥300 → `★长报警`；avg_s≤30 且 alarmCount≥5 → `↑高频`；total=0 → `—停机/无产出`；其余无标签。");
+            sb.AppendLine();
+            sb.AppendLine($"# 低良率小时扫描（{d}，阈值 {threshold}%）");
+            sb.AppendLine();
+            sb.AppendLine("## 概览指标");
+            sb.AppendLine("| 指标 | 数值 |");
+            sb.AppendLine("|---|---:|");
+            sb.AppendLine("| 命中小时数 | {rows.Count 千分位} |");
+            sb.AppendLine("| 覆盖比例 | {rows.Count/24 两位百分比} |");
+            sb.AppendLine("| 最低良率时段 | {示例 “10:00–11:00（良率xx%/产量x,xxx）”} |");
+            sb.AppendLine("| 命中小时平均报警单次 | {均值(avg_s) 一位}s |");
+            sb.AppendLine();
+            sb.AppendLine("## 逐小时明细（按良率升序，最多 24 行）");
+            sb.AppendLine("| 时段 | 产量 | 良率(%) | 报警时长 | 报警条数 | 平均单次(s) | 标签 |");
+            sb.AppendLine("|---|---:|---:|---:|---:|---:|---|");
+            sb.AppendLine("（rows 中逐行渲染；时段格式 `HH:00–HH+1:00`；数值千分位、百分比两位；avg_s 一位；标签按规则判定）");
+            sb.AppendLine();
+            sb.AppendLine("## 分类 Top（低良率窗口内）");
+            sb.AppendLine("- 取 top（按 seconds 降序，最多 10 条），格式：`代码 — 总时长/条数`。");
+            sb.AppendLine("- 每条补“典型机理（≤12字）+ 快速排查（≤16字）”，结合 rows 的文本线索，避免空话。");
+            sb.AppendLine();
+            sb.AppendLine("## 行动建议（L1/操作 & L2/工程）");
+            sb.AppendLine("输出 **5–8 条**闭环措施，按性价比排序：");
+            sb.AppendLine("| 关联代码/现象 | 具体措施 | ETA | 验证指标 | 预期收益 |");
+            sb.AppendLine("|---|---|---|---|---|"); // ← 修复：5列对应5个分隔符
+            sb.AppendLine("- 示例：清洁/紧固/复位、相机/治具点检、传感器/接插件检查、阈值复核、快速旁路策略。");
+            sb.AppendLine("- 示例：去抖与阈值优化、模板/对位参数重训、冗余/稳压/屏蔽、异常分级与重试、日志与监测点新增。");
+            sb.AppendLine();
+            sb.AppendLine("## 次日复核项");
+            sb.AppendLine("- 以量化口径列 3–5 条：如“Top代码报警时长↓30%”、“对位成功率≥99.5%”、“回零成功率≥99.9%”、“通讯重试率≤0.5%”。");
+            sb.AppendLine();
+            sb.AppendLine("## 异常与注意事项");
+            sb.AppendLine("- 如工具报错/无数据/跨天空洞，请逐条说明；否则写“无”。");
+            sb.AppendLine();
+            sb.AppendLine("【格式要求】");
+            sb.AppendLine("- 全文中文商务表述；**数值千分位、百分比两位**；时间统一 `HH:00`；时长 `xhym` 或 `ms`。");
+            sb.AppendLine("- 仅 Markdown 文本与表格；**严禁**代码块与 JSON。");
+
+            var prompt = sb.ToString();
+            try { MainWindow.PostProgramInfo("扫描低良率窗口…", "info"); } catch { }
+            SendCurrentAsyncByInfo(prompt);
+        }
+
+        // 统一日期（可改为你界面上的日期选择器值）
+        private static string TodayStr()
+        {
+            return DateTime.Today.ToString("yyyy-MM-dd");
+        }
+
+        private bool IsNearBottom()
+        {
+            var sv = FindDescendant<ScrollViewer>(ChatList);
+            if (sv == null) return true;
+            return sv.VerticalOffset >= sv.ScrollableHeight - 30; // 距底 30px 内才认为需要吸底
+        }
+
+        private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject { for (int i = 0, n = VisualTreeHelper.GetChildrenCount(root); i < n; i++) { var child = VisualTreeHelper.GetChild(root, i); if (child is T t) return t; var deeper = FindDescendant<T>(child); if (deeper != null) return deeper; } return null; }
+
+        private void ScrollToEndThrottled()
+        {
+            if (_scrollCoalescer == null)
+            {
+                _scrollCoalescer = new UiCoalescer(Dispatcher, TimeSpan.FromMilliseconds(80), () =>
+                {
+                    if (Messages.Count > 0 && IsNearBottom())
+                        ChatList.ScrollIntoView(Messages.Last());
+                });
+            }
+            _scrollCoalescer.Request();
+        }
+
+        private void ScrollToEnd()
+        {
+            if (Messages.Count > 0 && IsNearBottom())
+                ChatList.ScrollIntoView(Messages.Last());
+        }
+
+
+
+    }
+
+    // ====== 事件参数：外部对接推流 ======
+    public class StreamRequestEventArgs : EventArgs
+    {
+        public string Input { get; }
+        public CancellationToken CancellationToken { get; }
+        public Action<string> AppendToken { get; }
+        public Action<string> ReplaceAll { get; }
+        public Action Complete { get; }
+
+        public StreamRequestEventArgs(string input, CancellationToken ct,
+            Action<string> appendToken, Action<string> replaceAll, Action complete)
+        {
+            Input = input;
+            CancellationToken = ct;
+            AppendToken = appendToken;
+            ReplaceAll = replaceAll;
+            Complete = complete;
+        }
+    }
+
+    public class MessageItem : INotifyPropertyChanged
+    {
+        private string _markdown;
+        private string _streamText;     // ← 新增：流式阶段展示的轻量文本
+        private bool _isFinal;          // ← 新增：是否切换为最终 Markdown 渲染
+
+        public bool IsUser { get; set; }
+        public DateTime Timestamp { get; set; }
+
+        public string Markdown
+        {
+            get { return _markdown; }
+            set { _markdown = value; OnPropertyChanged(nameof(Markdown)); }
+        }
+
+        public string StreamText
+        {
+            get { return _streamText; }
+            set { _streamText = value; OnPropertyChanged(nameof(StreamText)); }
+        }
+
+        public bool IsFinal
+        {
+            get { return _isFinal; }
+            set { _isFinal = value; OnPropertyChanged(nameof(IsFinal)); }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        public void Touch() { OnPropertyChanged(nameof(Markdown)); }
+        protected void OnPropertyChanged(string name)
+        {
+            var h = PropertyChanged; if (h != null) h(this, new PropertyChangedEventArgs(name));
+        }
+    }
+
+
+}

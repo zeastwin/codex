@@ -1,0 +1,256 @@
+﻿<Window x:Class="EW_Assistant.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="720" Width="1280" WindowState="Maximized">
+
+    <!-- ===== 左侧栏配色与样式（仿图风格） ===== -->
+    <Window.Resources>
+        <!-- 左侧背景的轻微渐变 -->
+        <LinearGradientBrush x:Key="SideBgBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#FAFBFF" Offset="0"/>
+            <GradientStop Color="#F6F8FC" Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- 导航按钮（胶囊 + 圆形图标） -->
+        <Style x:Key="SidebarNavStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border Background="Transparent">
+                            <Grid Margin="12,6,12,0">
+                                <Border x:Name="Pill" Background="Transparent" CornerRadius="12" />
+                                <StackPanel Orientation="Horizontal" Margin="12,8,12,8">
+                                    <Grid Width="28" Height="28">
+                                        <Ellipse x:Name="IconCircle" Fill="Transparent" Stroke="#CBD5E1" StrokeThickness="1.5"/>
+                                        <TextBlock x:Name="Glyph"
+                                                   FontFamily="Segoe MDL2 Assets"
+                                                   Text="{TemplateBinding Tag}"
+                                                   FontSize="12"
+                                                   Foreground="#64748B"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <TextBlock x:Name="Label"
+                                               Text="{TemplateBinding Content}"
+                                               Margin="12,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="14"
+                                               Foreground="#111827"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- 悬停-->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="#F2F6FF"/>
+                            </Trigger>
+                            <!-- 选中-->
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="#E6EEFF"/>
+                                <Setter TargetName="IconCircle" Property="Fill" Value="#3B82F6"/>
+                                <Setter TargetName="IconCircle" Property="Stroke" Value="#3B82F6"/>
+                                <Setter TargetName="Glyph" Property="Foreground" Value="White"/>
+                                <Setter TargetName="Label" Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 圆角小按钮（中性灰） -->
+        <Style x:Key="RoundSmallButton" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="MinWidth" Value="64"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                        CornerRadius="12"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E5E7EB"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D1D5DB"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#493A8B">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="{Binding ActualWidth, ElementName=CompanyIcon}" Height="0" />
+                <TextBlock Grid.Column="1" Text="T66-TCT Program Powered By EW AI"
+                           Foreground="White" FontSize="22" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <Image Grid.Column="2" x:Name="CompanyIcon" Source="/Assets/EW.ico"
+                       Height="48" Stretch="Uniform" VerticalAlignment="Top" ToolTip="EW" />
+            </Grid>
+        </Border>
+
+        <!-- 主体：左侧栏 + 右侧内容(2/3) + 右侧信息卡(1/3) -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <!-- 左侧栏 -->
+                <ColumnDefinition Width="3*"/>
+                <!-- 主内容：2/3 -->
+                <ColumnDefinition Width="*"/>
+                <!-- 信息卡：1/3 -->
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧栏 -->
+            <Border Grid.Column="0" Background="{StaticResource SideBgBrush}" BorderBrush="#E5E7EB" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,8,0,12">
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}" IsChecked="True"
+                             Content="总览" Checked="NavItem_Checked" Tag="&#xE770;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="AI助手" Checked="NavItem_Checked" Tag="&#xE7FD;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="产能看板" Checked="NavItem_Checked" Tag="&#xE9D2;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="报警看板" Checked="NavItem_Checked" Tag="&#xE81F;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="机台控制" Checked="NavItem_Checked" Tag="&#xE707;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="设置" Checked="NavItem_Checked" Tag="&#xE713;"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- 右侧主内容容器 -->
+            <Grid x:Name="RightHost" Grid.Column="1" Background="WhiteSmoke"/>
+
+            <!-- 右侧信息卡片（程序信息） -->
+            <Border Grid.Column="2" Margin="8" Padding="12" CornerRadius="16" Background="White">
+                <Border.Effect>
+                    <DropShadowEffect Color="#1A000000" BlurRadius="18" ShadowDepth="2" Opacity="0.35"/>
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 标题 + 操作 -->
+                    <DockPanel Grid.Row="0" LastChildFill="False" Margin="2,0,2,8">
+                        <TextBlock Text="AI运行信息" FontSize="16" FontWeight="SemiBold" Foreground="#0B1220"
+                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                            <Button Content="清空"
+            Click="BtnClearInfo_Click"
+            Margin="8,0,0,0"
+            Style="{StaticResource RoundSmallButton}"/>
+                        </StackPanel>
+
+                    </DockPanel>
+
+                    <!-- 消息列表 -->
+                    <ListBox x:Name="InfoList"
+         Grid.Row="1"
+         BorderThickness="0"
+         Background="Transparent"
+         FontSize="14"
+         ItemsSource="{Binding InfoItems}"
+         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+         ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                        <!-- 关键：让每个 ListBoxItem 横向撑满，子元素才有“宽度约束”可换行 -->
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0"
+                           Text="{Binding Time, StringFormat=HH:mm:ss}"
+                           FontSize="12" Foreground="#94A3B8" Margin="2,0,2,4"/>
+
+                                    <Border Grid.Row="1" x:Name="Bubble"
+                        Background="#F1F5F9"
+                        Padding="8"
+                        CornerRadius="8"
+                        HorizontalAlignment="Stretch">
+                                        <!-- 关键：Wrap 或 WrapWithOverflow，保证超长单词/URL 也断开 -->
+                                        <TextBlock Text="{Binding Text}"
+                               TextWrapping="WrapWithOverflow"
+                               TextTrimming="None"
+                               Foreground="#0B1220"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- 颜色状态 -->
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Level}" Value="ok">
+                                        <Setter TargetName="Bubble" Property="Background" Value="#ECFDF5"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Level}" Value="warn">
+                                        <Setter TargetName="Bubble" Property="Background" Value="#FEF3C7"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Level}" Value="error">
+                                        <Setter TargetName="Bubble" Property="Background" Value="#FEE2E2"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

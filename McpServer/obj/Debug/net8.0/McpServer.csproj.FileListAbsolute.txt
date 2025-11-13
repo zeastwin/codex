@@ -1,0 +1,489 @@
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\source\repos\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\1\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\1\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\work\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\work\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\AI\work0917\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\AppConfig.json
+C:\Users\zeast\Desktop\T66_TCT1020\T66_TCT1020-增加生产数据显示\McpServer\bin\Debug\net8.0\Newtonsoft.Json.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\AppConfig.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Newtonsoft.Json.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ClosedXML.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ClosedXML.Parser.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\DocumentFormat.OpenXml.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\ExcelNumberFormat.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\RBush.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\SixLabors.Fonts.dll
+C:\Users\zeast\Desktop\T66 修改库存查询\T66_TCT1020-增加生产数据显示123\McpServer\bin\Debug\net8.0\System.IO.Packaging.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\AppConfig.json
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ClosedXML.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ClosedXML.Parser.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\DocumentFormat.OpenXml.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\ExcelNumberFormat.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\Newtonsoft.Json.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\RBush.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\SixLabors.Fonts.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\System.IO.Packaging.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\Desktop\McpServer\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.csproj.AssemblyReference.cache
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\rpswa.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.AssemblyInfoInputs.cache
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.AssemblyInfo.cs
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.csproj.CoreCompileInputs.cache
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\refint\McpServer.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\AppConfig.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\appsettings.Development.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\appsettings.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\libman.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\McpServer.staticwebassets.endpoints.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\McpServer.exe
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\McpServer.deps.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\McpServer.runtimeconfig.json
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\McpServer.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\McpServer.pdb
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ClosedXML.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ClosedXML.Parser.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\DocumentFormat.OpenXml.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ExcelNumberFormat.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.Extensions.Primitives.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Microsoft.OpenApi.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ModelContextProtocol.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ModelContextProtocol.AspNetCore.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ModelContextProtocol.Core.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\ModelContextProtocolServer.Sse.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Newtonsoft.Json.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\RBush.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Serilog.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Serilog.Extensions.Logging.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Serilog.Sinks.File.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\SixLabors.Fonts.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Stef.Validation.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\System.IO.Packaging.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\System.Net.ServerSentEvents.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\rjimswa.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\scopedcss\bundle\McpServer.styles.css
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\staticwebassets.build.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\staticwebassets.development.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\staticwebassets.build.endpoints.json
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.csproj.Up2Date
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\McpServer.genruntimeconfig.cache
+C:\Users\zeast\Desktop\McpServer 融合报警\obj\Debug\net8.0\ref\McpServer.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ClosedXML.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ClosedXML.Parser.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\DocumentFormat.OpenXml.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\ExcelNumberFormat.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\Newtonsoft.Json.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\RBush.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\SixLabors.Fonts.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\System.IO.Packaging.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\System.Text.Encoding.CodePages.dll
+C:\Users\zeast\source\repos\McpServer\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Text.Encoding.CodePages.dll
