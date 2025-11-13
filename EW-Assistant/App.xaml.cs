@@ -12,6 +12,7 @@ namespace EW_Assistant
     /// App.xaml 的交互逻辑
     /// </summary>
     public partial class App : Application
-    {
+    {252553
+    2222
     }
 }
