@@ -143,6 +143,7 @@
     <Compile Include="Component\UiCoalescer.cs" />
     <Compile Include="Component\WorkHttpServer.cs" />
     <Compile Include="Services\DifyWorkflowStreaming.cs" />
+    <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
       <DependentUpon>AlarmView.xaml</DependentUpon>
     </Compile>

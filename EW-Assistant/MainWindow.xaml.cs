@@ -46,6 +46,7 @@ namespace EW_Assistant
         // 缓存已创建的页面，避免反复 new
         private readonly Dictionary<string, UIElement> _viewCache = new();
         private CancellationTokenSource _serverCts;
+        private readonly Services.McpServerProcessHost _mcpHost = Services.McpServerProcessHost.Instance;
         public MainWindow()
         {
             InitializeComponent();
@@ -56,12 +57,14 @@ namespace EW_Assistant
             _serverCts = new CancellationTokenSource();
             var prefix = "http://127.0.0.1:8091/";
             _ = Net.WorkHttpServer.Instance.StartAsync(prefix, _serverCts.Token);
+            _mcpHost.StartIfNeeded(LogMcpMessage);
 
             // 应用退出统一停止
             Application.Current.Exit += (_, __) =>
             {
                 try { _serverCts.Cancel(); } catch { }
                 Net.WorkHttpServer.Instance.Stop();
+                _mcpHost.Stop(LogMcpMessage);
             };
 
             // ✅ 预创建 AI 助手页面：不加到 RightHost，但放入缓存
@@ -110,6 +113,11 @@ namespace EW_Assistant
             if (w == null) return;
 
             w.Dispatcher.Invoke(() => w.AppendInfo(message, level));
+        }
+
+        private void LogMcpMessage(string message, string level)
+        {
+            PostProgramInfo(message ?? string.Empty, level ?? "info");
         }
 
         // ===== 本地实现 =====

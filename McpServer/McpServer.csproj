@@ -7,6 +7,10 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <EWAssistantOutputDir Condition=" '$(EWAssistantOutputDir)' == '' ">$(MSBuildProjectDirectory)\..\EW-Assistant\bin\Debug\</EWAssistantOutputDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="ModelContextProtocolServer.Sse" Version="0.4.0" />
@@ -18,5 +22,20 @@
   <ItemGroup>
     <Folder Include="Controllers\" />
   </ItemGroup>
+
+  <Target Name="CopyMcpToAssistantBin" AfterTargets="Build">
+    <!-- 构建后把 MCP 输出复制到 WPF 发布目录 -->
+    <ItemGroup>
+      <McpServerBuildOutput Include="$(TargetDir)**\*.*" />
+    </ItemGroup>
+    <PropertyGroup>
+      <AssistantMcpDir>$(EWAssistantOutputDir)McpServer\</AssistantMcpDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(AssistantMcpDir)" />
+    <Copy
+      SourceFiles="@(McpServerBuildOutput)"
+      DestinationFiles="@(McpServerBuildOutput->'$(AssistantMcpDir)%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
