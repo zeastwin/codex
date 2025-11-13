@@ -1,1 +1,22 @@
-EW-Assistant/.vs/
+# =========================
+# Visual Studio 调试/缓存
+# =========================
+.vs/
+
+# =========================
+# 常见 .NET / VS 构建输出
+# =========================
+
+# 编译输出
+[Bb]in/
+[Oo]bj/
+
+# VS 用户本地配置（不必进仓库）
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / VS Code 等 IDE 配置（按需保留/删除）
+.idea/
+.vscode/
