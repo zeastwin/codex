@@ -13,5 +13,6 @@ namespace EW_Assistant
     /// </summary>
     public partial class App : Application
     {
+        ASDSS
     }
 }
