@@ -11,7 +11,6 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -34,6 +33,7 @@ namespace EW_Assistant.Views
 
         private static readonly SKTypeface FONT_CJK = ResolveCjkTypeface();
         private readonly DispatcherTimer _autoTimer;
+        private readonly bool _autoRefreshEnabled = true;
         private readonly Stopwatch _sw = new();
         private readonly TimeSpan _animDuration = TimeSpan.FromMilliseconds(520);
 
@@ -57,7 +57,6 @@ namespace EW_Assistant.Views
         {
             InitializeComponent();
 
-            DetailGrid.ItemsSource = _hourRows;
             TopList.ItemsSource = _topRows;
 
             DayPicker.SelectedDate = _day;
@@ -84,7 +83,7 @@ namespace EW_Assistant.Views
 
         private void ProductionBoardView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (AutoRefreshToggle.IsChecked == true && !_autoTimer.IsEnabled)
+            if (_autoRefreshEnabled && !_autoTimer.IsEnabled)
                 _autoTimer.Start();
 
             ReloadAll(animate: true, reloadWeek: true);
@@ -103,31 +102,18 @@ namespace EW_Assistant.Views
 
         private void AutoTimer_Tick(object? sender, EventArgs e)
         {
-            if (AutoRefreshToggle.IsChecked != true) return;
-            if (_day.Date != DateTime.Today) return;
-            ReloadAll(animate: true, reloadWeek: false);
+            if (!ShouldAutoRefresh()) return;
+            ReloadAll(animate: false, reloadWeek: false);
         }
 
-        private void AutoRefreshToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            if (!IsLoaded) return;
-
-            if (AutoRefreshToggle.IsChecked == true)
-            {
-                if (!_autoTimer.IsEnabled) _autoTimer.Start();
-            }
-            else
-            {
-                _autoTimer.Stop();
-            }
-        }
+        private bool ShouldAutoRefresh() => _autoRefreshEnabled && _day.Date == DateTime.Today;
 
         private void DayPicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
         {
             if (DayPicker.SelectedDate is not DateTime dt) return;
             _day = dt.Date;
             TitleDay.Text = FormatDay(_day);
-            ReloadAll(animate: true, reloadWeek: true);
+            ReloadAll(animate: false, reloadWeek: true);
         }
 
         private void BtnToday_Click(object sender, RoutedEventArgs e)
@@ -137,7 +123,7 @@ namespace EW_Assistant.Views
 
         private void BtnRefresh_Click(object sender, RoutedEventArgs e)
         {
-            ReloadAll(animate: true, reloadWeek: true);
+            ReloadAll(animate: false, reloadWeek: true);
         }
 
         private void BtnCopySummary_Click(object sender, RoutedEventArgs e)
@@ -197,7 +183,6 @@ namespace EW_Assistant.Views
                 ReloadDayHours();
                 UpdateBindings();
                 UpdateHighlights();
-                UpdateDetailState();
                 UpdateWarnings();
 
                 if (animate)
@@ -321,7 +306,6 @@ namespace EW_Assistant.Views
             }
 
             TitleHour.Text = $"{_day:yyyy-MM-dd} · 24 小时产出";
-            DetailTitle.Text = $"{_day:yyyy-MM-dd} · 逐小时明细";
             SkHour?.InvalidateVisual();
         }
 
@@ -395,29 +379,20 @@ namespace EW_Assistant.Views
             }
         }
 
-        private void UpdateDetailState()
-        {
-            bool hasData = !_dayMissing && _hourRows.Any();
-            DetailGrid.Visibility = hasData ? Visibility.Visible : Visibility.Collapsed;
-            DetailEmpty.Visibility = hasData ? Visibility.Collapsed : Visibility.Visible;
-        }
-
         private void UpdateWarnings()
         {
             var root = ConfigService.Current.CsvRootPath;
             if (string.IsNullOrWhiteSpace(root))
             {
-                WarningHint.Text = "Config：未填写 CsvRootPath，无法读取 CSV。";
+                WarningHint.Text = "Config：未填写 CsvRootPath，无法读取 CSV";
                 WarningHint.Visibility = Visibility.Visible;
-                FileHint.Text = "CSV：未配置路径";
                 return;
             }
 
-            FileHint.Text = _dayFile != null ? $"CSV：{_dayFile}" : $"CSV：{Path.Combine(root, $"{FilePrefix}{_day:yyyyMMdd}.csv")}";
-
             if (_dayFile == null || _dayMissing)
             {
-                WarningHint.Text = $"未找到 {_day:yyyy-MM-dd} 的 {FilePrefix}{_day:yyyyMMdd}.csv";
+                var expected = Path.Combine(root, $"{FilePrefix}{_day:yyyyMMdd}.csv");
+                WarningHint.Text = $"未找到 {_day:yyyy-MM-dd} · {Path.GetFileName(expected)}";
                 WarningHint.Visibility = Visibility.Visible;
             }
             else
@@ -872,40 +847,6 @@ namespace EW_Assistant.Views
                 }
             }
             return SKTypeface.Default;
-        }
-
-        private void DetailCard_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (DetailGrid != null)
-            {
-                var inner = FindDescendant<ScrollViewer>(DetailGrid);
-                if (inner != null && inner.ScrollableHeight > 0)
-                {
-                    if (e.Delta < 0) inner.LineDown(); else inner.LineUp();
-                    e.Handled = true;
-                    return;
-                }
-            }
-
-            if (RootScroll != null)
-            {
-                if (e.Delta < 0) RootScroll.LineDown(); else RootScroll.LineUp();
-                e.Handled = true;
-            }
-        }
-
-        private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
-        {
-            if (root == null) return null;
-            int count = VisualTreeHelper.GetChildrenCount(root);
-            for (int i = 0; i < count; i++)
-            {
-                var child = VisualTreeHelper.GetChild(root, i);
-                if (child is T target) return target;
-                var deeper = FindDescendant<T>(child);
-                if (deeper != null) return deeper;
-            }
-            return null;
         }
 
         private sealed class DayData

@@ -73,8 +73,6 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="12"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="12"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header -->
@@ -87,7 +85,6 @@
                 <StackPanel Orientation="Vertical">
                     <TextBlock Text="产能看板" FontSize="26" FontWeight="Bold" Foreground="#0F172A"/>
                     <TextBlock x:Name="TitleDay" FontSize="16" Foreground="#475569" Margin="0,4,0,0"/>
-                    <TextBlock x:Name="FileHint" FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                     <TextBlock x:Name="WarningHint" FontSize="12" Foreground="#DC2626" Margin="0,6,0,0" Visibility="Collapsed"/>
                 </StackPanel>
 
@@ -100,13 +97,6 @@
                     <Button Content="打开 CSV 文件夹" Style="{StaticResource GhostBtn}" Click="BtnOpenFolder_Click"/>
                     <Button Content="复制产能摘要" Style="{StaticResource GhostBtn}" Click="BtnCopySummary_Click"
                             ToolTip="将当日产量/良率/峰值时段复制到剪贴板，便于日报或IM分享"/>
-                    <CheckBox x:Name="AutoRefreshToggle"
-                              Content="自动刷新（10s，仅今日）"
-                              Margin="12,0,0,0"
-                              VerticalAlignment="Center"
-                              IsChecked="True"
-                              Checked="AutoRefreshToggle_Checked"
-                              Unchecked="AutoRefreshToggle_Checked"/>
                 </StackPanel>
             </Grid>
 
@@ -236,62 +226,6 @@
                     </Grid>
                 </Border>
             </Grid>
-
-            <!-- Detail table -->
-            <Border Grid.Row="6"
-                    Style="{StaticResource Card}"
-                    MinHeight="260"
-                    PreviewMouseWheel="DetailCard_PreviewMouseWheel">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock x:Name="DetailTitle" Text="逐小时明细" Style="{StaticResource CardTitle}"/>
-
-                    <Grid Grid.Row="1">
-                        <Grid.RowDefinitions>
-                            <RowDefinition/>
-                        </Grid.RowDefinitions>
-
-                        <DataGrid x:Name="DetailGrid"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  IsReadOnly="True"
-                                  BorderThickness="0"
-                                  HeadersVisibility="Column"
-                                  RowHeight="32"
-                                  EnableRowVirtualization="True">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="小时"
-                                                    Binding="{Binding Hour}"
-                                                    Width="110"/>
-                                <DataGridTextColumn Header="Pass"
-                                                    Binding="{Binding Pass}"
-                                                    Width="80"/>
-                                <DataGridTextColumn Header="Fail"
-                                                    Binding="{Binding Fail}"
-                                                    Width="80"/>
-                                <DataGridTextColumn Header="总计"
-                                                    Binding="{Binding Total}"
-                                                    Width="90"/>
-                                <DataGridTextColumn Header="良率"
-                                                    Binding="{Binding YieldText}"
-                                                    Width="90"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
-                        <TextBlock x:Name="DetailEmpty"
-                                   Text="暂无 CSV 数据，选择的日期没有产出记录。"
-                                   Foreground="#6B7280"
-                                   FontSize="12"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   IsHitTestVisible="False"/>
-                    </Grid>
-                </Grid>
-            </Border>
         </Grid>
     </ScrollViewer>
 </UserControl>
