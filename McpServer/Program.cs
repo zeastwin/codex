@@ -1,40 +1,178 @@
+Ôªøusing System.Diagnostics;
+using System.Drawing;
+using System.Text;
+using System.Windows.Forms;
 using EW_Assistant.Io;
-using McpServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Server;
-using System.Text;
 using static McpServer.Base;
-Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-var builder = WebApplication.CreateBuilder(args);
 
-// ∆Ù∂Ø ±∂¡»°≈‰÷√
-var appCfg = ReadAppConfig();
-CsvProductionRepository.ProductionLogPath = appCfg.ProductionLogPath;
-AlarmCsvTools.WarmLogPath = appCfg.WarmLogPath;
-
-// °™°™ ∆Ù∂Øº¥º”‘ÿ£®÷ª∂¡ƒ⁄¥Ê£©°™°™
-var ioCsv = appCfg.IoMapCsvPath;
-try
+namespace McpServer
 {
-    IoMapRepository.LoadFromXlsx(ioCsv);
+    internal static class Program
+    {
+        [STAThread]
+        private static async Task Main(string[] args)
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            var builder = WebApplication.CreateBuilder(args);
+
+            var appCfg = ReadAppConfig();
+            CsvProductionRepository.ProductionLogPath = appCfg.ProductionLogPath;
+            AlarmCsvTools.WarmLogPath = appCfg.WarmLogPath;
+
+            var ioCsv = appCfg.IoMapCsvPath;
+            try
+            {
+                IoMapRepository.LoadFromXlsx(ioCsv);
+            }
+            catch (Exception)
+            {
+            }
+
+            builder.Services
+                .AddMcpServer()
+                .WithHttpTransport()
+                .WithToolsFromAssembly(typeof(Program).Assembly);
+
+            var app = builder.Build();
+
+            app.MapMcp();
+            app.MapGet("/", () => "MCP Server (local bridge) running on localhost");
+
+            var exitSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var runTask = app.RunAsync(appCfg.MCPServerIP);
+
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            using (var tray = new McpTrayContext(restart => exitSignal.TrySetResult(restart)))
+            {
+                Application.Run(tray);
+            }
+
+            if (!exitSignal.Task.IsCompleted)
+            {
+                exitSignal.TrySetResult(false);
+            }
+
+            var restartRequested = await exitSignal.Task.ConfigureAwait(false);
+
+            try
+            {
+                await app.StopAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ÂÅúÊ≠¢ MCP Server Â§±Ë¥•Ôºö{ex.Message}");
+            }
+
+            try
+            {
+                await runTask.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"MCP Server ËøêË°åÂºÇÂ∏∏Ôºö{ex.Message}");
+            }
+
+            if (restartRequested)
+            {
+                RestartCurrentProcess(args);
+            }
+        }
+
+        private static void RestartCurrentProcess(string[] args)
+        {
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(exePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var startInfo = new ProcessStartInfo(exePath)
+                {
+                    UseShellExecute = false,
+                    WorkingDirectory = Environment.CurrentDirectory
+                };
+
+                foreach (var arg in args ?? Array.Empty<string>())
+                {
+                    startInfo.ArgumentList.Add(arg);
+                }
+
+                Process.Start(startInfo);
+            }
+            catch
+            {
+                // ÂøΩÁï•ÈáçÂêØÂ§±Ë¥•ÔºåÂΩìÂâçÂÆû‰æã‰ºöÊ≠£Â∏∏ÈÄÄÂá∫
+            }
+        }
+    }
+
+    internal sealed class McpTrayContext : ApplicationContext
+    {
+        private readonly NotifyIcon _notifyIcon;
+        private readonly ContextMenuStrip _menu;
+        private readonly Action<bool> _exitCallback;
+        private bool _exitHandled;
+
+        public McpTrayContext(Action<bool> exitCallback)
+        {
+            _exitCallback = exitCallback;
+
+            _menu = BuildMenu();
+            _notifyIcon = new NotifyIcon
+            {
+                Icon = SystemIcons.Application,
+                Text = "MCP Server ÊúçÂä°",
+                ContextMenuStrip = _menu,
+                Visible = true
+            };
+        }
+
+        private ContextMenuStrip BuildMenu()
+        {
+            var menu = new ContextMenuStrip();
+
+            var restartItem = new ToolStripMenuItem("ÈáçÂêØ MCP");
+            restartItem.Click += (_, __) => RequestExit(true);
+
+            var exitItem = new ToolStripMenuItem("ÈÄÄÂá∫ MCP");
+            exitItem.Click += (_, __) => RequestExit(false);
+
+            menu.Items.Add(restartItem);
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(exitItem);
+
+            return menu;
+        }
+
+        private void RequestExit(bool restart)
+        {
+            if (_exitHandled) return;
+            _exitHandled = true;
+            _notifyIcon.Visible = false;
+            _exitCallback?.Invoke(restart);
+            ExitThread();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _notifyIcon.Visible = false;
+                _notifyIcon.Dispose();
+                _menu.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
 }
-catch (Exception ex)
-{
-}
-
-
-builder.Services
-    .AddMcpServer()
-    .WithHttpTransport()  
-    .WithToolsFromAssembly(typeof(Program).Assembly);
-
-var app = builder.Build();
-
-app.MapMcp();
-
-app.MapGet("/", () => "MCP Server (local bridge) running on localhost");
-
-app.Run(appCfg.MCPServerIP); 
-//app.Run("http://192.168.200.10:5001");
