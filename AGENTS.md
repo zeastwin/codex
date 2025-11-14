@@ -1,185 +1,196 @@
-# AGENTS.md — EW-Assistant (WPF) × McpServer (.NET 8)
-## 语言风格
-
-- 所有代码注释、文档说明、提交说明（commit message）默认使用**简体中文**。
-- 代码中的标识符、API 名称保持英文。
-- 给开发者的解释、分析、总结，也请用简体中文输出。
-
-> 本文说明仓库里的 Agent 设计、工具白名单、调用契约、安全边界与运行调试要点。  
-> **特别提醒**：`EW-Assistant/Services/AlarmLogCache.cs` 与 `AlarmLogCompute.cs` 只服务 `DashboardView`（周/月统计 & Top 卡片），完全不参与 `AlarmView` 的绘制或数据链路。
+﻿# AGENTS.md — EW-Assistant (WPF) × McpServer (.NET 8)
+## 语言约定
+- 所有代码注释、技术文档、提交说明一律使用**简体中文**。
+- 代码中的标识符、API 名称、JSON 字段保持英文；用户可见字符串按 UI 设计需求呈现。
+- 面向开发者的说明、分析、总结全部用简体中文输出。
 
 ---
 
-## 0. 仓库结构（按实际代码）
-
-```
-<repo-root>/
-├─ EW-Assistant/                     # .NET Framework 4.8.1 WPF UI Shell
-│  ├─ Component/
-│  │  ├─ UiCoalescer.cs              # UI 合流/节流 + Dispatcher 安全更新
-│  │  └─ WorkHttpServer.cs           # HttpListener（8091）→ DifyWorkflowClient 触发入口
-│  ├─ Services/
-│  │  ├─ AlarmLogCache.cs            # Dashboard 专用报警日志缓存（逐日原文）
-│  │  ├─ AlarmLogCompute.cs          # Dashboard 专用聚合/Top 计算
-│  │  └─ DifyWorkflowStreaming.cs    # Dify Workflow SSE 适配、串行执行闸
-│  ├─ Views/
-│  │  ├─ AIAssistantView.xaml(.cs)   # 对话+Markdown（工具入口 & Quick Prompt）
-│  │  ├─ DashboardView.xaml(.cs)     # 日/周/月产量、报警卡片（SkiaSharp 渲染）
-│  │  ├─ AlarmView.xaml(.cs)         # 报警可视化（独立数据管线）
-│  │  ├─ MachineControl.xaml(.cs)    # 机台手动控制（调用本地 8081 API）
-│  │  └─ ConfigView.xaml(.cs)        # `D:\AppConfig.json` 可视化编辑
-│  ├─ DifyChatAdapter.cs             # Chat API + SSE 适配 & `D:\Data\AiLog\Chat`
-│  └─ MainWindow.xaml(.cs)           # Shell、路由、WorkHttpServer 生命周期
-└─ McpServer/                        # .NET 8 MCP 工具网关
-   ├─ csv_production_tools.cs        # `[McpServerToolType] ProdCsvTools`（产能只读）
-   ├─ AlarmTools.cs                  # ProdAlarmTools + AlarmCsvTools（报警分析）
-   ├─ IO/
-   │  ├─ IoMapRepository.cs          # 读取 Excel → IO Name/Address/CheckIndex 映射
-   │  └─ IoMcpTools.cs               # `IoCommand`（含读回、JSON 封装）
-   ├─ MCPTools.cs                    # `[McpServerToolType] Tool.*`（Start/Pause/...）
-   ├─ Base.cs / Program.cs           # `D:\MCPAppConfig.json`、HostBuilder、路由
-   ├─ appsettings*.json              # ASP.NET Core 默认配置
-   └─ McpServer.sln / McpServer.csproj
-```
-
----
-
-## 1. 架构与职责
+## 1. 系统概览
+- `EW-Assistant` 是 .NET Framework 4.8.1 的 WPF Shell，`MainWindow` 缓存多视图、维护底部 `ProgramInfo` 日志，并在启动时拉起 `WorkHttpServer`（8091）和 `McpServerProcessHost`（托管 `McpServer.exe`）。
+- `McpServer` 是 .NET 8 的本地 MCP 工具网关，使用 `ModelContextProtocol.Server` 对外暴露 CSV / 报警 / IO / 设备命令工具；输出统一 JSON，供 Dify Workflow/Chat 工具链消费。
+- 全部设备写操作最终都命中 `http://127.0.0.1:8081` 的内部 API；`MachineControl`（人工 UI）与 MCP 的 `Tool.*`/`IoMcpTools.*` 复用相同 JSON 请求体。
+- 本地数据来源均来自用户自建文件夹：生产 CSV (`ConfigService.Current.CsvRootPath`)、报警 CSV (`ConfigService.Current.AlarmLogPath`)、配置文件 `D:\AppConfig.json` / `D:\MCPAppConfig.json`、聊天/自动化日志 `D:\Data\AiLog`。
 
 ```mermaid
 flowchart LR
-subgraph UI[WPF UI]
+subgraph UI[WPF UI Shell]
   Dash[DashboardView]
+  Board[ProductionBoardView]
   Assistant[AIAssistantView]
   Alarm[AlarmView]
   Machine[MachineControl]
 end
-Assistant -- SSE/HTTP --> Dify[Dify Workflow / Agents]
-Dify -- Tool JSON --> MCP[McpServer (.NET 8, MCP)]
-MCP -- 只读/受控写 --> Data[(CSV 产能 / 报警日志 / IO 映射)]
-MCP -- HTTP 桥 --> Equip[本地设备 API @8081]
+Assistant -- SSE/HTTP --> Dify[Dify Chat & Workflow]
+Dify -- MCP Tool JSON --> MCP[McpServer (.NET 8)]
+MCP -- 只读/受控写 --> Data[(产能 CSV / 报警 CSV / IO 映射)]
+MCP -- HTTP 桥 --> Equip[设备 API @8081]
 Machine -- Confirmed POST --> Equip
 WorkHook[WorkHttpServer @8091] -- Trigger JSON --> DifyWorkflowClient --> Assistant
+MainWindow -- McpServerProcessHost --> MCP
 ```
 
-- **WPF Shell (`MainWindow`)**：缓存视图、统一的 `PostProgramInfo` 日志面板，并在启动时常驻 `WorkHttpServer`（默认 `http://127.0.0.1:8091/`）。
-- **AIAssistantView**：SSE + Markdown 渲染、`GlobalInstance` 提供给 `WorkHttpServer`，并包含若干 Quick Prompt（例如「今日日报」会明确列出要调用的 MCP 工具和格式要求）。
-- **DashboardView**：依赖 `ConfigService.Current.CsvRootPath` 与 `AlarmLogCache/Compute`，做本地渲染，不会走 MCP。
-- **MachineControl**：仍然使用 `http://127.0.0.1:8081` 的内部 HTTP API，按钮必须二次确认，结果写入 `MainWindow` 日志；Agent 控制则通过 MCP 的 `Tool.*`/`IoMcpTools.*` 间接访问同一接口。
-- **DifyWorkflowClient + WorkHttpServer**：用 `SemaphoreSlim` 限制任意时刻仅一条自动化 Workflow 在跑；`WorkHttpServer` 把 8091 端口上的 JSON POST 转交给 `DifyWorkflowClient.TryStartAutoAnalysisNow`（忙则 429）。
-- **McpServer (.NET 8)**：通过 `ModelContextProtocol.Server` 暴露工具；`Program.cs` 启动时读取 `D:\MCPAppConfig.json`，设置 `CsvProductionRepository.ProductionLogPath`、`AlarmCsvTools.WarmLogPath`、`IoMapRepository.LoadFromXlsx(...)` 等，然后 `app.Run(appCfg.MCPServerIP)`。
+---
+
+## 2. 目录结构（按现有代码）
+```
+EW-Assistant/
+├─ Assets/EW.ico
+├─ Component/
+│  ├─ UiCoalescer.cs              # UI 节流/合流（Dispatcher 安全更新）
+│  └─ WorkHttpServer.cs           # HttpListener @8091 → DifyWorkflowClient
+├─ Services/
+│  ├─ DifyChatAdapter.cs          # Dify Chat SSE 适配 + 日志
+│  ├─ DifyWorkflowStreaming.cs    # 静态 DifyWorkflowClient（串行闸门）
+│  └─ McpServerProcessHost.cs     # 附着/拉起 McpServer.exe
+├─ Views/
+│  ├─ AIAssistantView.xaml(.cs)   # 对话、Markdown、Quick Prompt、global sink
+│  ├─ DashboardView.xaml(.cs)     # SkiaSharp 仪表盘（含内部 AlarmLogCache/Compute）
+│  ├─ ProductionBoardView.xaml(.cs)# 电视墙版产能大屏
+│  ├─ AlarmView.xaml(.cs)         # 报警可视化，独立数据管线
+│  ├─ MachineControl.xaml(.cs)    # 本地设备操作（二次确认）
+│  └─ ConfigView.xaml(.cs)        # 可视化编辑 `D:\AppConfig.json`（同文件定义 Settings.AppConfig + ConfigService）
+├─ MainWindow.xaml(.cs)           # Shell、导航、全局日志
+└─ EW-Assistant.csproj / App.config / App.xaml(.cs)
+
+McpServer/
+├─ Base.cs / Program.cs           # 读取 `D:\MCPAppConfig.json`、注册工具、系统托盘
+├─ csv_production_tools.cs        # ProdCsvTools（CSV 仓库 + 工具导出）
+├─ AlarmTools.cs                  # AlarmCsvRepository + ProdAlarmTools + AlarmCsvTools
+├─ MCPTools.cs                    # Tool.*（Start/Pause/Reset/...）
+├─ IO/
+│  ├─ IoMapRepository.cs          # Excel → IO Name/Index/Address 映射
+│  └─ IoMcpTools.cs               # IoCommand + 读回判断
+├─ Controllers/                   # 预留 MVC 端点（当前为空）
+├─ Tray/                          # 托盘图标/资源
+├─ appsettings*.json / McpServer.http
+└─ McpServer.csproj / McpServer.sln
+```
 
 ---
 
-## 2. WPF UI 模块与数据来源
+## 3. WPF 模块职责
+### 3.1 MainWindow 与全局日志
+- 通过 `_routes` 与 `_viewCache` 动态切换视图；`AI 助手` 视图在启动时预加载以确保 `AIAssistantView.GlobalInstance` 可用。
+- `InfoItems` 记录最近 200 条系统事件，统一由 `MainWindow.PostProgramInfo` 写入，MachineControl、MCP 托管器、Workflow Hook、MCP 工具日志都汇入此面板。
+- 启动时：`WorkHttpServer` 监听 8091；`McpServerProcessHost` 会优先 attach 已有进程，否则尝试从 `.
+McpServer\McpServer.exe` 拉起；应用退出时统一停止。
 
-- **AIAssistantView**  
-  - 维护消息列表（Markdown ↔ 流式文本），Quick Prompt（如 `QuickReportBtn`）直接把「只允许调用哪些工具、按何格式输出」写进提示词。  
-  - 通过 `DifyChatAdapter` 连接 `ConfigService.Current.ChatURL/ChatKey`（SSE），并把完整对话日志落盘 `D:\Data\AiLog\Chat\yyyy-MM-dd.txt`。  
-  - 通过 `DifyWorkflowStreaming`/`DifyWorkflowClient` 调用 Auto Workflow（`ConfigService.Current.AutoURL/AutoKey`），执行过程写入 `D:\Data\AiLog\Auto\yyyy-MM-dd.txt`。
+### 3.2 AIAssistantView
+- 包含聊天消息列表（Markdown ↔ streaming 文本）、输入框、工具按钮、文件上传（AvalonEdit 编辑区）。
+- `GlobalInstance` 供 `WorkHttpServer`/Workflow 输出直接写入 UI；`DifyChatAdapter` 负责 SSE 解包、token/replace 回调、文件构建、日志落盘 `D:\Data\AiLog\Chat\yyyy-MM-dd.txt`。
+- `QuickReportBtn`、`QuickAlarmReportBtn` 等按钮直接把工具白名单、调用参数、输出模板写入用户提示词，明确禁止 JSON/raw 输出。
+- `RunAutoAnalysis` 通过 `DifyWorkflowClient`（`Services/DifyWorkflowStreaming.cs`）串流渲染节点，日志写入 `D:\Data\AiLog\Auto\yyyy-MM-dd.txt`。
 
-- **DashboardView**  
-  - `FilePrefix` 默认为 `"小时产量"`，文件名形如 `小时产量20251112.csv`。  
-  - 加载后立即 `AlarmLogCache.LoadRecent(ConfigService.Current.AlarmLogPath, days: 7)`，并用 `AlarmLogCompute` 做每日卡片/周 Top。**仍与 AlarmView 解耦**。
+### 3.3 DashboardView（SkiaSharp）
+- 使用 `ConfigService.Current.CsvRootPath` 定位 `FilePrefix + yyyyMMdd.csv`（默认 `FilePrefix="小时产量"`）；自动加载近 7 天数据绘制周趋势、当日 24 小时柱状、良率环图。
+- 文件缺失会被灰显并记录 `warnings`；动画基于 `CompositionTarget.Rendering` + `Stopwatch`。
+- 文件底部内嵌 `AlarmLogCache` / `AlarmLogCompute`（负责缓存近 7 天报警原文与 Top 聚合），仅供 Dashboard 使用，外部不要直接引用。
 
-- **AlarmView**  
-  - 拥有独立的数据拉取/渲染逻辑（可直接展示大文件、字体 fallback，默认优先 `Microsoft YaHei UI`）。不依赖 `AlarmLogCache`。
+### 3.4 ProductionBoardView
+- 面向电视墙/产线大屏：SkiaSharp + `DispatcherTimer` 每 10 秒刷新当日 CSV，支持日期切换、Top/Bottleneck 列表、周趋势卡片。
+- 内建动画（`_anim`）和低良率阈值（默认 95%），缺失 CSV 会在 UI 顶部提示；`ConfigService.ConfigChanged` 会触发全量重载。
 
-- **MachineControl**  
-  - `SendCommand(action, actionName, args)` 直接对 `http://127.0.0.1:8081` POST，且所有按钮都走 `ConfirmThenSendAsync`（弹框 + 执行日志）。  
-  - 结果写回 `MainWindow.PostProgramInfo`，供人工审计；Agent 版本的同款操作由 MCP `Tool.*` 暴露。
+### 3.5 AlarmView
+- 独立读取 `ConfigService.Current.AlarmLogPath`（按 `yyyy-MM-dd.csv` 命名）的大文件，提供周热度、Top Category、饼图、原始列表；能处理缺失文件与 GB2312/UTF-8 混排。
+- 10 秒定时刷新仅在查看当天数据时启用，并支持日期选择器/前后翻页；字体优先 `Microsoft YaHei UI`，内置 fallback 检测。
 
-- **ConfigView + ConfigService**  
-  - 图形化编辑 `D:\AppConfig.json`。字段：`CsvRootPath`、`AlarmLogPath`、`ChatURL`、`ChatKey`、`AutoURL`、`AutoKey`。  
-  - 保存/重载会触发 `ConfigService.ConfigChanged`，并在缺失必填项时提示。
+### 3.6 MachineControl
+- 所有按钮通过 `ConfirmThenSendAsync` 弹出危险提示，再构造 `{action,target,params}` JSON POST 至 `http://127.0.0.1:8081`。
+- 结果写入 `MainWindow.PostProgramInfo`，日志格式与 MCP `Tool.*` 完全一致，便于人工审计；超时、错误状态会带上 HTTP code 与原始文本。
+
+### 3.7 ConfigView 与 ConfigService
+- 通过 UI 编辑 `D:\AppConfig.json`（字段：`CsvRootPath`、`AlarmLogPath`、`ChatURL`、`ChatKey`、`AutoURL`、`AutoKey`），按下保存时会校验必填项并触发 `ConfigService.ConfigChanged`。
+- `ConfigService` 与 `Settings.AppConfig` 定义在同一文件内，首次加载会写回默认模板；其 `Current` 实例被 Dashboard/ProductionBoard/AlarmView/Dify 模块订阅。
 
 ---
 
-## 3. Agent 角色设定（建议）
+## 4. 服务层与基础设施
+- **WorkHttpServer**：`Component/WorkHttpServer.cs` 使用 `HttpListener` 长驻监听 8091；强制 POST JSON，自动兼容 `errorCode`/`ErrorCode` 等大小写；忙碌时返回 429 `{ok:false,busy:true}`。
+- **DifyChatAdapter**：封装 Chat API + SSE，支持 token/replace 事件、`/files` 上传、`/stop` 调用；每次对话结束都会把 Q/A、task_id、conversation_id 写入 `D:\Data\AiLog\Chat\*.txt`。
+- **DifyWorkflowClient**：`Services/DifyWorkflowStreaming.cs` 用 `SemaphoreSlim` 确保 Workflow 串行执行，`RunAutoAnalysisExclusiveAsync`/`TryStartAutoAnalysisNow` 会在忙碌时直接拒绝。
+- **McpServerProcessHost**：负责守护 `McpServer.exe`，可附着已有进程、检测不同目录的“外部实例”、托管退出事件并将状态写入 `MainWindow` 日志。
+- **UiCoalescer**：轻量级 Dispatcher 节流工具，用于 UI 线程防抖。
 
-| Agent | UI/入口 | 允许的工具 / 接口 | 输出 & 限制 |
+---
+
+## 5. McpServer 组件
+### 5.1 Program.cs & 托盘
+- 启动时调用 `Base.ReadAppConfig()`，设置 `CsvProductionRepository.ProductionLogPath`、`AlarmCsvTools.WarmLogPath`，并使用 `IoMapRepository.LoadFromXlsx` 导入 IO 映射。
+- `AddMcpServer().WithHttpTransport().WithToolsFromAssembly(...)` 自动扫描 `[McpServerTool]`；`app.MapMcp()` + 根路径 `"/"` 返回健康检查字符串。
+- `McpTrayContext` 通过 Windows NotifyIcon 提供“重启/退出 MCP”菜单，选择重启会重新拉起当前进程。
+
+### 5.2 Base.cs（配置）
+- 固定读取/创建 `D:\MCPAppConfig.json`，字段：`ProductionLogPath`、`WarmLogPath`、`IoMapCsvPath`、`MCPServerIP`（应写成 `http://127.0.0.1:5005` 形式）；缺失会写入默认模板并确保目录存在。
+
+### 5.3 csv_production_tools.cs
+- `CsvProductionRepository` 带文件 mtime 缓存、自动分隔符检测、PASS/FAIL 表头别名；默认按 `“小时产量yyyyMMdd.csv”` 命名。
+- 暴露 `ProdCsvTools.*`：`GetProductionSummary`、`GetHourlyStats`、`QuickQueryWindow`、`GetSummaryLastHours`、`GetProductionRangeSummary` 等。
+
+### 5.4 AlarmTools.cs
+- 合并 `AlarmCsvRepository`（缓存每日报警原文）、`ProdAlarmTools`（产能×报警联表）、`AlarmCsvTools`（报警专用工具）。
+- 支持统计每小时报警次数/秒数、低良率时段 Top 报警、Pearson 相关、自然语言解析、报警区间 TopN 及原始明细过滤。
+
+### 5.5 IO/
+- `IoMapRepository` 借助 ClosedXML 读取 Excel：目前 `GROUPS` 仅包含第 1 列与第 9 列，各自起始地址分别是 `30000/30001` 与 `30003/30002`，读回基址 `30100/30140`，按 16 点分段。
+- `IoMcpTools.IoCommand` 规范化 open/close 请求、写入 `IoWrite`，解析 16 位状态字，返回 `{type:"io.command", ok, status, expected, actual}` JSON。
+
+### 5.6 MCPTools.cs
+- `Tool.*` 系列（Start/Pause/Reset/Clear/VisionCalibrate/QuickInspection + 示例 `GetCurrentTime`/`OpenThisPC`）最终调用公共 `SendCommand`。
+- `SendCommand` 统一 POST `http://127.0.0.1:8081`，支持自定义超时、读取 JSON Response 并把 `status=="ok"` 判定为成功，其余原样透传；`Tool.PD` 用于生成 params 字典，供 `IoMcpTools` 复用。
+
+---
+
+## 6. Agent 角色与入口
+| 角色 | 入口 | 允许工具 / 接口 | 输出要求 |
 | --- | --- | --- | --- |
-| **Orchestrator** | `AIAssistantView`（默认对话）或 `WorkHttpServer` webhook | 不直接触碰设备；只拆解任务、把子任务派发给下述 Domain Agent；必要时可调用纯文档解析/检索工具 | Markdown 规划/状态同步；禁止绕过白名单 |
-| **Production‑Analyst** | `AIAssistantView`、`DashboardView` Quick Prompt | `ProdCsvTools.GetProductionSummary / GetHourlyStats / QuickQueryWindow / GetSummaryLastHours / GetProductionRangeSummary` | 生成 Markdown 表格 +结论+建议，并引用缺失文件/警告 |
-| **Alarm‑Analyst** | 同上 | `ProdAlarmTools.GetHourlyProdWithAlarms / GetAlarmImpactSummary / GetTopAlarmsDuringLowYield / AnalyzeProdAndAlarmsNL`；`AlarmCsvTools.GetAlarmRangeWindowSummary / QueryAlarms` | 输出 TopN、低良率小时列表、相关性系数、引用样本 |
-| **IO‑Controller** | `MachineControl`（人工）/ `AIAssistantView`（Agent） | `IoMcpTools.IoCommand`（必须读回）；`Tool.StartMachine / PauseMachine / ResetMachine / ClearMachineAlarms / VisionCalibrateMachine / QuickInspectionMachine` | 串行执行；每一步都返回结构化 JSON，并附人类摘要；失败立即停止 |
-| **Knowledge‑Ingestion（可选）** | `AIAssistantView` | 只读文件解析/FAQ 生成，不访问 MCP | 输出 FAQ/摘要卡，用于知识同步 |
+| **Orchestrator** | `AIAssistantView` 默认会话、`WorkHttpServer` Webhook | 不直接触碰设备，只拆解任务并派发给下述 Domain Agent，必要时可读取本地文档 | Markdown 规划/状态同步，遵守白名单 |
+| **Production-Analyst** | AIAssistant Quick Prompt「今日产能日报」、Dashboard 查询 | `ProdCsvTools.GetProductionSummary / GetHourlyStats / QuickQueryWindow / GetSummaryLastHours / GetProductionRangeSummary` | 输出 Markdown 表格 + KPI 结论 + 改进建议，缺 CSV 必须列出 `warnings` |
+| **Alarm-Analyst** | AIAssistant Quick Prompt「今日报警日报」、Alarm 分析会话 | `ProdAlarmTools.GetHourlyProdWithAlarms / GetAlarmImpactSummary / GetTopAlarmsDuringLowYield / AnalyzeProdAndAlarmsNL`、`AlarmCsvTools.GetAlarmRangeWindowSummary / QueryAlarms` | 需列出低良率小时、Top 报警、相关性，引用样本编号 |
+| **IO-Controller** | AIAssistant（经人工批准）或 MachineControl（人工 UI） | `IoMcpTools.IoCommand`（必须读回） + `Tool.StartMachine / PauseMachine / ResetMachine / ClearMachineAlarms / VisionCalibrateMachine / QuickInspectionMachine` | 串行执行，逐步输出结构化 JSON + 人类摘要，失败立即终止 |
+| **Knowledge-Ingestion** | AIAssistant 自由会话 | 只读文件解析（不调用 MCP 工具） | 输出 FAQ / 摘要卡片，供班组知识同步 |
 
 ---
 
-## 4. 工具白名单 & 契约（依据实际实现）
+## 7. 工具白名单与契约
+### 7.1 产能 CSV —— `ProdCsvTools`
+- `GetProductionSummary(date?)`：返回 `{type:"prod.summary", date, pass, fail, total, yield}`。
+- `GetHourlyStats(date?, startHour?, endHour?)`：`{type:"prod.hours", hours:[], subtotal:{}}`，小时 0–23 一律补齐。
+- `QuickQueryWindow(date?, window)`：语法糖 `HH-HH`/`HH:MM-HH:MM`，内部仍用 `GetHourlyStats`。
+- `GetSummaryLastHours(lastHours=4, until?)`：跨天滚动窗口，附 `warnings`（缺文件、跨日）。
+- `GetProductionRangeSummary(startDate, endDate)`：`days = [{date, pass, fail, total, yield}]`，额外附 `markdown` 片段方便 UI 直接展示。
+- 所有函数在文件缺失时返回 `{type:"error", message:"未找到 CSV"}`；Agent 必须据实汇报。
 
-### 4.1 产能 CSV —— `ProdCsvTools`（`csv_production_tools.cs`）
+### 7.2 产能 × 报警 —— `ProdAlarmTools`
+- `GetHourlyProdWithAlarms`：合并单日 24 小时的产能 + 报警次数/秒数 + Top1 报警代码。
+- `GetAlarmImpactSummary`：返回 `byHour`/`byDay` 聚合、Pearson 相关系数、低良率小时 `rows`、Top 报警列表及 `warnings`。
+- `GetTopAlarmsDuringLowYield`：筛出 `yield<threshold` 的小时，统计 Top 报警代码与命中次数。
+- `AnalyzeProdAndAlarmsNL`：解析自然语言中的日期/时间窗，再调用 `GetAlarmImpactSummary`。
+- 缺任意 CSV 会通过 `warnings` 提醒，但仍尽量输出其他日期的数据。
 
-- **底层仓库**：`CsvProductionRepository`  
-  - `ProductionLogPath` 与 `DailyFilePattern = "小时产量yyyyMMdd'.csv'"` 来自 `D:\MCPAppConfig.json`。  
-  - 自动检测分隔符（逗号/分号/TAB），并识别 `PASS/良品/良率pass`、`FAIL/不良/NG` 等表头别名。  
-  - 带内存缓存（基于文件 mtime），避免重复 IO。
+### 7.3 报警 CSV —— `AlarmCsvTools`
+- `AlarmCsvTools.WarmLogPath` 来自 `D:\MCPAppConfig.json`，文件按 `yyyy-MM-dd.csv` 命名。
+- `GetAlarmRangeWindowSummary(startDate, endDate, window?, topN=10, sortBy="duration")`：输出 `{type:"alarm.range.summary", totals, byCategory, top}`，window 支持 `HH-HH` / `HH:MM-HH:MM`。
+- `QueryAlarms(startDate, endDate, code?, keyword?, window?, take=50)`：返回 `{type:"alarm.query", rows:[], totalCount, durationSeconds}`，rows 包含开始时间、代码、内容、秒数、源文件名。
+- 输入非法会直接返回 `{type:"error", message:"..."}`，Agent 必须阻断写操作。
 
-- **工具列表**  
-  - `GetProductionSummary(date?)` → `type = "prod.summary"`，返回 `{date, pass, fail, total, yield}`。  
-  - `GetHourlyStats(date?, startHour?, endHour?)` → `type = "prod.hours"`，包含 `hours = [{hour, pass, fail, total, yield}]` 与区间小计。  
-  - `QuickQueryWindow(date?, window)` → 语法糖，调用 `GetHourlyStats` 并限制时间段（`10-14` 或 `10:00-14:00`）。  
-  - `GetSummaryLastHours(lastHours=4, until?)` → `type = "prod.last_hours"`，跨天按小时滚动窗口，附 `warnings`（缺 CSV）。  
-  - `GetProductionRangeSummary(startDate, endDate)` → `type = "prod.range.summary"`，输出逐日 `days` 与 `warnings`，自带 Markdown 摘要（供 UI 直接展示）。
+### 7.4 IO 工具 —— `IoMcpTools` + `IoMapRepository`
+- `IoMapRepository.LoadFromXlsx(ioCsv)` 详见 `MCPAppConfig.json`，每 16 点共用一组 `CheckAddress`，`CheckIndex` 范围 1..16（MSB）。
+- `IoMcpTools.IoCommand(ioName, op)`：
+  - `op` 仅允许 open/close（含中英 alias），拒绝 toggle/空值。
+  - `Tool.SendCommand("IoWrite", ...)` 始终写 `on`，必要时可传 `checkAddress` 做读回；若 IO 表缺失、地址空、或命令超时，直接返回 `type:"error"` 或 `status:"timeout"`。
+  - 正常完成时返回 `{type:"io.command", ok, status: ok|mismatch|readback_unavailable, expected, actual, address}`。
 
-### 4.2 产能 × 报警联表 —— `ProdAlarmTools`（`AlarmTools.cs`）
+### 7.5 设备命令 —— `Tool.*`
+- `StartMachine/PauseMachine/ResetMachine/ClearMachineAlarms/VisionCalibrateMachine/QuickInspectionMachine` 与 UI 相同：POST `http://127.0.0.1:8081`，等待 `{status:"ok"}`。
+- `Tool.SendCommand` 默认 5000 ms 超时；如需其他动作（如 `IoWrite`）由上层指定 `actionName`。
+- 所有 `Tool.*` 调用必须串行执行（Agent 完成一条命令后才能发下一条），并在日志中注明人类可读摘要。
 
-- 依赖 `CsvProductionRepository` + `AlarmCsvRepository`（均使用配置路径）。缺任一文件会记录 `warnings`，但尽量返回其他信息。
-- 主要方法：
-  - `GetHourlyProdWithAlarms(date, startHour?, endHour?)` → `type = "prod.hourly.with.alarms"`，每小时提供 `pass/fail/total/yield`、报警次数/秒数以及 Top1 报警代码。  
-  - `GetAlarmImpactSummary(startDate, endDate, window?, lowYieldThreshold=95)` → `type = "prod.alarm.impact"`：返回报警秒数与产量/良率的 Pearson 相关系数、逐小时负载、低良率小时 `rows`、Top 报警代码、`byDay` 聚合以及 `warnings`。  
-  - `GetTopAlarmsDuringLowYield(startDate, endDate, threshold=95, window?)` → `type = "prod.low_yield.top_alarms"`，筛出低良率小时，汇总 `rows` + 报警 Top。  
-  - `AnalyzeProdAndAlarmsNL(text, lowYieldThreshold?)` → 解析自然语言日期/时段，再调用 `GetAlarmImpactSummary`。
+---
 
-### 4.3 报警 CSV 专用 —— `AlarmCsvTools`（同文件）
-
-- `AlarmCsvTools.WarmLogPath` 在 `Program.cs` 中赋值为 `appCfg.WarmLogPath`（默认 `D:\`，可在 `MCPAppConfig.json` 自定义至 `D:\Data\Alarms` 等）。
-- 公开工具：
-  - `GetAlarmRangeWindowSummary(startDate, endDate, window?, topN=10, sortBy="duration")`  
-    - 验证输入格式（`yyyy-MM-dd` + `HH-HH` / `HH:MM-HH:MM`），读区间内所有 `yyyy-MM-dd.csv`，输出 `{type="alarm.range.summary", totals, byCategory, top}`。  
-  - `QueryAlarms(startDate, endDate, code?, keyword?, window?, take=50)`  
-    - 读取区间报警明细后按代码/关键字过滤，返回 `{type="alarm.query", rows:[...], totalCount, durationSeconds}`，供 Agent 展示引用样本。
-
-### 4.4 IO 工具 —— `IoMcpTools` + `IoMapRepository`
-
-- `IoMapRepository.LoadFromXlsx(ioCsv)` 在 `Program.cs` 启动时执行，Excel 列表需按照 `GROUPS` 中定义的列号（示例：第 1 列是名称，第 9 列是另一组），自动计算 `CloseAddress`/`OpenAddress` 与 `CheckAddress + CheckIndex`。  
-- `IoMcpTools.IoCommand(ioName, op)`  
-  - `op` 只接受 open/close（含中/英 alias）；拒绝 toggle。  
-  - 通过 `Tool.SendCommand("IoWrite", ...)` 写入地址（始终写 `on`），返回 JSON：  
-    ```json
-    {
-      "type": "io.command",
-      "ok": true,
-      "status": "ok | mismatch | readback_unavailable",
-      "io": "Clamp#03",
-      "intent": "open",
-      "expected": true,
-      "actual": true,
-      "address": "30001"
-    }
-    ```  
-  - 出现超时/异常会返回 `ok=false` 以及 `status="timeout"` 或 `message`。
-
-### 4.5 设备命令 —— `Tool.*`（`MCPTools.cs`）
-
-- `StartMachine` / `PauseMachine` / `ResetMachine` / `ClearMachineAlarms` / `VisionCalibrateMachine` / `QuickInspectionMachine`（以及示例 `GetCurrentTime`、`OpenThisPC`）。  
-- 最终都调用 `SendCommand(action, actionName, args = Tool.PD(...), target?, timeoutMs=5000)`，请求体：
-  ```json
-  {
-    "action": "StartMachine",
-    "target": { "station": "T66-01", "device": "IO1" },
-    "params": { "mode": "auto" }
-  }
-  ```
-  - POST 至 `http://127.0.0.1:8081`，解析回复 JSON（若 `status=="ok"` 视为成功，否则把原文返回）。
-  - 所有 Agent 写入都必须串行执行：上一条命令未拿到结果不得发送下一条。
-- WPF `MachineControl` 与 `IoMcpTools` 共用同一设备 API，因此在改动 Base URL/接口时必须同步更新两个位置。
-
-### 4.6 WorkHttpServer（本地 webhook）契约
-
-- 监听地址：`http://127.0.0.1:8091/`（`MainWindow` 启动时拉起，可改 `prefix`）。需要事先执行 `netsh http add urlacl url=http://127.0.0.1:8091/ user=<域\用户>`。  
-- 只接受 `POST`，JSON 体示例：
+## 8. Workflow / Webhook 契约
+- `WorkHttpServer` 默认监听 `http://127.0.0.1:8091/`，必须提前执行 `netsh http add urlacl url=http://127.0.0.1:8091/ user=<DOMAIN\User>` 授权。
+- 请求示例：
   ```json
   {
     "errorCode": "E203.1",
@@ -189,97 +200,65 @@ WorkHook[WorkHttpServer @8091] -- Trigger JSON --> DifyWorkflowClient --> Assist
     "onlyMajorNodes": true
   }
   ```
-  - 内部会抓取 `AIAssistantView.GlobalInstance` 作为输出承载；若 `_gate` 已被占用，则返回 `429 { ok:false, busy:true }`。  
-  - 调用成功仅返回 `"accepted"`，全部内容输出都走 AIAssistant UI。
+- 成功返回 `{"ok":true,"busy":false,"msg":"accepted"}`，所有输出直接注入 `AIAssistantView.GlobalInstance`。
+- 若 `_gate` 被占用，立即返回 `429`；调用方需稍后重试或等人工终止当前 Workflow。
 
 ---
 
-## 5. 配置、构建与运行
-
-1. **配置文件**  
-   - `EW_Assistant.Services.ConfigService.FilePath = D:\AppConfig.json`  
-     - 需要手动创建/编辑，至少填好 `CsvRootPath`（小时产量 CSV 目录）、`AlarmLogPath`（报警 `yyyy-MM-dd.csv`）、`ChatURL/ChatKey`（Dify Chat API）、`AutoURL/AutoKey`（Workflow API）。  
-   - `McpServer.Base.ReadAppConfig()` 固定读取 `D:\MCPAppConfig.json`，字段：`ProductionLogPath`、`WarmLogPath`（报警 CSV 根目录）、`IoMapCsvPath`（Excel 映射）、`MCPServerIP`（例如 `"http://127.0.0.1:5005"`）。缺失会写入默认模板并保证文件夹存在。
-
-2. **构建 & 拷贝**  
-   - `McpServer` 目标框架 `net8.0`，编译后需把 `bin/<Config>/net8.0/**` 同步到 WPF 输出目录的 `McpServer/`。可在 `EW-Assistant.csproj` 加入：
-     ```xml
-     <Target Name="CopyMcpOnBuild" AfterTargets="Build">
-       <ItemGroup>
-         <McpFiles Include="$(SolutionDir)McpServer\bin\$(Configuration)\net8.0\**\*.*" />
-       </ItemGroup>
-       <MakeDir Directories="$(OutDir)McpServer" />
-       <Copy SourceFiles="@(McpFiles)"
-             DestinationFolder="$(OutDir)McpServer\%(RecursiveDir)"
-             SkipUnchangedFiles="true" />
-     </Target>
-     ```
-
-3. **运行顺序**  
-   - 先启 `dotnet run --project McpServer/McpServer.csproj /property:Configuration=Release`（或发布自带服务）。  
-   - 再开 `EW-Assistant.exe`，它会自动启动 8091 webhook 并允许手工操作。  
-   - 若要在 UI 中一键启动 MCP，可在 `MainWindow`/`Configuration` 里增加检测逻辑（目前未实现）。
-
-4. **本地设备 API**  
-   - `MachineControl` 与 MCP `Tool.SendCommand` 均把命令发往 `http://127.0.0.1:8081`，并期望返回 `{status:"ok", message:"..."}`。更换端口/协议时必须同步修改 `MCPTools.cs` 与 `MachineControl.xaml.cs`。
+## 9. 配置与目录
+- **`D:\AppConfig.json`（WPF）**：`CsvRootPath`、`AlarmLogPath`、`ChatURL`、`ChatKey`、`AutoURL`、`AutoKey`。由 `ConfigService` 负责读写并广播 `ConfigChanged`，缺失时自动写入默认模板。
+- **`D:\MCPAppConfig.json`（MCP）**：`ProductionLogPath`、`WarmLogPath`、`IoMapCsvPath`、`MCPServerIP`。必须提供可写目录，并确保 `MCPServerIP` 包含 `http://` 前缀；修改后需重启 MCP。
+- **日志目录**：`D:\Data\AiLog\Chat\yyyy-MM-dd.txt`（聊天） / `D:\Data\AiLog\Auto\yyyy-MM-dd.txt`（Workflow）；`MainWindow` UI 中仅缓存最近 200 条。
+- **McpServer 可执行文件**：`EW-Assistant` 输出目录下需存在 `McpServer\McpServer.exe`，供 `McpServerProcessHost` 自动启动/附着；请在发布后复制 net8.0 输出。
 
 ---
 
-## 6. 安全、审计与并发约束
-
-- **串行执行**  
-  - `DifyWorkflowClient` 使用 `_gate (SemaphoreSlim)`，保证任何时刻只有一条 Workflow 在跑；`WorkHttpServer` 忙时返回 429。  
-  - `IoMcpTools.IoCommand` 在 `Tool.SendCommand("IoWrite")` 之后立即解析读回位，如无 readback 视为失败。
-
-- **人工确认 & 审批**  
-  - `MachineControl` 的所有按钮都调用 `ConfirmThenSendAsync(...)`，默认按钮文本/确认文案已经写明风险。  
-  - Agent 写操作（`Tool.*` / `IoMcpTools`）必须在 UI 二次确认后才能真的执行。
-
-- **日志与追溯**  
-  - `DifyChatAdapter.WriteLog` → `D:\Data\AiLog\Chat\yyyy-MM-dd.txt`（记录每次 SSE 会话）。  
-  - `DifyWorkflowStreaming` → `D:\Data\AiLog\Auto\yyyy-MM-dd.txt`。  
-  - `MainWindow.PostProgramInfo` 在 UI 底部滚动区域保留最近 200 条事件，便于人工审查。
-
-- **失败处理**  
-  - MCP 工具若遇到缺 CSV / 报警文件 / IO 映射，统一返回 `{type:"error", where:"...", message:"..."}`，Agent 必须将错误转换成「只读解释 + 人工建议」，而不是继续写操作。
+## 10. 构建与运行
+1. **编译 MCP**  
+   ```powershell
+   dotnet publish McpServer/McpServer.csproj -c Release -o ..\EW-Assistant\bin\Release\net48\McpServer
+   ```  
+   或发布到任意文件夹再手动复制；确保 `McpServer.exe`、`Tray` 资源与 `appsettings*.json` 均在该目录。
+2. **（可选）自动复制**：可在 `EW-Assistant.csproj` 添加 `CopyMcpOnBuild` Target，将 `McpServer\bin\<Config>\net8.0\**` 同步到 `$(OutDir)McpServer\%(RecursiveDir)`。
+3. **编译 WPF**：使用 VS 或 `msbuild EW-Assistant.sln /p:Configuration=Release /m`，目标平台 AnyCPU（Debug 默认 x64）。
+4. **运行顺序**：先启动 `McpServer.exe`（或依赖 `MainWindow` 自动拉起），再运行 `EW-Assistant.exe`；若 MCP 已在其他目录运行，`McpServerProcessHost` 会在日志中告警，需要人工确认是否关闭外部实例。
 
 ---
 
-## 7. 健康检查与常见问题
+## 11. 安全 / 审计 / 并发
+- `DifyWorkflowClient` 使用 `SemaphoreSlim` 串行化自动化工作流，防止多个 Workflow 同时操作 MCP 工具。
+- `WorkHttpServer` 在忙碌时直接返回 429，避免外部系统重复触发；所有 webhook 请求与响应都会写入 `ProgramInfo`。
+- `MachineControl`、`Tool.*`、`IoMcpTools.*` 统一通过 `MainWindow.PostProgramInfo` 记录命令、状态、异常；人机共用同一个 8081 API，确保审计线索齐全。
+- 每个写操作都需要人工确认：UI 按钮有弹窗，Agent 必须在 System Prompt 中要求人工批准（Quick Prompt 已包含提醒）。
+- `IoMcpTools` 在写入后立即解析 16 位读回，`status!="ok"` 时必须停止后续操作；若无读回能力则返回 `readback_unavailable`。
+- 日志与配置均保存在本地磁盘，不得由 Agent 擅自上传；如遇缺失 CSV/报警文件，MCP 会返回 `type:"error"`，Agent 只能输出只读解释。
 
-| 项目 | 检查方式 | 常见问题 & 处理 |
+---
+
+## 12. 健康检查与排障
+| 项目 | 检查方式 | 常见问题 & 处置 |
 | --- | --- | --- |
-| MCP Host | 访问 `http://<MCPServerIP>/` 应返回 `"MCP Server (local bridge) running on localhost"`；或使用 MCP 客户端调用 `Tool.GetCurrentTime` | 若端口占用，`app.Run` 会抛异常；更新 `MCPAppConfig.json` → 重启 |
-| 产能 CSV | 调用 `ProdCsvTools.GetProductionSummary` | `message: 未找到当天 CSV` → 检查 `ProductionLogPath`、文件名 `小时产量yyyyMMdd.csv` 是否齐全 |
-| 报警 CSV | 调用 `ProdAlarmTools.GetHourlyProdWithAlarms` 或 `AlarmCsvTools.GetAlarmRangeWindowSummary` | 缺文件会写入 `warnings`；确认 `WarmLogPath` 指向 `yyyy-MM-dd.csv` 文件夹 |
-| IO 映射 | `IoMcpTools.IoCommand(ioName="...")` | 如果返回 `IO 映射未加载` → 检查 `D:\MCPAppConfig.json` 的 `IoMapCsvPath` 和 Excel 格式；需重启 MCP 重新加载 |
-| Workflow Hook | `curl -X POST http://127.0.0.1:8091/ -d '{"prompt":"..."}'` | 报 `busy` ⇒ UI 正在跑自动化；等 `_gate` 释放或调用 `RunAutoAnalysisExclusiveAsync` 主动终止 |
-| SSE / Chat | 在 ConfigView 填好 `ChatURL/ChatKey`，点击 Quick Prompt 验证 | 若返回 401/403，检查 Dify Key；若 UI 无输出，查看 `D:\Data\AiLog\Chat` 是否写入 |
+| MCP 服务 | 浏览 `http://<MCPServerIP>/` 或调用 `Tool.GetCurrentTime` | 端口占用/URL 缺少 `http://`：更新 `D:\MCPAppConfig.json` 并重启 |
+| MCP 托盘 / Host | 查看系统托盘是否有 “MCP Server 运行” 图标；或查 `MainWindow` 日志出现 “MCP Server 已启动 PID=xxx” | 若提示“检测到其他目录的 MCP Server”，需先关闭外部实例 |
+| WorkHttpServer | `curl -X POST http://127.0.0.1:8091/ -d '{"prompt":"test"}'` | 返回 429 ⇒ Workflow 正在运行；若提示 urlacl，需以管理员执行 `netsh http add urlacl ...` |
+| 产能 CSV | `ProdCsvTools.GetProductionSummary` | `message: 未找到 CSV` ⇒ 检查 `CsvRootPath`、文件命名（无扩展、含 BOM） |
+| 报警 CSV | `AlarmCsvTools.GetAlarmRangeWindowSummary` | `warnings` / `type:"error"` ⇒ 核对 `AlarmLogPath` 或文件编码（GB2312） |
+| IO 映射 | `IoMcpTools.IoCommand(ioName="...")` | 返回 “IO 映射未加载” ⇒ 检查 `IoMapCsvPath`、Excel 列布局（当前只解析第 1/9 列），重启 MCP |
+| Dify Chat/Workflow | 在 AIAssistant 中点击 Quick Prompt | 401/403 ⇒ 检查 `ChatKey/AutoKey`；UI 无输出 ⇒ 查看 `D:\Data\AiLog\Chat` 是否写入 |
 
 ---
 
-## 8. 扩展/新增 Agent 的步骤
-
-1. **MCP 层**：在 `McpServer` 新增 `[McpServerTool]`（优先只读），并更新 `MCPAppConfig` / Excel 映射等依赖。  
-2. **Dify 配置**：为新 Agent 定制 System Prompt & 工具白名单，只授予需用的 `ProdCsvTools.*`、`ProdAlarmTools.*` 等。  
-3. **WPF 入口**：在 `AIAssistantView` 或其他视图增加按钮/模板，把 Agent 名称/白名单注入提示词。  
-4. **安全钩子**：写操作需走 UI 确认 + 日志；必要时在 `MachineControl` 或 MCP 工具里补充双读回/回滚逻辑。  
-5. **验证**：提交前附至少 1 组成功日志 + 1 组失败/越权日志（证明安全边界仍生效），并更新本文的白名单/契约章节。
-
----
-
-## 9. 示例用户语句
-
-- 「生成 **今天 0–24 点** 的产能日报，缺 CSV 要灰显并写 `warnings`，不要输出 JSON。」→ 触发 Quick Prompt，使用 `ProdCsvTools.GetHourlyStats` + `GetProductionSummary`。  
-- 「最近 2 天 10:00–14:00 的产出与报警相关性？列出低于 93% 的小时及 Top 报警。」→ `ProdAlarmTools.GetAlarmImpactSummary`。  
-- 「查询 11 月 5–9 日的报警 Top10（按 duration），以及代码 `E203.1` 的原始记录。」→ 组合 `AlarmCsvTools.GetAlarmRangeWindowSummary` + `QueryAlarms`。  
-- 「清除报警 → 复位 → 启动，逐步执行并确认读回。」→ `IoMcpTools.IoCommand`（若涉及 IO）+ `Tool.ClearMachineAlarms/ResetMachine/StartMachine`，每步等成功再继续。
+## 13. 示例提示词
+- 「生成 **今天 0–24 点** 的产能日报，缺 CSV 要写 `warnings`，只允许 Markdown。」→ 触发 Quick Prompt，调用 `GetHourlyStats` + `GetProductionSummary`。
+- 「输出 **今天报警日报**，列出报警 Top、低良率时段、平均响应时间，禁止 JSON。」→ Quick Prompt 调用 `GetHourlyProdWithAlarms` + `GetAlarmImpactSummary`。
+- 「最近 48 小时 10:00–14:00 的产能与报警相关性？列出 <93% 的小时及 Top 报警。」→ `ProdAlarmTools.GetAlarmImpactSummary`（window 参数）。
+- 「查询 11 月 5–9 日报警 Top10（按 duration）并附代码 `E203.1` 样本。」→ `AlarmCsvTools.GetAlarmRangeWindowSummary` + `QueryAlarms`。
+- 「清除报警 → 复位 → 启动，逐步执行并确认读回。」→ 先人工确认，再串行调用 `Tool.ClearMachineAlarms` / `Tool.ResetMachine` / `Tool.StartMachine`，必要时穿插 `IoMcpTools.IoCommand`。
 
 ---
 
-## 10. 维护提醒
-
-- 任何新增/改名的 MCP 工具、配置字段、JSON 字段，都要同步更新 **§4 工具白名单** 与相关 Quick Prompt，确保 UI & Agent 描述一致。  
-- PR 需附至少 1 组正向日志 + 1 组失败/拦截日志，验证写操作确实触发审计与回退。  
-- 再次强调：`AlarmLogCache` / `AlarmLogCompute` 仅供 `DashboardView` 使用；`AlarmView` 走自身逻辑，若后续想复用请先抽象 `IAlarmReadOnlyStore` 并在 UI 层注入。
-
+## 14. 维护提醒
+- 新增/改名 MCP 工具、配置字段、JSON schema、Quick Prompt 时务必同步更新本文档与 UI 描述，确保 Agent 白名单与 Dify 配置一致。
+- `AlarmLogCache` / `AlarmLogCompute` 仅存在于 `DashboardView.xaml.cs`，不要直接在其他模块复用；如需共享请先抽象接口。
+- `ProductionBoardView` 与 `ProdCsvTools` 使用同一 CSV 解析逻辑，产线 CSV 格式有改动时需要同时调整两个视图与 MCP 仓库。
+- 发布版本前至少保留一组成功日志 + 一组失败/越权日志，验证写操作确实触发审计与回退；变更设备 API 地址时，请同步更新 `MCPTools.cs` 与 `Views/MachineControl.xaml.cs`。
