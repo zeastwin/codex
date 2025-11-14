@@ -728,6 +728,113 @@ namespace EW_Assistant.Views
             SendCurrentAsyncByInfo(prompt);
         }
 
+        private void QuickWeeklyReportBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var endDt = DateTime.Today;
+            var startDt = endDt.AddDays(-6);
+            var endDate = endDt.ToString("yyyy-MM-dd");
+            var startDate = startDt.ToString("yyyy-MM-dd");
+            var range = $"{startDate} ~ {endDate}";
+
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"请输出 **{range}（最近7天）** 的产能周报，必须使用 Markdown，禁止 JSON、原始日志或随意发挥。");
+            sb.AppendLine();
+            sb.AppendLine("请按以下步骤执行：");
+            sb.AppendLine($"1) 仅调用 MCP 工具 GetWeeklyProductionSummary(endDate=\"{endDate}\")，取得 `summary`（pass/fail/total/yield/avgYield/medianTotal/volatility/lastDay/bestDays/worstDays）与 `days`（逐日明细）以及 `warnings`。");
+            sb.AppendLine("2) 所有周度 KPI 均直接引用 summary；日度表格来自 days。禁止私自补算缺失字段。");
+            sb.AppendLine("3) 若 warnings 不为空或某天缺 CSV，须在“异常/缺失”章节逐条说明，并在日度表中标注原因。");
+            sb.AppendLine("4) 基于 bestDays/worstDays/lastDayDelta 给出有洞见的亮点、薄弱点与改进建议。");
+            sb.AppendLine();
+            sb.AppendLine("输出模板（章节与表头不可删改，可补充描述）：");
+            sb.AppendLine($"# 产能周报（{range}）");
+            sb.AppendLine();
+            sb.AppendLine("## 周度KPI");
+            sb.AppendLine("| 指标 | 数值 | 说明 |");
+            sb.AppendLine("|---|---:|---|");
+            sb.AppendLine("| PASS 总量 | {summary.pass 千分位} | Σpass |");
+            sb.AppendLine("| FAIL 总量 | {summary.fail 千分位} | Σfail |");
+            sb.AppendLine("| 总产量 | {summary.total 千分位} | PASS+FAIL |");
+            sb.AppendLine("| 周整体良率 | {summary.yield 百分比2位} | summary.pass/summary.total |");
+            sb.AppendLine("| 周均良率 | {summary.avgYield 百分比2位} | days 平均 yield |");
+            sb.AppendLine("| 中位产量 | {summary.medianTotal 千分位} | days 中位 total |");
+            sb.AppendLine("| 产能波动 CV | {summary.volatility 百分比2位} | std(total)/avg(total) |");
+            sb.AppendLine("| 最后1天 vs 周均 | {summary.lastDayDelta.total 百分比1位}/{summary.lastDayDelta.yield 百分比1位} | 产量/良率偏差 |");
+            sb.AppendLine();
+            sb.AppendLine("## 日度表现");
+            sb.AppendLine("| 日期 | PASS | FAIL | 总量 | 良率 | 备注 |");
+            sb.AppendLine("|---|---:|---:|---:|---:|---|");
+            sb.AppendLine("按 days 的顺序逐日渲染，备注写明 warnings 对应的缺失、异常或特别说明。");
+            sb.AppendLine();
+            sb.AppendLine("## 重点洞察");
+            sb.AppendLine("- 亮点：引用 summary.bestDays 中的事实说明高产工况。");
+            sb.AppendLine("- 薄弱：引用 summary.worstDays 分析瓶颈、对周均的拖累。");
+            sb.AppendLine("- 趋势：描述 7 天走势、峰谷出现时间以及 summary.lastDay/lastDayDelta。");
+            sb.AppendLine();
+            sb.AppendLine("## 风险与改进");
+            sb.AppendLine("- 给出 2–3 条可执行措施，包含负责人/验证指标/预期收益。");
+            sb.AppendLine();
+            sb.AppendLine("## 异常/缺失");
+            sb.AppendLine("- 若存在工具报错或缺 CSV，逐条列出；否则写“无”。");
+            sb.AppendLine();
+            sb.AppendLine("> 所有指标必须来自 GetWeeklyProductionSummary 的结果，严禁输出 JSON。");
+
+            var prompt = sb.ToString();
+            try { MainWindow.PostProgramInfo("AI产能周报提示注入完成", "info"); } catch { }
+            SendCurrentAsyncByInfo(prompt);
+        }
+
+        private void QuickWeeklyAlarmBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var endDate = TodayStr();
+            var startDate = DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd");
+            var range = $"{startDate} ~ {endDate}";
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"请输出 **{range}（最近7天）** 的报警周报，仅允许 Markdown 表达，禁止 JSON/原始日志。");
+            sb.AppendLine();
+            sb.AppendLine("执行步骤：");
+            sb.AppendLine($"1) 调用 ProdAlarmTools.GetAlarmImpactSummary(startDate=\"{startDate}\", endDate=\"{endDate}\", window=\"\")，获取 byDay/byHour/topAlarms/rows/Pearson 相关/warnings。");
+            sb.AppendLine($"2) 调用 AlarmCsvTools.GetAlarmRangeWindowSummary(startDate=\"{startDate}\", endDate=\"{endDate}\", window=\"\", topN=10, sortBy=\"duration\")，得到类别占比与 top 列表。");
+            sb.AppendLine("3) 若需引用案例，可使用 QueryAlarms(startDate, endDate, code=某个 topAlarmCode, keyword=\"\", take=3) 抽取样本，写明开始时间/代码/描述/持续时长。");
+            sb.AppendLine("4) 报告需覆盖：低良率小时（rows）、报警对良率/产量的影响、主要报警类别、Top 报警原因与措施，以及 warnings。");
+            sb.AppendLine();
+            sb.AppendLine("输出模板：");
+            sb.AppendLine($"# 报警周报（{range}）");
+            sb.AppendLine();
+            sb.AppendLine("## 周度KPI");
+            sb.AppendLine("| 指标 | 数值 | 说明 |");
+            sb.AppendLine("|---|---:|---|");
+            sb.AppendLine("| 报警次数 | {week_alarm_count 千分位} | Σ alarmCount |");
+            sb.AppendLine("| 报警总时长 | {week_alarm_seconds 转 xhym} | Σ alarmSeconds |");
+            sb.AppendLine("| 平均单次时长 | {avg_duration 秒1位} | week_alarm_seconds / max(1, week_alarm_count) |");
+            sb.AppendLine("| 覆盖小时数 | {active_hours}/168 | seconds>0 的小时数 |");
+            sb.AppendLine("| 低良率小时 | {rows.Count 千分位} | rows（yield<threshold） |");
+            sb.AppendLine("| 报警-良率相关 | {pearson 百分比2位} | alarmSeconds_vs_yield r |");
+            sb.AppendLine();
+            sb.AppendLine("## 日度趋势");
+            sb.AppendLine("| 日期 | 报警次数 | 报警时长 | 良率 | Top 报警 |");
+            sb.AppendLine("|---|---:|---:|---:|---|");
+            sb.AppendLine("按日期升序展示 byDay，并写出当日时长最高的报警代码/现象。");
+            sb.AppendLine();
+            sb.AppendLine("## 低良率与 Top 报警");
+            sb.AppendLine("- 罗列 rows 里的关键小时：`HH:00-HH+1:00 / yield / alarmSeconds / topAlarmCode`，解释低良率原因。");
+            sb.AppendLine("- 结合 topAlarms 与 AlarmRangeSummary.top，分析前三大报警对产能/良率的影响与占比。");
+            sb.AppendLine();
+            sb.AppendLine("## 样本与措施");
+            sb.AppendLine("- 至少给出 2–3 条典型报警样本（开始时间、代码、描述、持续时间、涉及工序），并写 L1/L2 处置及验证指标。");
+            sb.AppendLine("- 汇总需要升级的系统性问题与预计关闭时间。");
+            sb.AppendLine();
+            sb.AppendLine("## 异常/缺失");
+            sb.AppendLine("- 把 warnings、缺 CSV 或工具报错逐条列出；若无则写“无”。");
+            sb.AppendLine();
+            sb.AppendLine("> 严格使用 Markdown，所有结论都须引用上述工具。");
+
+            var prompt = sb.ToString();
+            try { MainWindow.PostProgramInfo("AI报警周报提示注入完成", "info"); } catch { }
+            SendCurrentAsyncByInfo(prompt);
+        }
+
         // 低良率扫描（当天，阈值可调） —— 升级版
         private void BtnLowYield_Click(object sender, RoutedEventArgs e)
         {

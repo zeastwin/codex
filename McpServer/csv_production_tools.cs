@@ -202,6 +202,114 @@ public static class ProdCsvTools
         return Task.FromResult(JsonConvert.SerializeObject(payload));
     }
 
+    [McpServerTool, Description("获取最近 7 天的产能汇总，提供周度 KPI、日度明细与告警提示，方便一次性生成周报")]
+    public static Task<string> GetWeeklyProductionSummary(
+        [Description("周统计的结束日期（含当天），yyyy-MM-dd，默认今天")] string endDate = "")
+    {
+        var now = DateTime.Now;
+        var endInput = string.IsNullOrWhiteSpace(endDate) ? now.ToString("yyyy-MM-dd") : endDate;
+        if (!TryParseSmartDate(endInput, now, out var endDay))
+            return Task.FromResult(JsonConvert.SerializeObject(new { type = "error", where = "GetWeeklyProductionSummary", message = "endDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" }));
+
+        endDay = endDay.Date;
+        var startDay = endDay.AddDays(-6);
+
+        var dayRecords = new List<(DateTime date, int pass, int fail, int total, double yield, string warning)>();
+        var warnings = new List<string>();
+        int totalPass = 0, totalFail = 0;
+
+        for (var d = startDay; d <= endDay; d = d.AddDays(1))
+        {
+            if (CsvProductionRepository.TryLoadDay(d, out var ds, out var err))
+            {
+                var total = ds.Pass + ds.Fail;
+                var y = total == 0 ? 0 : Math.Round(ds.Pass * 100.0 / total, 2);
+                dayRecords.Add((d, ds.Pass, ds.Fail, total, y, null));
+                totalPass += ds.Pass;
+                totalFail += ds.Fail;
+            }
+            else
+            {
+                var warn = $"{d:yyyy-MM-dd} 缺失CSV：{err}";
+                warnings.Add(warn);
+                dayRecords.Add((d, 0, 0, 0, 0.0, warn));
+            }
+        }
+
+        var totals = dayRecords.Select(x => x.total).ToArray();
+        var yields = dayRecords.Select(x => x.yield).ToArray();
+
+        var grandTotal = totalPass + totalFail;
+        var weekYield = grandTotal == 0 ? 0 : Math.Round(totalPass * 100.0 / grandTotal, 2);
+        var avgYield = yields.Length == 0 ? 0 : Math.Round(yields.Average(), 2);
+        var medianTotal = Math.Round(CalcMedian(totals), 2);
+        var avgTotal = totals.Length == 0 ? 0 : totals.Average();
+        var variance = totals.Length == 0 ? 0 : totals.Sum(t => Math.Pow(t - avgTotal, 2)) / (totals.Length == 0 ? 1 : totals.Length);
+        var volatility = avgTotal == 0 ? 0 : Math.Round(Math.Sqrt(variance) / avgTotal * 100.0, 2);
+
+        var lastDay = dayRecords.LastOrDefault();
+        var lastDayInfo = new
+        {
+            date = lastDay.date.ToString("yyyy-MM-dd"),
+            pass = lastDay.pass,
+            fail = lastDay.fail,
+            total = lastDay.total,
+            yield = lastDay.yield
+        };
+        var lastDayDelta = new
+        {
+            total = avgTotal == 0 ? 0 : Math.Round((lastDay.total - avgTotal) * 100.0 / avgTotal, 1),
+            yield = Math.Round(lastDay.yield - avgYield, 1)
+        };
+
+        var bestDays = dayRecords
+            .OrderByDescending(x => x.total)
+            .ThenBy(x => x.date)
+            .Take(3)
+            .Select(x => new { date = x.date.ToString("yyyy-MM-dd"), pass = x.pass, fail = x.fail, total = x.total, yield = x.yield })
+            .ToList();
+
+        var worstDays = dayRecords
+            .OrderBy(x => x.total)
+            .ThenBy(x => x.date)
+            .Take(3)
+            .Select(x => new { date = x.date.ToString("yyyy-MM-dd"), pass = x.pass, fail = x.fail, total = x.total, yield = x.yield })
+            .ToList();
+
+        var payload = new
+        {
+            type = "prod.weekly.summary",
+            startDate = startDay.ToString("yyyy-MM-dd"),
+            endDate = endDay.ToString("yyyy-MM-dd"),
+            summary = new
+            {
+                pass = totalPass,
+                fail = totalFail,
+                total = grandTotal,
+                yield = weekYield,
+                avgYield,
+                medianTotal,
+                volatility,
+                lastDay = lastDayInfo,
+                lastDayDelta,
+                bestDays,
+                worstDays
+            },
+            days = dayRecords.Select(x => new
+            {
+                date = x.date.ToString("yyyy-MM-dd"),
+                pass = x.pass,
+                fail = x.fail,
+                total = x.total,
+                yield = x.yield,
+                warning = x.warning ?? string.Empty
+            }),
+            warnings
+        };
+
+        return Task.FromResult(JsonConvert.SerializeObject(payload));
+    }
+
     // 2) 查询某天按小时明细（可选起止小时）
     [McpServerTool, Description("查询某天按小时的 PASS/FAIL 明细（可选 startHour/endHour，范围0-23）。默认今天全时段。")]
     public static Task<string> GetHourlyStats(
@@ -480,5 +588,14 @@ public static class ProdCsvTools
     {
         var o = new { type = "error", where, message = msg };
         return JsonConvert.SerializeObject(o);
+    }
+
+    private static double CalcMedian(IReadOnlyList<int> values)
+    {
+        if (values == null || values.Count == 0) return 0;
+        var ordered = values.OrderBy(v => v).ToArray();
+        int mid = ordered.Length / 2;
+        if (ordered.Length % 2 == 1) return ordered[mid];
+        return (ordered[mid - 1] + ordered[mid]) / 2.0;
     }
 }

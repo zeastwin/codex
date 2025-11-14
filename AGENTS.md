@@ -153,12 +153,14 @@ McpServer\McpServer.exe` 拉起；应用退出时统一停止。
 ---
 
 ## 7. 工具白名单与契约
+- **使用准则**：在撰写 Prompt 或调用 MCP 工具前，必须先检索 `McpServer` 项目中 `[McpServerTool]` 的真实定义，确认目标函数确实已对外暴露；若仓库未实现，则应先在 `McpServer` 中补齐该工具，再引导 Agent 调用，禁止虚构接口。
 ### 7.1 产能 CSV —— `ProdCsvTools`
 - `GetProductionSummary(date?)`：返回 `{type:"prod.summary", date, pass, fail, total, yield}`。
 - `GetHourlyStats(date?, startHour?, endHour?)`：`{type:"prod.hours", hours:[], subtotal:{}}`，小时 0–23 一律补齐。
 - `QuickQueryWindow(date?, window)`：语法糖 `HH-HH`/`HH:MM-HH:MM`，内部仍用 `GetHourlyStats`。
 - `GetSummaryLastHours(lastHours=4, until?)`：跨天滚动窗口，附 `warnings`（缺文件、跨日）。
 - `GetProductionRangeSummary(startDate, endDate)`：`days = [{date, pass, fail, total, yield}]`，额外附 `markdown` 片段方便 UI 直接展示。
+- `GetWeeklyProductionSummary(endDate?)`：返回 `{type:"prod.weekly.summary", startDate, endDate, summary, days, warnings}`，其中 `summary` 含周度 KPI（pass/fail/total/yield/avgYield/medianTotal/volatility/lastDay/bestDays/worstDays），`days` 为连续 7 天日度明细；默认 `endDate=今天`。
 - 所有函数在文件缺失时返回 `{type:"error", message:"未找到 CSV"}`；Agent 必须据实汇报。
 
 ### 7.2 产能 × 报警 —— `ProdAlarmTools`
