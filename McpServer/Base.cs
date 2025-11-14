@@ -129,7 +129,6 @@ namespace McpServer
         {
             TryCreateDirectory(cfg.ProductionLogPath);
             TryCreateDirectory(cfg.WarmLogPath);
-            TryCreateDirectory(cfg.IoMapCsvPath);
         }
 
         private static void TryCreateDirectory(string path)
