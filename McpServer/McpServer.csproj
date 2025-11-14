@@ -24,6 +24,12 @@
     <Folder Include="Controllers\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Tray\wrench.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <Target Name="CopyMcpToAssistantBin" AfterTargets="Build">
     <!-- 构建后把 MCP 输出复制到 WPF 发布目录 -->
     <ItemGroup>

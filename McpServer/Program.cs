@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using EW_Assistant.Io;
@@ -119,6 +120,7 @@ namespace McpServer
     internal sealed class McpTrayContext : ApplicationContext
     {
         private readonly NotifyIcon _notifyIcon;
+        private readonly Icon _trayIcon;
         private readonly ContextMenuStrip _menu;
         private readonly Action<bool> _exitCallback;
         private bool _exitHandled;
@@ -127,11 +129,12 @@ namespace McpServer
         {
             _exitCallback = exitCallback;
 
-            _menu = BuildMenu();
+                        _menu = BuildMenu();
+            _trayIcon = LoadTrayIcon();
             _notifyIcon = new NotifyIcon
             {
-                Icon = SystemIcons.Application,
-                Text = "MCP Server 服务",
+                Icon = _trayIcon,
+                Text = "MCP Server",
                 ContextMenuStrip = _menu,
                 Visible = true
             };
@@ -170,9 +173,30 @@ namespace McpServer
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
                 _menu.Dispose();
+                _trayIcon?.Dispose();
             }
 
             base.Dispose(disposing);
+        }
+
+        private static Icon LoadTrayIcon()
+        {
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory ?? AppContext.BaseDirectory;
+                if (!string.IsNullOrWhiteSpace(baseDir))
+                {
+                    var iconPath = Path.Combine(baseDir, "Tray", "wrench.ico");
+                    if (File.Exists(iconPath))
+                        return new Icon(iconPath);
+                }
+            }
+            catch
+            {
+                // 忽略异常，使用系统默认图标
+            }
+
+            return (Icon)SystemIcons.Application.Clone();
         }
     }
 }

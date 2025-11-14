@@ -126,26 +126,6 @@ namespace EW_Assistant.Views
             ReloadAll(animate: false, reloadWeek: true);
         }
 
-        private void BtnCopySummary_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var summary = BuildClipboardSummary();
-                if (string.IsNullOrEmpty(summary))
-                {
-                    MainWindow.PostProgramInfo("暂无可复制的数据，请先加载当日 CSV。", "warn");
-                    return;
-                }
-
-                Clipboard.SetText(summary);
-                MainWindow.PostProgramInfo($"已复制 {_day:yyyy-MM-dd} 产能摘要。", "ok");
-            }
-            catch (Exception ex)
-            {
-                MainWindow.PostProgramInfo($"复制产能摘要失败：{ex.Message}", "error");
-            }
-        }
-
         private void BtnOpenFolder_Click(object sender, RoutedEventArgs e)
         {
             var root = ConfigService.Current.CsvRootPath;

@@ -95,8 +95,6 @@
                     <Button Content="今天" Style="{StaticResource GhostBtn}" Click="BtnToday_Click"/>
                     <Button Content="刷新" Style="{StaticResource SolidBtn}" Click="BtnRefresh_Click"/>
                     <Button Content="打开 CSV 文件夹" Style="{StaticResource GhostBtn}" Click="BtnOpenFolder_Click"/>
-                    <Button Content="复制产能摘要" Style="{StaticResource GhostBtn}" Click="BtnCopySummary_Click"
-                            ToolTip="将当日产量/良率/峰值时段复制到剪贴板，便于日报或IM分享"/>
                 </StackPanel>
             </Grid>
 
