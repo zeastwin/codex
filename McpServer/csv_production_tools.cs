@@ -27,7 +27,7 @@ public class DayStats
     public int Fail { get; set; }
     public int Total => Pass + Fail;
     public double Yield => Total == 0 ? 0 : Pass * 100.0 / Total;
-    public List<HourStat> Hours { get; set; } = new();
+public List<HourStat> Hours { get; set; } = new List<HourStat>();
 }
 
 // ======== 读取与缓存 ========
@@ -39,7 +39,8 @@ static class CsvProductionRepository
     // 允许逗号/分号/Tab
     public static string[] PossibleDelimiters { get; set; } = new[] { ",", ";", "\t" };
 
-    private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats stats)> _cache = new();
+private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats stats)> _cache =
+    new ConcurrentDictionary<string, (DateTime mtime, DayStats stats)>();
     private static readonly string[] _passAliases = new[] { "pass", "良品", "良率pass" };
     private static readonly string[] _failAliases = new[] { "fail", "不良", "报废", "抛料", "ng" };
 

@@ -5,16 +5,18 @@ using System.Linq;
 namespace EW_Assistant.Component.MindMap
 {
     /// <summary>
-    /// 简单的树状布局器，将 MindMapNode 映射为层级坐标，供画布渲染。
+    /// 思维导图布局器：负责把树状结构转换为二维坐标，并自动避免同层遮挡。
     /// </summary>
     public static class MindMapLayoutEngine
     {
         public static (IReadOnlyList<MindMapVisualNode> Nodes, IReadOnlyList<MindMapEdge> Edges) Layout(
             MindMapNode root,
-            double horizontalGap = 340,
+            double horizontalGap = 320,
             double verticalGap = 160,
-            double marginX = 180,
-            double marginY = 140)
+            double marginX = 160,
+            double marginY = 160,
+            Func<MindMapNode, double> nodeHeightProvider = null,
+            Func<MindMapNode, double> verticalGapProvider = null)
         {
             if (root == null) return (Array.Empty<MindMapVisualNode>(), Array.Empty<MindMapEdge>());
 
@@ -22,9 +24,8 @@ namespace EW_Assistant.Component.MindMap
             var edges = new List<MindMapEdge>();
             double cursorY = marginY;
 
-            LayoutInternal(root, 0, ref cursorY, nodes, edges, null, horizontalGap, verticalGap, marginX);
+            LayoutInternal(root, 0, ref cursorY, nodes, edges, null, horizontalGap, verticalGap, marginX, nodeHeightProvider, verticalGapProvider);
 
-            // 归一化 Y，避免出现负值。
             var minY = nodes.Count > 0 ? nodes.Min(n => n.Y) : marginY;
             if (minY < marginY)
             {
@@ -33,34 +34,41 @@ namespace EW_Assistant.Component.MindMap
                     node.Y += offset;
             }
 
-            var normalizedNodes = nodes.ToList();
+            double EvalGap(MindMapVisualNode visual)
+            {
+                var gap = verticalGapProvider?.Invoke(visual.Node) ?? verticalGap;
+                return gap < 24 ? 24 : gap;
+            }
+
+            var normalized = nodes.ToList();
             bool changed;
             do
             {
                 changed = false;
-                for (int i = 0; i < normalizedNodes.Count; i++)
+                for (int i = 0; i < normalized.Count; i++)
                 {
-                    for (int j = i + 1; j < normalizedNodes.Count; j++)
+                    for (int j = i + 1; j < normalized.Count; j++)
                     {
-                        var a = normalizedNodes[i];
-                        var b = normalizedNodes[j];
-                        if (Math.Abs(a.Depth - b.Depth) > 0) continue;
+                        var a = normalized[i];
+                        var b = normalized[j];
+                        if (a.Depth != b.Depth) continue;
                         if (a.Bounds.IntersectsWith(b.Bounds))
                         {
+                            var padding = (EvalGap(a) + EvalGap(b)) / 2.0;
                             if (a.Y <= b.Y)
-                                b.Y = a.Y + a.Height + verticalGap * 0.6;
+                                b.Y = a.Y + a.Height + padding;
                             else
-                                a.Y = b.Y + b.Height + verticalGap * 0.6;
+                                a.Y = b.Y + b.Height + padding;
                             changed = true;
                         }
                     }
                 }
             } while (changed);
 
-            return (normalizedNodes, edges);
+            return (normalized, edges);
         }
 
-        private static double LayoutInternal(
+        private static MindMapVisualNode LayoutInternal(
             MindMapNode node,
             int depth,
             ref double cursorY,
@@ -69,12 +77,24 @@ namespace EW_Assistant.Component.MindMap
             MindMapVisualNode parent,
             double hGap,
             double vGap,
-            double marginX)
+            double marginX,
+            Func<MindMapNode, double> nodeHeightProvider,
+            Func<MindMapNode, double> gapProvider)
         {
-            var visual = new MindMapVisualNode(node, depth)
+            var visual = new MindMapVisualNode(node, depth);
+            if (nodeHeightProvider != null)
             {
-                X = marginX + depth * hGap
-            };
+                var height = nodeHeightProvider(node);
+                if (height > 0)
+                    visual.Height = height;
+            }
+            visual.X = parent == null ? marginX : parent.RightX + hGap;
+
+            double GapFor(MindMapNode target)
+            {
+                var value = gapProvider?.Invoke(target) ?? vGap;
+                return value < 24 ? 24 : value;
+            }
 
             nodes.Add(visual);
 
@@ -86,29 +106,29 @@ namespace EW_Assistant.Component.MindMap
             if (visibleChildren.Count == 0)
             {
                 y = cursorY;
-                cursorY += vGap;
+                cursorY += visual.Height + GapFor(node);
             }
             else
             {
-                double firstChildY = double.MaxValue;
-                double lastChildY = double.MinValue;
+                double subtreeTop = double.MaxValue;
+                double subtreeBottom = double.MinValue;
 
                 foreach (var child in visibleChildren)
                 {
-                    var childY = LayoutInternal(child, depth + 1, ref cursorY, nodes, edges, visual, hGap, vGap, marginX);
-                    firstChildY = Math.Min(firstChildY, childY);
-                    lastChildY = Math.Max(lastChildY, childY);
+                    var childVisual = LayoutInternal(child, depth + 1, ref cursorY, nodes, edges, visual, hGap, vGap, marginX, nodeHeightProvider, gapProvider);
+                    subtreeTop = Math.Min(subtreeTop, childVisual.Y);
+                    subtreeBottom = Math.Max(subtreeBottom, childVisual.Y + childVisual.Height);
                 }
 
-                y = (firstChildY + lastChildY) / 2.0;
+                var center = (subtreeTop + subtreeBottom) / 2.0;
+                y = center - visual.Height / 2.0;
             }
 
             visual.Y = y;
-
             if (parent != null)
                 edges.Add(new MindMapEdge(parent, visual));
 
-            return y;
+            return visual;
         }
     }
 }

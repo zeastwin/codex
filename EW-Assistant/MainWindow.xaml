@@ -151,6 +151,8 @@
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="AI助手" Checked="NavItem_Checked" Tag="&#xE7FD;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="知识导图" Checked="NavItem_Checked" Tag="&#xE8EF;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="产能看板" Checked="NavItem_Checked" Tag="&#xE9D2;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="报警看板" Checked="NavItem_Checked" Tag="&#xE81F;"/>

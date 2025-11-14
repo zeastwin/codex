@@ -24,7 +24,7 @@ namespace EW_Assistant
         public static MainWindow Instance { get; private set; }
 
         // 绑定到 ListBox 的数据源
-        public ObservableCollection<ProgramInfoItem> InfoItems { get; } = new();
+        public ObservableCollection<ProgramInfoItem> InfoItems { get; } = new ObservableCollection<ProgramInfoItem>();
 
         // 底部状态文本
         public string StatusText
@@ -34,17 +34,18 @@ namespace EW_Assistant
         }
         private string _statusText = "就绪";
 
-        private readonly Dictionary<string, Func<UIElement>> _routes = new()
+        private readonly Dictionary<string, Func<UIElement>> _routes = new Dictionary<string, Func<UIElement>>()
         {
             ["总览"] = () => new DashboardView() ,
             ["AI助手"] = () => new AIAssistantView(),
+            ["知识导图"] = () => new KnowledgeMindMapView(),
             ["产能看板"] = () => new ProductionBoardView(),
             ["报警看板"] = () => new AlarmView(),
             ["机台控制"] = () => new MachineControl(),
             ["设置"] = () => new ConfigView(),
         };
         // 缓存已创建的页面，避免反复 new
-        private readonly Dictionary<string, UIElement> _viewCache = new();
+        private readonly Dictionary<string, UIElement> _viewCache = new Dictionary<string, UIElement>();
         private CancellationTokenSource _serverCts;
         private readonly Services.McpServerProcessHost _mcpHost = Services.McpServerProcessHost.Instance;
         public MainWindow()
