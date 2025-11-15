@@ -20,7 +20,7 @@ using System.Windows.Threading;
 namespace EW_Assistant.Views
 {
     /// <summary>
-    /// 文档知识导图视图：支持拖拽 docx/pdf，自动解析为思维导图。
+    /// 文档知识导图视图：接入 Workflow，对任意上传文件进行结构化解析并绘制思维导图。
     /// </summary>
     public partial class KnowledgeMindMapView : UserControl, INotifyPropertyChanged
     {
@@ -29,8 +29,8 @@ namespace EW_Assistant.Views
         private MindMapNode _selectedNode;
         private bool _isBusy;
         private bool _isDragHover;
-        private string _statusText = "拖入 .docx / .pdf 开始解析";
-        private string _outlineSummary = "尚未载入文档";
+        private string _statusText = "拖拽或选择任意文件，即可自动生成思维导图";
+        private string _outlineSummary = "尚未加载文档";
         private double _canvasWidth = 1200;
         private double _canvasHeight = 800;
         private bool _isPanning;
@@ -116,7 +116,7 @@ namespace EW_Assistant.Views
             var target = files.FirstOrDefault(IsSupportedFile);
             if (target == null)
             {
-                StatusText = "仅支持 .docx / .pdf 文件";
+                StatusText = "未找到可解析的文件，请重新选择";
                 return;
             }
             await ParseFileAsync(target);
@@ -150,7 +150,7 @@ namespace EW_Assistant.Views
         {
             var dialog = new OpenFileDialog
             {
-                Filter = "支持的文档|*.docx;*.pdf",
+                Filter = "所有文件|*.*",
                 Multiselect = false
             };
             if (dialog.ShowDialog() == true)
@@ -165,6 +165,7 @@ namespace EW_Assistant.Views
             {
                 IsBusy = true;
                 StatusText = $"正在解析：{Path.GetFileName(path)}";
+                MainWindow.PostProgramInfo($"[Mindmap] 正在向 Workflow 请求解析 {Path.GetFileName(path)}", "info");
                 var tree = await _parser.ParseAsync(path);
                 _root = tree;
                 OnPropertyChanged(nameof(HasDocument));
@@ -488,8 +489,7 @@ namespace EW_Assistant.Views
         private static bool IsSupportedFile(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return false;
-            var ext = Path.GetExtension(path)?.ToLowerInvariant();
-            return ext == ".docx" || ext == ".pdf";
+            return File.Exists(path);
         }
 
         private static int CountNodes(MindMapNode node)
@@ -557,6 +557,11 @@ namespace EW_Assistant.Views
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
+
+
+
+
+
 
 
 

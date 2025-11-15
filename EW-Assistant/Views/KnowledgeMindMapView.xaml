@@ -152,8 +152,7 @@
                                FontSize="13"
                                Foreground="#475569"
                                TextWrapping="Wrap"
-                               MaxWidth="280"
-                               MaxHeight="88"/>
+                               MaxWidth="340"/>
                 </StackPanel>
             </Border>
         </DataTemplate>
