@@ -89,6 +89,7 @@
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
@@ -99,6 +100,10 @@
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal"
                                 HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="测试"
+                                Margin="0,0,8,0"
+                                Style="{StaticResource RoundOutlineButton}"
+                                Click="BtnTest_Click"/>
                         <Button Content="重新读取"
                                 Margin="0,0,8,0"
                                 Style="{StaticResource RoundOutlineButton}"

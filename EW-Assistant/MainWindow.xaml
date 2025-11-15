@@ -201,7 +201,8 @@
          FontSize="14"
          ItemsSource="{Binding InfoItems}"
          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-         ScrollViewer.VerticalScrollBarVisibility="Auto">
+         ScrollViewer.VerticalScrollBarVisibility="Auto"
+         ScrollViewer.CanContentScroll="False">
 
                         <!-- 关键：让每个 ListBoxItem 横向撑满，子元素才有“宽度约束”可换行 -->
                         <ListBox.ItemContainerStyle>

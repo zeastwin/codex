@@ -149,6 +149,7 @@
     <Compile Include="Component\MindMap\MindMapNode.cs" />
     <Compile Include="Services\DifyWorkflowStreaming.cs" />
     <Compile Include="Services\DocumentMindMapParser.cs" />
+    <Compile Include="Services\FileWorkflowClient.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
       <DependentUpon>AlarmView.xaml</DependentUpon>
