@@ -261,7 +261,16 @@ namespace EW_Assistant.Views
                 var row = SmartSplit(lines[i]);
                 if (row.Length == 0) continue;
 
-                int hour = hasHour ? ExtractHour(row[idxHour]) : (i - 1);
+                int hour;
+                if (hasHour)
+                {
+                    if (idxHour >= row.Length) continue;
+                    hour = ExtractHour(row[idxHour]);
+                }
+                else
+                {
+                    hour = i - 1;
+                }
                 if (hour < 0 || hour > 23) continue;
 
                 int pass = (idxPass >= 0 && idxPass < row.Length) ? ToInt(row[idxPass]) : 0;
@@ -667,15 +676,14 @@ namespace EW_Assistant.Views
                     barPaint.Shader = null;
                 }
 
-                if (t > 0)
-                {
-                    var tag = t.ToString(CultureInfo.InvariantCulture);
-                    var bounds = new SKRect();
-                    valuePaint.MeasureText(tag, ref bounds);
-                    float desired = chart.Bottom - totalH - 6;
-                    float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
-                    canvas.DrawText(tag, cx - bounds.MidX, baseline, valuePaint);
-                }
+                if (t <= 0) continue;
+
+                var tag = t.ToString(CultureInfo.InvariantCulture);
+                var bounds = new SKRect();
+                valuePaint.MeasureText(tag, ref bounds);
+                float desired = chart.Bottom - totalH - 6;
+                float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
+                canvas.DrawText(tag, cx - bounds.MidX, baseline, valuePaint);
             }
         }
 
@@ -730,14 +738,29 @@ namespace EW_Assistant.Views
             var header = SmartSplit(lines[0]);
             int idxPass = FindIndex(header, "PASS", "良品");
             int idxFail = FindIndex(header, "FAIL", "不良");
+            int idxHour = FindIndex(header, "HOUR", "小时", "时段", "时刻", "时间", "时别");
+            bool hasHour = idxHour >= 0;
 
             int sumPass = 0, sumFail = 0;
             for (int i = 1; i < lines.Count; i++)
             {
                 var row = SmartSplit(lines[i]);
                 if (row.Length == 0) continue;
-                if (idxPass >= 0 && idxPass < row.Length) sumPass += ToInt(row[idxPass]);
-                if (idxFail >= 0 && idxFail < row.Length) sumFail += ToInt(row[idxFail]);
+
+                int hour;
+                if (hasHour)
+                {
+                    if (idxHour >= row.Length) continue;
+                    hour = ExtractHour(row[idxHour]);
+                }
+                else
+                {
+                    hour = i - 1;
+                }
+                if (hour < 0 || hour > 23) continue;
+
+                if (idxPass >= 0 && idxPass < row.Length) sumPass += Math.Max(0, ToInt(row[idxPass]));
+                if (idxFail >= 0 && idxFail < row.Length) sumFail += Math.Max(0, ToInt(row[idxFail]));
             }
             return (sumPass, sumFail);
         }

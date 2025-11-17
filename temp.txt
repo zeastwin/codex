@@ -1,4 +1,4 @@
-ï»¿using EW_Assistant.Services;
+using EW_Assistant.Services;
 using SkiaSharp;
 using SkiaSharp.Views.WPF;
 using System;
@@ -18,12 +18,12 @@ namespace EW_Assistant
 {
     public partial class DashboardView : UserControl
     {
-        // ===== ä¾èµ–å±æ€§ï¼šCSV æ ¹ç›®å½• & æ–‡ä»¶å‰ç¼€ =====
+        // ===== ÒÀÀµÊôĞÔ£ºCSV ¸ùÄ¿Â¼ & ÎÄ¼şÇ°×º =====
         public static readonly DependencyProperty FilePrefixProperty =
             DependencyProperty.Register(nameof(FilePrefix), typeof(string), typeof(DashboardView),
-                new PropertyMetadata("å°æ—¶äº§é‡", OnCsvRootPathChanged));
+                new PropertyMetadata("Ğ¡Ê±²úÁ¿", OnCsvRootPathChanged));
 
-        // ===== å›¾è¡¨å°ºå¯¸ï¼ˆå¤–éƒ¨å¯ç»‘ï¼‰ =====
+        // ===== Í¼±í³ß´ç£¨Íâ²¿¿É°ó£© =====
         public static readonly DependencyProperty WeekChartWidthProperty =
             DependencyProperty.Register(nameof(WeekChartWidth), typeof(double), typeof(DashboardView),
                 new PropertyMetadata(590d));
@@ -37,7 +37,7 @@ namespace EW_Assistant
             DependencyProperty.Register(nameof(HourChartHeight), typeof(double), typeof(DashboardView),
                 new PropertyMetadata(220d));
 
-        // ===== è‰¯ç‡å¡ç‰‡å°ºå¯¸ =====
+        // ===== Á¼ÂÊ¿¨Æ¬³ß´ç =====
         public static readonly DependencyProperty YieldCardWidthProperty =
             DependencyProperty.Register(nameof(YieldCardWidth), typeof(double), typeof(DashboardView),
                 new PropertyMetadata(220d));
@@ -45,13 +45,13 @@ namespace EW_Assistant
             DependencyProperty.Register(nameof(YieldCardHeight), typeof(double), typeof(DashboardView),
                 new PropertyMetadata(220d));
 
-        // è‰¯ç‡åœ†ç¯çš„ç›¸å¯¹å°ºå¯¸ï¼ˆç›¸å¯¹äºå¡ç‰‡è¾¹é•¿çš„æ¯”ä¾‹ï¼Œ0~1ï¼‰ï¼Œé»˜è®¤ 0.72 = 72%
-        // æŠŠå®ƒè°ƒå°ï¼ˆå¦‚ 0.62ï¼‰å³å¯è®©åœ†ç¯â€œå°ä¸€ç‚¹â€
+        // Á¼ÂÊÔ²»·µÄÏà¶Ô³ß´ç£¨Ïà¶ÔÓÚ¿¨Æ¬±ß³¤µÄ±ÈÀı£¬0~1£©£¬Ä¬ÈÏ 0.72 = 72%
+        // °ÑËüµ÷Ğ¡£¨Èç 0.62£©¼´¿ÉÈÃÔ²»·¡°Ğ¡Ò»µã¡±
         public static readonly DependencyProperty YieldRingScaleProperty =
             DependencyProperty.Register(nameof(YieldRingScale), typeof(double), typeof(DashboardView),
                 new PropertyMetadata(0.92d, OnYieldVisualPropertyChanged));
 
-        // è‰¯ç‡åœ†ç¯çš„ç›¸å¯¹ç²—ç»†ï¼ˆç›¸å¯¹äºåœ†ç¯å¤–å¾„ï¼Œ0~1ï¼‰ï¼Œé»˜è®¤ 0.10 = 10%
+        // Á¼ÂÊÔ²»·µÄÏà¶Ô´ÖÏ¸£¨Ïà¶ÔÓÚÔ²»·Íâ¾¶£¬0~1£©£¬Ä¬ÈÏ 0.10 = 10%
         public static readonly DependencyProperty YieldRingThicknessProperty =
             DependencyProperty.Register(nameof(YieldRingThickness), typeof(double), typeof(DashboardView),
                 new PropertyMetadata(0.10d, OnYieldVisualPropertyChanged));
@@ -81,7 +81,7 @@ namespace EW_Assistant
         public double YieldCardHeight { get => (double)GetValue(YieldCardHeightProperty); set => SetValue(YieldCardHeightProperty, value); }
         public string FilePrefix { get => (string)GetValue(FilePrefixProperty); set => SetValue(FilePrefixProperty, value); }
 
-        // ===== å‘¨æ•°æ® =====
+        // ===== ÖÜÊı¾İ =====
         private class DayData
         {
             public DateTime Date;
@@ -92,17 +92,17 @@ namespace EW_Assistant
         }
         private readonly List<DayData> _week = new();
 
-        // ===== æ—¥äº§èƒ½ï¼ˆ24å°æ—¶ï¼Œå †å ï¼‰ =====
+        // ===== ÈÕ²úÄÜ£¨24Ğ¡Ê±£¬¶Ñµş£© =====
         private readonly int[] _hourPass = new int[24];
         private readonly int[] _hourFail = new int[24];
         private bool _todayMissing = false;
 
-        // ä»Šæ—¥è‰¯ç‡
+        // ½ñÈÕÁ¼ÂÊ
         private int _todayPassSum = 0;
         private int _todayFailSum = 0;
         private double _todayYield = 0.0; // 0..1
 
-        // ===== åŠ¨ç”» =====
+        // ===== ¶¯»­ =====
         private double _anim = 1.0;
         private readonly Stopwatch _sw = new Stopwatch();
         private bool _isAnimating = false;
@@ -136,11 +136,11 @@ namespace EW_Assistant
             };
         }
 
-        //è‡ªåŠ¨åˆ·æ–°
-        // === æ–°å¢ï¼šè‡ªåŠ¨åˆ·æ–°è®¾ç½® ===
+        //×Ô¶¯Ë¢ĞÂ
+        // === ĞÂÔö£º×Ô¶¯Ë¢ĞÂÉèÖÃ ===
         public static readonly DependencyProperty RefreshIntervalProperty =
             DependencyProperty.Register(nameof(RefreshInterval), typeof(TimeSpan), typeof(DashboardView),
-                new PropertyMetadata(TimeSpan.FromSeconds(10), OnRefreshIntervalChanged)); // é»˜è®¤ 10s
+                new PropertyMetadata(TimeSpan.FromSeconds(10), OnRefreshIntervalChanged)); // Ä¬ÈÏ 10s
 
         public TimeSpan RefreshInterval
         {
@@ -163,7 +163,7 @@ namespace EW_Assistant
             if (d is DashboardView v)
             {
                 v._refreshTimer.Interval = (TimeSpan)e.NewValue;
-                // å¦‚æœæ­£åœ¨è·‘ï¼Œç«‹åˆ»ç”Ÿæ•ˆ
+                // Èç¹ûÕıÔÚÅÜ£¬Á¢¿ÌÉúĞ§
                 if (v._refreshTimer.IsEnabled)
                 {
                     v._refreshTimer.Stop();
@@ -182,7 +182,7 @@ namespace EW_Assistant
         }
 
         private readonly DispatcherTimer _refreshTimer = new DispatcherTimer();
-        private bool _isRefreshing = false; // é˜²æŠ–
+        private bool _isRefreshing = false; // ·À¶¶
 
 
         private void StartAutoRefresh()
@@ -210,15 +210,15 @@ namespace EW_Assistant
                 var snap = await Task.Run(() =>
                 {
                     AlarmLogCache.LoadRecent(ConfigService.Current.AlarmLogPath, days: 7);
-                    // ç»„è£…éœ€è¦çš„è®¡ç®—ç»“æœåˆ°ä¸€ä¸ªå¿«ç…§å¯¹è±¡ï¼ˆçœç•¥å…·ä½“ç±»å‹ï¼‰
+                    // ×é×°ĞèÒªµÄ¼ÆËã½á¹ûµ½Ò»¸ö¿ìÕÕ¶ÔÏó£¨Ê¡ÂÔ¾ßÌåÀàĞÍ£©
                     return true;
                 });
                 ReloadWeek();
                 ReloadTodayHours();
                 RefreshAlarmFromCache();
-                LoadAlarmHourlyFromCacheOrFile();   // ä¼˜å…ˆç¼“å­˜ï¼Œå¤±è´¥å›è½ CSV
+                LoadAlarmHourlyFromCacheOrFile();   // ÓÅÏÈ»º´æ£¬Ê§°Ü»ØÂä CSV
                 LoadAlarmDurationShareFromCacheOrFile();
-                // è‹¥ä¸æƒ³æ¯æ¬¡åŠ¨ç”»ï¼Œå°±æ‰‹åŠ¨åˆ·æ–°ï¼›æƒ³è¦åŠ¨ç”»å°±ç”¨ StartAnimation()
+                // Èô²»ÏëÃ¿´Î¶¯»­£¬¾ÍÊÖ¶¯Ë¢ĞÂ£»ÏëÒª¶¯»­¾ÍÓÃ StartAnimation()
                 SkChart?.InvalidateVisual();
                 SkHour?.InvalidateVisual();
                 SkYield?.InvalidateVisual();
@@ -226,11 +226,11 @@ namespace EW_Assistant
                 SkAlarmHour?.InvalidateVisual();
                 SkAlarmPie?.InvalidateVisual();
 
-                // æˆ–è€…ï¼šStartAnimation();
+                // »òÕß£ºStartAnimation();
             }
             catch (Exception ex)
             {
-                MainWindow.PostProgramInfo($"è‡ªåŠ¨åˆ·æ–°å¤±è´¥ï¼š{ex.Message}", "warn");
+                MainWindow.PostProgramInfo($"×Ô¶¯Ë¢ĞÂÊ§°Ü£º{ex.Message}", "warn");
             }
             finally
             {
@@ -238,7 +238,7 @@ namespace EW_Assistant
             }
         }
 
-        // å¯é€‰ï¼šæ‰‹åŠ¨æš´éœ²ä¸€ä¸ªå¼ºåˆ¶åˆ·æ–°æ–¹æ³•ç»™å¤–éƒ¨è°ƒç”¨
+        // ¿ÉÑ¡£ºÊÖ¶¯±©Â¶Ò»¸öÇ¿ÖÆË¢ĞÂ·½·¨¸øÍâ²¿µ÷ÓÃ
         public void ForceRefresh()
         {
             RefreshTimer_Tick(this, EventArgs.Empty);
@@ -289,7 +289,7 @@ namespace EW_Assistant
                 _anim = 1.0;
             }
         }
-        // å…±äº«è¯»å–ï¼šå…è®¸å¯¹æ–¹æ­£åœ¨å†™å…¥æ—¶æˆ‘ä»¬åªè¯»æ‰“å¼€
+        // ¹²Ïí¶ÁÈ¡£ºÔÊĞí¶Ô·½ÕıÔÚĞ´ÈëÊ±ÎÒÃÇÖ»¶Á´ò¿ª
         private static List<string> ReadAllLinesShared(string path, Encoding enc)
         {
             var list = new List<string>();
@@ -303,8 +303,8 @@ namespace EW_Assistant
             }
             return list;
         }
-        // ===== æ•°æ®è¯»å– =====
-        // ===== æ•°æ®è¯»å–ï¼ˆå‘¨ï¼‰ =====
+        // ===== Êı¾İ¶ÁÈ¡ =====
+        // ===== Êı¾İ¶ÁÈ¡£¨ÖÜ£© =====
         private void ReloadWeek()
         {
             _week.Clear();
@@ -320,7 +320,7 @@ namespace EW_Assistant
                 {
                     try
                     {
-                        var (pass, fail) = SumPassFailShared(file);   // â† ç”¨å…±äº«è¯»å–ç‰ˆ
+                        var (pass, fail) = SumPassFailShared(file);   // ¡û ÓÃ¹²Ïí¶ÁÈ¡°æ
                         item.Pass = pass;
                         item.Fail = fail;
                     }
@@ -334,11 +334,11 @@ namespace EW_Assistant
             }
 
             if (Subtitle != null)
-                Subtitle.Text = "ç»Ÿè®¡ï¼šPASS(è“)+FAIL(çº¢)";
+                Subtitle.Text = "Í³¼Æ£ºPASS(À¶)+FAIL(ºì)";
             SkChart?.InvalidateVisual();
         }
 
-        // ===== æ•°æ®è¯»å–ï¼ˆä»Šæ—¥24å°æ—¶ & è‰¯ç‡ï¼‰ =====
+        // ===== Êı¾İ¶ÁÈ¡£¨½ñÈÕ24Ğ¡Ê± & Á¼ÂÊ£© =====
         private void ReloadTodayHours()
         {
             Array.Clear(_hourPass, 0, _hourPass.Length);
@@ -362,7 +362,7 @@ namespace EW_Assistant
             List<string> lines;
             try
             {
-                lines = ReadAllLinesShared(file, enc);   // â† ç”¨å…±äº«è¯»å–ç‰ˆ
+                lines = ReadAllLinesShared(file, enc);   // ¡û ÓÃ¹²Ïí¶ÁÈ¡°æ
             }
             catch
             {
@@ -373,9 +373,9 @@ namespace EW_Assistant
             if (lines.Count == 0) { _todayMissing = true; return; }
 
             var header = SmartSplit(lines[0]);
-            int idxPass = FindIndex(header, "PASS", "è‰¯å“");
-            int idxFail = FindIndex(header, "FAIL", "ä¸è‰¯");
-            int idxHour = FindIndex(header, "å°æ—¶", "Hour", "HOUR", "æ—¶é—´", "æ—¶åˆ»", "æ—¶æ®µ");
+            int idxPass = FindIndex(header, "PASS", "Á¼Æ·");
+            int idxFail = FindIndex(header, "FAIL", "²»Á¼");
+            int idxHour = FindIndex(header, "Ğ¡Ê±", "Hour", "HOUR", "Ê±¼ä", "Ê±¿Ì", "Ê±¶Î");
             bool hasHour = idxHour >= 0;
 
             for (int i = 1; i < lines.Count; i++)
@@ -398,11 +398,11 @@ namespace EW_Assistant
             int total = _todayPassSum + _todayFailSum;
             _todayYield = total > 0 ? (double)_todayPassSum / total : 0.0;
 
-            // è¿™é‡Œæ— éœ€é¢å¤– Invalidateï¼Œå¤–éƒ¨ä¼šç»Ÿä¸€é‡ç»˜ï¼›è‹¥ä½ æƒ³ç«‹å³é‡ç»˜ä¹Ÿå¯ï¼š
+            // ÕâÀïÎŞĞè¶îÍâ Invalidate£¬Íâ²¿»áÍ³Ò»ÖØ»æ£»ÈôÄãÏëÁ¢¼´ÖØ»æÒ²¿É£º
             // SkHour?.InvalidateVisual();
             // SkYield?.InvalidateVisual();
 
-            // --- æœ¬åœ°å·¥å…·ä¿æŒä¸åŸå®ç°ä¸€è‡´ ---
+            // --- ±¾µØ¹¤¾ß±£³ÖÓëÔ­ÊµÏÖÒ»ÖÂ ---
             static int FindIndex(string[] arr, params string[] keys)
             {
                 for (int i = 0; i < arr.Length; i++)
@@ -439,7 +439,7 @@ namespace EW_Assistant
             }
         }
 
-        // ===== å‘¨æ±‡æ€»ï¼šæ”¹æˆå…±äº«è¯»å–ç‰ˆ =====
+        // ===== ÖÜ»ã×Ü£º¸Ä³É¹²Ïí¶ÁÈ¡°æ =====
         private static (int pass, int fail) SumPassFailShared(string file)
         {
             Encoding enc;
@@ -450,10 +450,8 @@ namespace EW_Assistant
             if (lines.Count == 0) return (0, 0);
 
             var header = SmartSplit(lines[0]);
-            int idxPass = IndexOf(header, new[] { "PASS", "è‰¯å“" });
-            int idxFail = IndexOf(header, new[] { "FAIL", "ä¸è‰¯" });
-            int idxHour = IndexOf(header, new[] { "å°æ—¶", "HOUR", "Hour", "æ—¶æ®µ", "æ—¶é—´", "æ—¶åˆ«", "æ—¶åŒº" });
-            bool hasHour = idxHour >= 0;
+            int idxPass = IndexOf(header, new[] { "PASS", "Á¼Æ·" });
+            int idxFail = IndexOf(header, new[] { "FAIL", "²»Á¼" });
 
             int sumPass = 0, sumFail = 0;
 
@@ -461,22 +459,10 @@ namespace EW_Assistant
             {
                 var row = SmartSplit(lines[i]);
                 if (row.Length == 0) continue;
+                if (row[0].Trim().Contains("×Ü")) continue; // ºöÂÔºÏ¼Æ
 
-                int hour;
-                if (hasHour)
-                {
-                    if (idxHour >= row.Length) continue;
-                    hour = ExtractHour(row[idxHour]);
-                }
-                else
-                {
-                    hour = i - 1; // æ— å°æ—¶åˆ—æ—¶æŒ‰è¡Œåºæ¨ç®—
-                }
-
-                if (hour < 0 || hour > 23) continue; // å¿½ç•¥åˆè®¡ä¸å¼‚å¸¸è¡Œ
-
-                if (idxPass >= 0 && idxPass < row.Length) sumPass += Math.Max(0, ToInt(row[idxPass]));
-                if (idxFail >= 0 && idxFail < row.Length) sumFail += Math.Max(0, ToInt(row[idxFail]));
+                if (idxPass >= 0 && idxPass < row.Length) sumPass += ToInt(row[idxPass]);
+                if (idxFail >= 0 && idxFail < row.Length) sumFail += ToInt(row[idxFail]);
             }
             return (sumPass, sumFail);
 
@@ -503,20 +489,9 @@ namespace EW_Assistant
                 if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, out v)) return v;
                 return 0;
             }
-            static int ExtractHour(string s)
-            {
-                if (string.IsNullOrWhiteSpace(s)) return -1;
-                s = s.Trim();
-                if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var h) && h >= 0 && h <= 23) return h;
-                if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt)) return dt.Hour;
-                if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) return dt.Hour;
-                var digits = new string(s.TakeWhile(char.IsDigit).ToArray());
-                if (digits.Length > 0 && int.TryParse(digits, out h) && h >= 0 && h <= 23) return h;
-                return -1;
-            }
         }
 
-        // ===== ç»˜å›¾ï¼šå‘¨å›¾ï¼ˆå †å  PASS/FAILï¼‰ =====
+        // ===== »æÍ¼£ºÖÜÍ¼£¨¶Ñµş PASS/FAIL£© =====
         private void SkChart_PaintSurface(object sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
@@ -535,7 +510,7 @@ namespace EW_Assistant
 
             int max = Math.Max(1, _week.Any() ? _week.Max(d => d.Total) : 1);
             int gridCount = 4;
-            // ä¸Šé™ = æœ€é«˜å€¼ * 1.1ï¼ˆå‘ä¸Šå–æ•´ï¼‰
+            // ÉÏÏŞ = ×î¸ßÖµ * 1.1£¨ÏòÉÏÈ¡Õû£©
             int yMax = (int)Math.Ceiling(max * 1.10);
 
 
@@ -573,12 +548,12 @@ namespace EW_Assistant
                 var d = _week[i];
                 float cx = chart.Left + slot * i + slot / 2;
 
-                // X è½´æ—¥æœŸ
+                // X ÖáÈÕÆÚ
                 string dayLabel = d.Date.ToString("MM-dd");
                 var db = new SKRect(); dayPaint.MeasureText(dayLabel, ref db);
                 canvas.DrawText(dayLabel, cx - db.MidX, chart.Bottom + 18, dayPaint);
 
-                // åŠ¨ç”»
+                // ¶¯»­
                 double local = Clamp01((_anim - i * Stagger) / (1.0 - Math.Min(1.0, i * Stagger)));
                 double eased = EaseOutCubic(local);
 
@@ -597,7 +572,7 @@ namespace EW_Assistant
                 float left = cx - barWidth / 2f, right = cx + barWidth / 2f;
                 float bottom = chart.Bottom;
 
-                // PASS æ®µ
+                // PASS ¶Î
                 if (pH > 0.1f)
                 {
                     var r = new SKRect(left, bottom - pH, right, bottom);
@@ -607,7 +582,7 @@ namespace EW_Assistant
                     barPaint.Shader = shader; canvas.DrawRoundRect(rr, barPaint); barPaint.Shader = null;
                 }
 
-                // FAIL æ®µ
+                // FAIL ¶Î
                 if (fH > 0.1f)
                 {
                     var r = new SKRect(left, bottom - pH - fH, right, bottom - pH);
@@ -617,7 +592,7 @@ namespace EW_Assistant
                     barPaint.Shader = shader; canvas.DrawRoundRect(rr, barPaint); barPaint.Shader = null;
                 }
 
-                // é¡¶éƒ¨æ€»æ•°
+                // ¶¥²¿×ÜÊı
                 var tagTotal = (d.Pass + d.Fail).ToString();
                 var tb2 = new SKRect(); valuePaint.MeasureText(tagTotal, ref tb2);
                 float desired = chart.Bottom - totalH - 6;
@@ -626,7 +601,7 @@ namespace EW_Assistant
             }
         }
 
-        // ===== ç»˜å›¾ï¼šæ—¥å›¾ï¼ˆ24 å°æ—¶å †å ï¼‰ =====
+        // ===== »æÍ¼£ºÈÕÍ¼£¨24 Ğ¡Ê±¶Ñµş£© =====
         private void SkHour_PaintSurface(object sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
@@ -687,6 +662,8 @@ namespace EW_Assistant
             var failDark = new SKColor(239, 68, 68);
             var failLight = new SKColor(254, 202, 202);
 
+            bool showValue = barWidth > 18f;
+
             for (int i = 0; i < 24; i++)
             {
                 int p = _hourPass[i];
@@ -728,52 +705,53 @@ namespace EW_Assistant
                     canvas.DrawText(label, cx - tbx.MidX, chart.Bottom + 18, textPaint);
                 }
 
-                if (t <= 0) continue;
-
-                var tag = t.ToString();
-                var tb = new SKRect(); valuePaint.MeasureText(tag, ref tb);
-                float desired = chart.Bottom - totalH - 6;
-                float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
-                canvas.DrawText(tag, cx - tb.MidX, baseline, valuePaint);
+                if (showValue && t > 0)
+                {
+                    var tag = t.ToString();
+                    var tb = new SKRect(); valuePaint.MeasureText(tag, ref tb);
+                    float desired = chart.Bottom - totalH - 6;
+                    float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
+                    canvas.DrawText(tag, cx - tb.MidX, baseline, valuePaint);
+                }
             }
         }
 
-        // ===== ç»˜å›¾ï¼šè‰¯ç‡åœ†ç¯ =====
+        // ===== »æÍ¼£ºÁ¼ÂÊÔ²»· =====
         private void SkYield_PaintSurface(object sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
             var info = e.Info;
             canvas.Clear(SKColors.White);
 
-            // â€”â€” å°ºå¯¸ä¸ä½ç½®ï¼ˆåœ†ç¯æ›´å°ï¼Œä½†å¡ç‰‡å°ºå¯¸ä¸å˜ï¼‰â€”â€”
+            // ¡ª¡ª ³ß´çÓëÎ»ÖÃ£¨Ô²»·¸üĞ¡£¬µ«¿¨Æ¬³ß´ç²»±ä£©¡ª¡ª
             float pad = 8f;
             float cx = info.Width / 2f, cy = info.Height / 2f;
 
-            // å¤–å¾„æŒ‰æ¯”ä¾‹ç¼©æ”¾ï¼ˆYieldRingScale: 0~1ï¼Œå»ºè®® 0.60~0.80ï¼‰
+            // Íâ¾¶°´±ÈÀıËõ·Å£¨YieldRingScale: 0~1£¬½¨Òé 0.60~0.80£©
             float ringScale = (float)Math.Max(0.3, Math.Min(1.0, YieldRingScale));
             float outerSize = Math.Min(info.Width, info.Height) * ringScale;
 
-            // ç»™ä¸€ç‚¹å†…è¾¹è·ï¼Œé¿å…è´´è¾¹
+            // ¸øÒ»µãÄÚ±ß¾à£¬±ÜÃâÌù±ß
             float size = Math.Max(outerSize - pad * 2f, 16f);
 
-            // åœ†ç¯ç²—ç»†ï¼ˆç›¸å¯¹å¤–å¾„ï¼‰ï¼Œæœ€å°‘ 6 åƒç´ é˜²æ­¢å¤ªç»†
+            // Ô²»·´ÖÏ¸£¨Ïà¶ÔÍâ¾¶£©£¬×îÉÙ 6 ÏñËØ·ÀÖ¹Ì«Ï¸
             float thickness = Math.Max(6f, (float)(YieldRingThickness * size));
 
-            float startAngle = -90f; // ä» 12 ç‚¹æ–¹å‘å¼€å§‹
+            float startAngle = -90f; // ´Ó 12 µã·½Ïò¿ªÊ¼
             double eased = 1 - Math.Pow(1 - _anim, 3);
-            double ratio = _todayYield * eased;                 // ä»Šæ—¥è‰¯ç‡ï¼ˆReloadTodayHours å·²æŒ‰ PASS/(PASS+FAIL) è®¡ç®—ï¼‰
-            float sweep = (float)(360.0 * Clamp01(ratio));   // 0..1 ä¹‹é—´
+            double ratio = _todayYield * eased;                 // ½ñÈÕÁ¼ÂÊ£¨ReloadTodayHours ÒÑ°´ PASS/(PASS+FAIL) ¼ÆËã£©
+            float sweep = (float)(360.0 * Clamp01(ratio));   // 0..1 Ö®¼ä
 
-            // åœ†ç¯å¤–æ¥æ­£æ–¹å½¢
+            // Ô²»·Íâ½ÓÕı·½ĞÎ
             var box = new SKRect(cx - size / 2f, cy - size / 2f, cx + size / 2f, cy + size / 2f);
 
-            // é¢œè‰²
+            // ÑÕÉ«
             var ringBg = new SKColor(231, 238, 247);
             var g1 = new SKColor(167, 243, 208); // #A7F3D0
             var g2 = new SKColor(16, 185, 129);  // #10B981
             var textColor = new SKColor(11, 18, 32);
 
-            // èƒŒæ™¯ç¯
+            // ±³¾°»·
             using var bg = new SKPaint
             {
                 IsAntialias = true,
@@ -784,7 +762,7 @@ namespace EW_Assistant
             };
             canvas.DrawArc(box, 0, 360, false, bg);
 
-            // ===== å‰æ™¯è¿›åº¦ç¯ï¼ˆæŠŠæ¸å˜æ¥ç¼æŒªåˆ°å¼§çº¿å¤–ï¼‰=====
+            // ===== Ç°¾°½ø¶È»·£¨°Ñ½¥±ä½Ó·ìÅ²µ½»¡ÏßÍâ£©=====
             using var fg = new SKPaint
             {
                 IsAntialias = true,
@@ -793,11 +771,11 @@ namespace EW_Assistant
                 StrokeCap = SKStrokeCap.Round
             };
 
-            // æ¸å˜é¦–å°¾åŒè‰²ï¼Œä¿è¯ç¯è·¯è¿ç»­ï¼›ä¸­é—´ g2 ä¸ºé«˜äº®è‰²
-            var colors = new[] { g1, g2, g1 };     // é¦–å°¾ç›¸åŒè‰²
-            var offsets = new[] { 0f, 0.99f, 1f };  // g2 å‡ºç°åœ¨ç¯ä¸Šå¤§çº¦ 70% ä½ç½®ï¼ˆå¯è°ƒï¼‰
+            // ½¥±äÊ×Î²Í¬É«£¬±£Ö¤»·Â·Á¬Ğø£»ÖĞ¼ä g2 Îª¸ßÁÁÉ«
+            var colors = new[] { g1, g2, g1 };     // Ê×Î²ÏàÍ¬É«
+            var offsets = new[] { 0f, 0.99f, 1f };  // g2 ³öÏÖÔÚ»·ÉÏ´óÔ¼ 70% Î»ÖÃ£¨¿Éµ÷£©
 
-            // æŠŠæ¥ç¼æ”¾åˆ°å¼§çº¿èµ·ç‚¹ä¹‹å‰ï¼ˆæ¯”å¦‚èµ·ç‚¹å¾€å› 20Â°ï¼‰ï¼Œè¿™æ ·å¼§çº¿ä¸ç»è¿‡æ¥ç¼
+            // °Ñ½Ó·ì·Åµ½»¡ÏßÆğµãÖ®Ç°£¨±ÈÈçÆğµãÍù»Ø 20¡ã£©£¬ÕâÑù»¡Ïß²»¾­¹ı½Ó·ì
             float seamAngle = startAngle - 5;
             using var shader = SKShader.CreateSweepGradient(new SKPoint(cx, cy), colors, offsets);
             fg.Shader = shader.WithLocalMatrix(SKMatrix.CreateRotationDegrees(seamAngle, cx, cy));
@@ -807,7 +785,7 @@ namespace EW_Assistant
             {
                 if (sweep >= 359.4f)
                 {
-                    // æ¥è¿‘æ•´åœˆï¼šç›´æ¥ç”»æ•´åœˆï¼Œå½»åº•æ²¡æœ‰ç«¯å¸½/æ¥ç¼
+                    // ½Ó½üÕûÈ¦£ºÖ±½Ó»­ÕûÈ¦£¬³¹µ×Ã»ÓĞ¶ËÃ±/½Ó·ì
                     canvas.DrawCircle(cx, cy, size / 2f, fg);
                 }
                 else if (sweep > 0.5f)
@@ -818,7 +796,7 @@ namespace EW_Assistant
 
 
 
-            // ç™¾åˆ†æ¯”æ–‡å­—
+            // °Ù·Ö±ÈÎÄ×Ö
             string pct = (_todayYield * 100.0).ToString("0.#", CultureInfo.CurrentCulture) + "%";
             using var tp = new SKPaint { IsAntialias = true, Color = textColor, TextSize = size * 0.32f, FakeBoldText = true };
             var tb = new SKRect(); tp.MeasureText(pct, ref tb);
@@ -826,7 +804,7 @@ namespace EW_Assistant
         }
 
 
-        // ===== å·¥å…· =====
+        // ===== ¹¤¾ß =====
         private static SKRoundRect MakeRRect(SKRect rect, float tl, float tr, float br, float bl)
         {
             var rr = new SKRoundRect();
@@ -866,14 +844,14 @@ namespace EW_Assistant
         }
 
 
-        //==========================================æŠ¥è­¦ç›¸å…³==============================//
-        // ç»Ÿä¸€çš„ä¸­æ–‡å­—ä½“ï¼ˆæ”¯æŒ CJKï¼‰
+        //==========================================±¨¾¯Ïà¹Ø==============================//
+        // Í³Ò»µÄÖĞÎÄ×ÖÌå£¨Ö§³Ö CJK£©
         private static readonly SKTypeface FONT_CJK = ResolveCjkTypeface();
 
         private static SKTypeface ResolveCjkTypeface()
         {
             var fm = SKFontManager.Default;
-            // æŒ‰å¸¸è§å­—ä½“ä¼˜å…ˆçº§å°è¯•ï¼ˆä½ ä¹Ÿå¯ä»¥æŠŠè‡ªå®¶ UI å­—ä½“åæ”¾åˆ°æœ€å‰é¢ï¼‰
+            // °´³£¼û×ÖÌåÓÅÏÈ¼¶³¢ÊÔ£¨ÄãÒ²¿ÉÒÔ°Ñ×Ô¼Ò UI ×ÖÌåÃû·Åµ½×îÇ°Ãæ£©
             string[] candidates = {
         "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "SimSun",
         "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC"
@@ -884,17 +862,17 @@ namespace EW_Assistant
                 if (tf != null)
                 {
                     using var p = new SKPaint { Typeface = tf, TextSize = 12 };
-                    if (p.ContainsGlyphs("æµ‹è¯•ä¸­æ–‡123")) // éªŒè¯æ˜¯å¦çœŸæœ‰ä¸­æ–‡å­—å½¢
+                    if (p.ContainsGlyphs("²âÊÔÖĞÎÄ123")) // ÑéÖ¤ÊÇ·ñÕæÓĞÖĞÎÄ×ÖĞÎ
                         return tf;
                 }
             }
-            // å…œåº•ï¼šæŒ‰å­—ç¬¦åŒ¹é…ä¸€ä¸ªèƒ½æ¸²æŸ“â€œæ±‰â€çš„å­—ä½“
-            var byChar = fm.MatchCharacter('æ±‰');
+            // ¶µµ×£º°´×Ö·ûÆ¥ÅäÒ»¸öÄÜäÖÈ¾¡°ºº¡±µÄ×ÖÌå
+            var byChar = fm.MatchCharacter('ºº');
             return byChar ?? SKTypeface.Default;
         }
 
 
-        // ======== ä»Šæ—¥æŠ¥è­¦ TOP5 ========
+        // ======== ½ñÈÕ±¨¾¯ TOP5 ========
         private class TopAlarmItem
         {
             public int Rank;
@@ -905,13 +883,13 @@ namespace EW_Assistant
         private void RefreshAlarmFromCache()
         {
 
-            // B. ç”¨ç¼“å­˜åšå†…å­˜è®¡ç®— -> å„è‡ªæ›´æ–°UI
-            // 1) æœ€è¿‘ä¸€å‘¨æŠ¥è­¦æ¬¡æ•°å¡
+            // B. ÓÃ»º´æ×öÄÚ´æ¼ÆËã -> ¸÷×Ô¸üĞÂUI
+            // 1) ×î½üÒ»ÖÜ±¨¾¯´ÎÊı¿¨
             _alarmWeek.Clear();
             foreach (var (date, count, missing) in AlarmLogCompute.GetDailyCountsFromCache(7))
                 _alarmWeek.Add(new AlarmDay { Date = date, Count = count, Missing = missing });
 
-            // 2) ä»Šæ—¥æŠ¥è­¦ç±»å‹ TOP5ï¼ˆæ”¹ä¸º Skia æ•°æ®æºï¼‰
+            // 2) ½ñÈÕ±¨¾¯ÀàĞÍ TOP5£¨¸ÄÎª Skia Êı¾İÔ´£©
             var top = AlarmLogCompute.GetTopCategoriesFromCache(DateTime.Today, 5);
             _top5.Clear();
             int idx = 0;
@@ -925,16 +903,16 @@ namespace EW_Assistant
                 });
             }
 
-            // ä¸å†ä½¿ç”¨ ItemsControl ç»‘å®š
+            // ²»ÔÙÊ¹ÓÃ ItemsControl °ó¶¨
             // Top5AlarmList.ItemsSource = items;
 
-            // è¿™é‡Œä¸å¼ºåˆ¶é‡å¼€åŠ¨ç”»ï¼ˆä¸ç°åœ¨ç­–ç•¥ä¸€è‡´ï¼‰ï¼š
-            // è‹¥ä½ æƒ³æ¯æ¬¡åˆ·æ–°éƒ½é‡æ”¾åŠ¨ç”»ï¼Œæ”¹ä¸º StartAnimation();
-            // å½“å‰ç­–ç•¥ï¼šåªé‡ç»˜
+            // ÕâÀï²»Ç¿ÖÆÖØ¿ª¶¯»­£¨ÓëÏÖÔÚ²ßÂÔÒ»ÖÂ£©£º
+            // ÈôÄãÏëÃ¿´ÎË¢ĞÂ¶¼ÖØ·Å¶¯»­£¬¸ÄÎª StartAnimation();
+            // µ±Ç°²ßÂÔ£ºÖ»ÖØ»æ
             SkTop5?.InvalidateVisual();
         }
         /// <summary>
-        /// ä¼˜å…ˆä»ç¼“å­˜æ‹‰å–ä»Šæ—¥æ¯å°æ—¶æŠ¥è­¦æ¬¡æ•°ï¼ˆ24 ä¸ªï¼‰ï¼Œå¤±è´¥åˆ™å›è½åˆ° CSV æ–‡ä»¶æ‰«æã€‚
+        /// ÓÅÏÈ´Ó»º´æÀ­È¡½ñÈÕÃ¿Ğ¡Ê±±¨¾¯´ÎÊı£¨24 ¸ö£©£¬Ê§°ÜÔò»ØÂäµ½ CSV ÎÄ¼şÉ¨Ãè¡£
         /// </summary>
         private void LoadAlarmHourlyFromCacheOrFile()
         {
@@ -943,10 +921,10 @@ namespace EW_Assistant
                 Array.Clear(_alarmHour, 0, _alarmHour.Length);
                 _alarmTodayMissing = false;
 
-                // 1) ä¼˜å…ˆï¼šå°è¯•ç¼“å­˜ï¼ˆè‹¥ä½ çš„ AlarmLogCompute æ²¡æœ‰æ­¤ APIï¼Œå¯ç›´æ¥èµ° 2)ï¼‰
+                // 1) ÓÅÏÈ£º³¢ÊÔ»º´æ£¨ÈôÄãµÄ AlarmLogCompute Ã»ÓĞ´Ë API£¬¿ÉÖ±½Ó×ß 2)£©
                 try
                 {
-                    // çº¦å®šï¼šè‹¥ä½ çš„å·¥å…·å·²æœ‰è¯¥æ–¹æ³•ï¼Œè¯·ä¿ç•™ï¼›æ²¡æœ‰å°±è®©å®ƒæŠ›å¼‚å¸¸èµ° 2)
+                    // Ô¼¶¨£ºÈôÄãµÄ¹¤¾ßÒÑÓĞ¸Ã·½·¨£¬Çë±£Áô£»Ã»ÓĞ¾ÍÈÃËüÅ×Òì³£×ß 2)
                     var fromCache = AlarmLogCompute.GetHourlyCountsFromCache(DateTime.Today);
                     if (fromCache != null && fromCache.Length == 24)
                     {
@@ -954,13 +932,13 @@ namespace EW_Assistant
                         return;
                     }
                 }
-                catch { /* å¿½ç•¥ï¼Œå›è½åˆ° CSV */ }
+                catch { /* ºöÂÔ£¬»ØÂäµ½ CSV */ }
 
-                // 2) å›è½ï¼šæ‰«æä»Šæ—¥æŠ¥è­¦ CSV å¹¶æŒ‰å°æ—¶èšåˆ
+                // 2) »ØÂä£ºÉ¨Ãè½ñÈÕ±¨¾¯ CSV ²¢°´Ğ¡Ê±¾ÛºÏ
                 string dir = ConfigService.Current.AlarmLogPath ?? "";
                 if (!Directory.Exists(dir)) { _alarmTodayMissing = true; return; }
 
-                // å°½é‡åŒ¹é…åŒ…å« yyyyMMdd çš„æ–‡ä»¶åï¼›æ‰¾ä¸åˆ°åˆ™ç”¨å…¨éƒ¨ csv ä¸­æœ€æ–°çš„é‚£ä¸ª
+                // ¾¡Á¿Æ¥Åä°üº¬ yyyyMMdd µÄÎÄ¼şÃû£»ÕÒ²»µ½ÔòÓÃÈ«²¿ csv ÖĞ×îĞÂµÄÄÇ¸ö
                 string stamp = DateTime.Today.ToString("yyyyMMdd");
                 var candidates = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly)
                     .Where(f => Path.GetFileName(f).Contains(stamp))
@@ -970,7 +948,7 @@ namespace EW_Assistant
                 string? file = candidates.FirstOrDefault();
                 if (file == null)
                 {
-                    // å…œåº•ï¼šæ‰¾æœ€æ–°çš„ä¸€ä¸ª CSVï¼ˆæœ‰äº›ç°åœºå‘½åä¸å«æ—¥æœŸï¼‰
+                    // ¶µµ×£ºÕÒ×îĞÂµÄÒ»¸ö CSV£¨ÓĞĞ©ÏÖ³¡ÃüÃû²»º¬ÈÕÆÚ£©
                     file = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly)
                            .OrderByDescending(File.GetLastWriteTime)
                            .FirstOrDefault();
@@ -984,9 +962,9 @@ namespace EW_Assistant
                 var lines = ReadAllLinesShared(file, enc);
                 if (lines.Count == 0) { _alarmTodayMissing = true; return; }
 
-                // è§£æè¡¨å¤´ï¼Œå¯»æ‰¾â€œå°æ—¶/æ—¶é—´/å‘ç”Ÿæ—¶é—´/æ—¶åˆ»â€ç­‰å­—æ®µ
+                // ½âÎö±íÍ·£¬Ñ°ÕÒ¡°Ğ¡Ê±/Ê±¼ä/·¢ÉúÊ±¼ä/Ê±¿Ì¡±µÈ×Ö¶Î
                 var header = SmartSplitAny(lines[0]);
-                int idxHour = IndexOf(header, "å°æ—¶", "Hour", "HOUR", "æ—¶é—´", "å‘ç”Ÿæ—¶é—´", "æ—¶åˆ»", "æ—¶æ®µ");
+                int idxHour = IndexOf(header, "Ğ¡Ê±", "Hour", "HOUR", "Ê±¼ä", "·¢ÉúÊ±¼ä", "Ê±¿Ì", "Ê±¶Î");
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -997,7 +975,7 @@ namespace EW_Assistant
                     if (idxHour >= 0 && idxHour < row.Length) hour = ExtractHourLoose(row[idxHour]);
                     if (hour < 0 || hour > 23)
                     {
-                        // æ²¡æœ‰å°æ—¶åˆ—æ—¶ï¼Œç²—ç•¥ç”¨è¡Œå·æ¨æ–­ï¼ˆä¸æ¨èï¼Œä½†å°½é‡å¡«å……ä»¥é¿å…ç©ºå›¾ï¼‰
+                        // Ã»ÓĞĞ¡Ê±ÁĞÊ±£¬´ÖÂÔÓÃĞĞºÅÍÆ¶Ï£¨²»ÍÆ¼ö£¬µ«¾¡Á¿Ìî³äÒÔ±ÜÃâ¿ÕÍ¼£©
                         if (idxHour < 0) hour = (i - 1) % 24;
                     }
                     if (hour >= 0 && hour <= 23) _alarmHour[hour]++;
@@ -1015,7 +993,7 @@ namespace EW_Assistant
 
             try
             {
-                // 1) ä¼˜å…ˆï¼šç¼“å­˜
+                // 1) ÓÅÏÈ£º»º´æ
                 var fromCache = AlarmLogCompute.GetCategoryDurationsFromCache(DateTime.Today);
                 if (fromCache != null && fromCache.Count > 0)
                 {
@@ -1024,7 +1002,7 @@ namespace EW_Assistant
                 }
                 else
                 {
-                    // 2) å›è½ï¼šç›´æ¥æ‰«æä»Šæ—¥ CSVï¼ˆç”¨ä½ ç»™çš„è¡¨å¤´ï¼‰
+                    // 2) »ØÂä£ºÖ±½ÓÉ¨Ãè½ñÈÕ CSV£¨ÓÃÄã¸øµÄ±íÍ·£©
                     string dir = ConfigService.Current.AlarmLogPath ?? "";
                     if (Directory.Exists(dir))
                     {
@@ -1047,8 +1025,8 @@ namespace EW_Assistant
                             if (lines.Count > 0)
                             {
                                 var header = SmartSplitAny(lines[0]);
-                                int idxCategory = IndexOf(header, "æŠ¥è­¦ç±»åˆ«", "ç±»åˆ«", "Category", "Type");
-                                int idxSeconds = IndexOf(header, "æŠ¥è­¦æ—¶é—´(s)", "æŠ¥è­¦æ—¶é•¿(s)", "æŒç»­æ—¶é—´(s)", "Seconds", "Duration");
+                                int idxCategory = IndexOf(header, "±¨¾¯Àà±ğ", "Àà±ğ", "Category", "Type");
+                                int idxSeconds = IndexOf(header, "±¨¾¯Ê±¼ä(s)", "±¨¾¯Ê±³¤(s)", "³ÖĞøÊ±¼ä(s)", "Seconds", "Duration");
 
                                 var dict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
@@ -1080,7 +1058,7 @@ namespace EW_Assistant
                     }
                 }
 
-                // Top-N + å…¶ä»– èšåˆï¼ˆè®©å›¾ä¾‹ä¸æ‹¥æŒ¤ï¼‰
+                // Top-N + ÆäËû ¾ÛºÏ£¨ÈÃÍ¼Àı²»Óµ¼·£©
                 const int TOP_N = 6;
                 if (_pieSlices.Count > TOP_N)
                 {
@@ -1088,7 +1066,7 @@ namespace EW_Assistant
                     var otherSec = _pieSlices.Skip(TOP_N).Sum(x => x.Seconds);
                     _pieSlices.Clear();
                     _pieSlices.AddRange(top);
-                    if (otherSec > 0) _pieSlices.Add(("å…¶ä»–", otherSec));
+                    if (otherSec > 0) _pieSlices.Add(("ÆäËû", otherSec));
                 }
 
                 _pieTotalSeconds = _pieSlices.Sum(x => x.Seconds);
@@ -1126,14 +1104,14 @@ namespace EW_Assistant
             if (string.IsNullOrWhiteSpace(s)) return -1;
             s = s.Trim();
 
-            // ç›´æ¥æ•´æ•°ï¼ˆ0-23ï¼‰
+            // Ö±½ÓÕûÊı£¨0-23£©
             if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int h) && h >= 0 && h <= 23) return h;
 
-            // æ ‡å‡†æ—¶é—´
+            // ±ê×¼Ê±¼ä
             if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt)) return dt.Hour;
             if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) return dt.Hour;
 
-            // â€œ08:00-09:00â€ã€â€œ08ç‚¹â€ã€â€œ8æ—¶30åˆ†â€ ä¹‹ç±»
+            // ¡°08:00-09:00¡±¡¢¡°08µã¡±¡¢¡°8Ê±30·Ö¡± Ö®Àà
             var digits = new string(s.TakeWhile(ch => char.IsDigit(ch)).ToArray());
             if (digits.Length > 0 && int.TryParse(digits, out h) && h >= 0 && h <= 23) return h;
 
@@ -1146,11 +1124,11 @@ namespace EW_Assistant
             var info = e.Info;
             canvas.Clear(SKColors.White);
 
-            // ç”»å¸ƒåŒºåŸŸ & å†…è¾¹è·
+            // »­²¼ÇøÓò & ÄÚ±ß¾à
             float padX = 10f, padY = 8f;
             var area = new SKRect(padX, padY, info.Width - padX, info.Height - padY);
 
-            // æ–‡å­—ç”»ç¬”ï¼ˆç”¨ä½ ç»Ÿä¸€çš„ä¸­æ–‡å­—ä½“ï¼›è‹¥æ²¡æœ‰ FONT_UIï¼Œå°±å»æ‰ Typefaceï¼‰
+            // ÎÄ×Ö»­±Ê£¨ÓÃÄãÍ³Ò»µÄÖĞÎÄ×ÖÌå£»ÈôÃ»ÓĞ FONT_UI£¬¾ÍÈ¥µô Typeface£©
             // SkTop5_PaintSurface
             using var namePaint = new SKPaint { Typeface = FONT_CJK, IsAntialias = true, Color = new SKColor(107, 114, 128), TextSize = 13 };
             using var countPaint = new SKPaint { Typeface = FONT_CJK, IsAntialias = true, Color = new SKColor(55, 65, 81), TextSize = 16, FakeBoldText = true };
@@ -1160,7 +1138,7 @@ namespace EW_Assistant
 
             if (_top5.Count == 0)
             {
-                var tip = "ä»Šæ—¥æš‚æ— æŠ¥è­¦";
+                var tip = "½ñÈÕÔİÎŞ±¨¾¯";
                 var b = new SKRect(); namePaint.MeasureText(tip, ref b);
                 canvas.DrawText(tip, area.MidX - b.MidX, area.MidY + b.Height / 2, namePaint);
                 return;
@@ -1168,57 +1146,57 @@ namespace EW_Assistant
 
             int max = Math.Max(1, _top5.Max(x => x.Count));
 
-            // å¸ƒå±€ï¼šä¸€è¡Œ = åç§°(ä¸Š) + èƒ¶å›Šæ¡(ä¸‹) + å³ä¾§æ•°å­—
+            // ²¼¾Ö£ºÒ»ĞĞ = Ãû³Æ(ÉÏ) + ½ºÄÒÌõ(ÏÂ) + ÓÒ²àÊı×Ö
             int rows = _top5.Count;
             float rowGap = 20f;
             float rowH = (area.Height - rowGap * (rows - 1)) / rows;
 
-            float valueColW = 48f;                      // å³ä¾§æ•°å­—åˆ—å®½
-            float barLeft = area.Left;                // èƒ¶å›Šèµ·ç‚¹ï¼ˆä¸åç§°å·¦å¯¹é½ï¼‰
-            float barRight = area.Right - valueColW;   // é¢„ç•™å³ä¾§æ•°å­—
+            float valueColW = 48f;                      // ÓÒ²àÊı×ÖÁĞ¿í
+            float barLeft = area.Left;                // ½ºÄÒÆğµã£¨ÓëÃû³Æ×ó¶ÔÆë£©
+            float barRight = area.Right - valueColW;   // Ô¤ÁôÓÒ²àÊı×Ö
             float fullW = Math.Max(0, barRight - barLeft);
 
-            // èƒ¶å›Šé«˜åº¦ & åœ†è§’
-            float barH = 16f;                      // è§†è§‰æ›´æ¥è¿‘ä½ çš„å›¾
+            // ½ºÄÒ¸ß¶È & Ô²½Ç
+            float barH = 16f;                      // ÊÓ¾õ¸ü½Ó½üÄãµÄÍ¼
             float radius = barH / 2f;
 
-            // é¢œè‰²ï¼šæ²¿ç”¨æŠ¥è­¦å‘¨å›¾çš„æ©™è‰²æ¸å˜
-            var barDark = new SKColor(234, 88, 12);    // æ©™æ·±
-            var barLight = new SKColor(253, 186, 116);  // æ©™æµ…
+            // ÑÕÉ«£ºÑØÓÃ±¨¾¯ÖÜÍ¼µÄ³ÈÉ«½¥±ä
+            var barDark = new SKColor(234, 88, 12);    // ³ÈÉî
+            var barLight = new SKColor(253, 186, 116);  // ³ÈÇ³
 
             for (int i = 0; i < rows; i++)
             {
                 var it = _top5[i];
 
-                // æ¯è¡Œèµ·ç‚¹
+                // Ã¿ĞĞÆğµã
                 float yTop = area.Top + i * (rowH + rowGap);
 
-                // â€”â€” åç§°ï¼ˆç°ï¼Œå·¦ä¸Šï¼‰â€”â€”
-                string name = EllipsisFit(it.Name ?? "", namePaint, fullW - 6); // ç»™å³ä¾§èƒ¶å›Šç•™ç‚¹ç©º
+                // ¡ª¡ª Ãû³Æ£¨»Ò£¬×óÉÏ£©¡ª¡ª
+                string name = EllipsisFit(it.Name ?? "", namePaint, fullW - 6); // ¸øÓÒ²à½ºÄÒÁôµã¿Õ
                 var nb = new SKRect(); namePaint.MeasureText(name, ref nb);
-                float nameBase = yTop + nb.Height; // ç®€å•åŸºçº¿
+                float nameBase = yTop + nb.Height; // ¼òµ¥»ùÏß
                 canvas.DrawText(name, barLeft, nameBase, namePaint);
 
-                // â€”â€” èƒ¶å›Šæ¡åŸºçº¿ï¼ˆåç§°ä¸‹æ–¹ 6pxï¼‰â€”â€”
+                // ¡ª¡ª ½ºÄÒÌõ»ùÏß£¨Ãû³ÆÏÂ·½ 6px£©¡ª¡ª
                 float gapAfterName = 6f;
                 float yBarMid = nameBase + gapAfterName + barH / 2f;
 
-                // â€”â€” åŠ¨ç”»ï¼šä¸å…¶å®ƒå¡ç‰‡ä¸€è‡´ï¼ˆ_anim + Stagger + EaseOutCubicï¼‰â€”â€”
+                // ¡ª¡ª ¶¯»­£ºÓëÆäËü¿¨Æ¬Ò»ÖÂ£¨_anim + Stagger + EaseOutCubic£©¡ª¡ª
                 double local = Clamp01((_anim - i * Stagger) / (1.0 - Math.Min(1.0, i * Stagger)));
                 double eased = EaseOutCubic(local);
 
-                // â€”â€” è½¨é“ï¼ˆæµ…ç°æ•´æ¡ï¼‰â€”â€”
+                // ¡ª¡ª ¹ìµÀ£¨Ç³»ÒÕûÌõ£©¡ª¡ª
                 var trackRect = new SKRect(barLeft, yBarMid - barH / 2, barRight, yBarMid + barH / 2);
                 using (var rrTrack = new SKRoundRect(trackRect, radius, radius))
                     canvas.DrawRoundRect(rrTrack, trackPaint);
 
-                // â€”â€” è¿›åº¦ï¼ˆè“è‰²æ¸å˜ï¼Œåœ†è§’ï¼›æå°å€¼æ˜¾ç¤ºæˆâ€œåœ†ç‚¹â€ï¼‰â€”â€”
+                // ¡ª¡ª ½ø¶È£¨À¶É«½¥±ä£¬Ô²½Ç£»¼«Ğ¡ÖµÏÔÊ¾³É¡°Ô²µã¡±£©¡ª¡ª
                 float ratio = (float)it.Count / max;
                 float w = fullW * ratio * (float)eased;
 
                 if (it.Count > 0 && w < barH * 0.45f)
                 {
-                    // å¾ˆå°ï¼šç”¨å°åœ†ç‚¹è¡¨ç°
+                    // ºÜĞ¡£ºÓÃĞ¡Ô²µã±íÏÖ
                     using var shaderDot = SKShader.CreateLinearGradient(
                         new SKPoint(0, yBarMid - barH / 2),
                         new SKPoint(0, yBarMid + barH / 2),
@@ -1240,7 +1218,7 @@ namespace EW_Assistant
                     barPaint.Shader = null;
                 }
 
-                // â€”â€” å³ä¾§æ•°é‡ï¼ˆæ·±è‰²ã€ç²—ä½“ï¼Œå‚ç›´å¯¹é½åˆ°èƒ¶å›Šä¸­çº¿ï¼‰â€”â€”
+                // ¡ª¡ª ÓÒ²àÊıÁ¿£¨ÉîÉ«¡¢´ÖÌå£¬´¹Ö±¶ÔÆëµ½½ºÄÒÖĞÏß£©¡ª¡ª
                 var valText = it.Count.ToString();
                 var vb = new SKRect(); countPaint.MeasureText(valText, ref vb);
                 float vx = area.Right - valueColW / 2f - vb.MidX;
@@ -1256,7 +1234,7 @@ namespace EW_Assistant
             paint.MeasureText(s, ref bounds);
             if (bounds.Width <= maxWidth) return s;
 
-            const string ell = "â€¦";
+            const string ell = "¡­";
             paint.MeasureText(ell, ref bounds);
             float ellW = bounds.Width;
 
@@ -1278,18 +1256,18 @@ namespace EW_Assistant
         }
 
 
-        // ======== æŠ¥è­¦å‘¨æ•°æ® ========
+        // ======== ±¨¾¯ÖÜÊı¾İ ========
         private class AlarmDay
         {
             public DateTime Date { get; set; }
-            public int Count { get; set; }    // å½“å¤©æŠ¥è­¦æ¡æ•°ï¼ˆè¿™é‡Œä»…ç”¨äºå‘¨ç»Ÿè®¡ï¼‰
-            public bool Missing { get; set; } // æ–‡ä»¶ç¼ºå¤±æˆ–è¯»å–å¤±è´¥
+            public int Count { get; set; }    // µ±Ìì±¨¾¯ÌõÊı£¨ÕâÀï½öÓÃÓÚÖÜÍ³¼Æ£©
+            public bool Missing { get; set; } // ÎÄ¼şÈ±Ê§»ò¶ÁÈ¡Ê§°Ü
         }
 
         private readonly List<AlarmDay> _alarmWeek = new();
 
 
-        // ======== ç»˜åˆ¶æŠ¥è­¦å‘¨å›¾ ========
+        // ======== »æÖÆ±¨¾¯ÖÜÍ¼ ========
         private void SkAlarm_PaintSurface(object sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
@@ -1306,7 +1284,7 @@ namespace EW_Assistant
             using var dayPaint = new SKPaint { IsAntialias = true, Color = new SKColor(107, 114, 128), TextSize = 12 };
             using var barPaint = new SKPaint { IsAntialias = true };
 
-            // åæ ‡è½´ä¸ç½‘æ ¼
+            // ×ø±êÖáÓëÍø¸ñ
             int max = Math.Max(1, _alarmWeek.Any() ? _alarmWeek.Max(d => d.Count) : 1);
             int yMax = NiceCeil((int)Math.Ceiling(max * 1.10));
 
@@ -1334,20 +1312,20 @@ namespace EW_Assistant
             float barWidth = slot * 0.52f;
             float radius = 6f;
 
-            var barDark = new SKColor(234, 88, 12);   // æ©™è‰²æ·±
-            var barLight = new SKColor(253, 186, 116);// æ©™è‰²æµ…
+            var barDark = new SKColor(234, 88, 12);   // ³ÈÉ«Éî
+            var barLight = new SKColor(253, 186, 116);// ³ÈÉ«Ç³
 
             for (int i = 0; i < _alarmWeek.Count; i++)
             {
                 var d = _alarmWeek[i];
                 float cx = chart.Left + slot * i + slot / 2f;
 
-                // Xè½´æ—¥æœŸ
+                // XÖáÈÕÆÚ
                 string dayLabel = d.Date.ToString("MM-dd");
                 var db = new SKRect(); dayPaint.MeasureText(dayLabel, ref db);
                 canvas.DrawText(dayLabel, cx - db.MidX, chart.Bottom + 18, dayPaint);
 
-                // åŠ¨ç”»
+                // ¶¯»­
                 double local = Clamp01((_anim - i * 0.08) / (1.0 - Math.Min(1.0, i * 0.08)));
                 double eased = EaseOutCubic(local);
 
@@ -1369,7 +1347,7 @@ namespace EW_Assistant
                     new[] { barLight, barDark }, null, SKShaderTileMode.Clamp);
                 barPaint.Shader = shader; canvas.DrawRoundRect(rr, barPaint); barPaint.Shader = null;
 
-                // é¡¶éƒ¨æ•°å­—
+                // ¶¥²¿Êı×Ö
                 var tag2 = d.Count.ToString();
                 var tb2 = new SKRect(); valuePaint.MeasureText(tag2, ref tb2);
                 float desired = chart.Bottom - h - 6;
@@ -1378,7 +1356,7 @@ namespace EW_Assistant
             }
         }
 
-        // === æ–°å¢ï¼šä»Šæ—¥ 24 å°æ—¶æŠ¥è­¦æ¬¡æ•°ï¼ˆæŠ˜çº¿å›¾æ•°æ®ï¼‰ ===
+        // === ĞÂÔö£º½ñÈÕ 24 Ğ¡Ê±±¨¾¯´ÎÊı£¨ÕÛÏßÍ¼Êı¾İ£© ===
         private readonly int[] _alarmHour = new int[24];
         private bool _alarmTodayMissing = false;
         private void SkAlarmHour_PaintSurface(object? sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
@@ -1480,12 +1458,12 @@ namespace EW_Assistant
                 canvas.DrawCircle(pts[i], r, dotPaint);
             }
 
-            // ======= æ ‡æ³¨ç«¯ç‚¹æ•°å€¼ï¼šä»…é 0ï¼Œä¸”æ— æ–¹æ¡† =======
+            // ======= ±ê×¢¶ËµãÊıÖµ£º½ö·Ç 0£¬ÇÒÎŞ·½¿ò =======
             using var labelPaint = new SKPaint
             {
                 IsAntialias = true,
                 Color = new SKColor(31, 41, 55),
-                TextSize = 13,              // æƒ³æ›´æ˜¾çœ¼å¯è°ƒåˆ° 14~15
+                TextSize = 13,              // Ïë¸üÏÔÑÛ¿Éµ÷µ½ 14~15
                 FakeBoldText = true,
                 Typeface = FONT_CJK
             };
@@ -1493,16 +1471,16 @@ namespace EW_Assistant
             void DrawPointLabel(int idx)
             {
                 int v = _alarmHour[idx];
-                if (v <= 0) return; // 0 ä¸æ˜¾ç¤º
+                if (v <= 0) return; // 0 ²»ÏÔÊ¾
 
                 string txt = v.ToString(CultureInfo.InvariantCulture);
                 var tb = new SKRect(); labelPaint.MeasureText(txt, ref tb);
 
-                // æ”¾åœ¨ç‚¹çš„ä¸Šæ–¹ï¼Œè‡ªåŠ¨é™ä½åˆ°å›¾å†…
+                // ·ÅÔÚµãµÄÉÏ·½£¬×Ô¶¯ÏŞÎ»µ½Í¼ÄÚ
                 float desired = pts[idx].Y - 8f;
                 float baseline = SafeBaseline(labelPaint, txt, desired, chart.Top, chart.Bottom, padTop: 8f, padBottom: 6f);
 
-                // å·¦åŠåŒºæ–‡å­—æ”¾å³ä¾§ï¼Œå³åŠåŒºæ”¾å·¦ä¾§ï¼Œé¿å…é¡¶åˆ°è¾¹ç¼˜
+                // ×ó°ëÇøÎÄ×Ö·ÅÓÒ²à£¬ÓÒ°ëÇø·Å×ó²à£¬±ÜÃâ¶¥µ½±ßÔµ
                 bool rightHalf = idx >= 12;
                 float tx = rightHalf ? (pts[idx].X - tb.Width - 6f) : (pts[idx].X + 6f);
                 tx = Math.Max(chart.Left + 2f, Math.Min(tx, chart.Right - tb.Width - 2f));
@@ -1510,13 +1488,13 @@ namespace EW_Assistant
                 canvas.DrawText(txt, tx, baseline, labelPaint);
             }
 
-            // é€ç‚¹ç»˜åˆ¶ï¼ˆä»…é 0 ä¼šç”»ï¼‰
+            // Öğµã»æÖÆ£¨½ö·Ç 0 »á»­£©
             for (int i = 0; i < 24; i++)
                 DrawPointLabel(i);
 
             if (_alarmHour.All(v => v == 0))
             {
-                var tip = "æ— æŠ¥è­¦æ•°æ®";
+                var tip = "ÎŞ±¨¾¯Êı¾İ";
                 var tb = new SKRect(); textPaint.MeasureText(tip, ref tb);
                 canvas.DrawText(tip, chart.MidX - tb.MidX, chart.MidY, textPaint);
             }
@@ -1524,7 +1502,7 @@ namespace EW_Assistant
 
 
 
-        // === æŠ¥è­¦æ—¶é•¿å æ¯”ï¼ˆç¯å½¢é¥¼ï¼‰ ===
+        // === ±¨¾¯Ê±³¤Õ¼±È£¨»·ĞÎ±ı£© ===
         private readonly List<(string Name, double Seconds)> _pieSlices = new();
         private double _pieTotalSeconds = 0;
 
@@ -1545,11 +1523,11 @@ namespace EW_Assistant
             float pad = 8f;
             float w = info.Width, h = info.Height;
 
-            // é¥¼å›¾å å®½åº¦çº¦ 60%ï¼Œé«˜åº¦ä¼˜å…ˆï¼ˆä¸å˜ï¼‰
+            // ±ıÍ¼Õ¼¿í¶ÈÔ¼ 60%£¬¸ß¶ÈÓÅÏÈ£¨²»±ä£©
             float pieSize = Math.Min(h - pad * 2f, w * 0.60f - pad * 2f);
             pieSize = Math.Max(80f, pieSize);
 
-            // é¥¼å›¾é å·¦ï¼Œå±…ä¸­
+            // ±ıÍ¼¿¿×ó£¬¾ÓÖĞ
             float cx = pad + pieSize / 2f;
             float cy = h / 2f;
             var box = new SKRect(cx - pieSize / 2f, cy - pieSize / 2f, cx + pieSize / 2f, cy + pieSize / 2f);
@@ -1561,7 +1539,7 @@ namespace EW_Assistant
             {
                 using var bgFill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = new SKColor(238, 242, 247) };
                 canvas.DrawOval(box, bgFill);
-                var tip = "æš‚æ— æ—¶é•¿æ•°æ®";
+                var tip = "ÔİÎŞÊ±³¤Êı¾İ";
                 var tb = new SKRect(); textPaint.MeasureText(tip, ref tb);
                 canvas.DrawText(tip, (w - tb.Width) / 2f, cy - tb.MidY, textPaint);
                 return;
@@ -1592,8 +1570,8 @@ namespace EW_Assistant
             }
             canvas.DrawOval(box, borderPaint);
 
-            // ===== å³ä¾§å›¾ä¾‹ï¼šåç§° + ç™¾åˆ†æ¯” + æ—¶é•¿ï¼ˆå³ä¾§å¯¹é½åˆ°åŒä¸€åˆ—ï¼‰ =====
-            float legendX = box.Right + 32f;   // æ•´ä½“æ›´é å³
+            // ===== ÓÒ²àÍ¼Àı£ºÃû³Æ + °Ù·Ö±È + Ê±³¤£¨ÓÒ²à¶ÔÆëµ½Í¬Ò»ÁĞ£© =====
+            float legendX = box.Right + 32f;   // ÕûÌå¸ü¿¿ÓÒ
             float legendY = box.Top + 10f;
             float dot = 12f;
             float row = 26f;
@@ -1611,17 +1589,17 @@ namespace EW_Assistant
             using var durationText = new SKPaint
             {
                 IsAntialias = true,
-                Color = new SKColor(75, 85, 99), // ç•¥æ·±ç°
+                Color = new SKColor(75, 85, 99), // ÂÔÉî»Ò
                 TextSize = 13,
                 Typeface = FONT_CJK,
                 SubpixelText = true,
                 LcdRenderText = true
             };
 
-            float labelStartX = legendX + dot + 10f; // åç§°+ç™¾åˆ†æ¯”èµ·ç‚¹
+            float labelStartX = legendX + dot + 10f; // Ãû³Æ+°Ù·Ö±ÈÆğµã
             float gap = 12f;
 
-            // 1) å…ˆæµ‹é‡â€œåç§° + ç™¾åˆ†æ¯”â€çš„æœ€å¤§å®½åº¦ï¼Œç”¨äºç»Ÿä¸€å¯¹é½æ—¶é•¿åˆ—
+            // 1) ÏÈ²âÁ¿¡°Ãû³Æ + °Ù·Ö±È¡±µÄ×î´ó¿í¶È£¬ÓÃÓÚÍ³Ò»¶ÔÆëÊ±³¤ÁĞ
             float maxLabelW = 0f;
             for (int i = 0; i < _pieSlices.Count; i++)
             {
@@ -1633,13 +1611,13 @@ namespace EW_Assistant
             }
             float durationX = labelStartX + maxLabelW + gap;
 
-            // 2) ç»˜åˆ¶æ¯è¡Œï¼šåœ†ç‚¹ + â€œåç§°  ç™¾åˆ†æ¯”â€ + â€œæ—¶é•¿â€
+            // 2) »æÖÆÃ¿ĞĞ£ºÔ²µã + ¡°Ãû³Æ  °Ù·Ö±È¡± + ¡°Ê±³¤¡±
             for (int i = 0; i < _pieSlices.Count; i++)
             {
                 var (name, sec) = _pieSlices[i];
                 float pct = (float)(sec / _pieTotalSeconds * 100.0f);
                 string label = $"{name}  {pct:0.#}%";
-                string dur = FormatDuration(sec); // ä¾‹å¦‚ 1h23m / 12m30s
+                string dur = FormatDuration(sec); // ÀıÈç 1h23m / 12m30s
 
                 using var dotPaint = new SKPaint { IsAntialias = true, Color = palette[i % palette.Length], Style = SKPaintStyle.Fill };
                 canvas.DrawCircle(legendX, legendY + i * row - 3f, dot / 2f, dotPaint);
@@ -1648,8 +1626,8 @@ namespace EW_Assistant
                 canvas.DrawText(dur, durationX, legendY + i * row, durationText);
             }
 
-            // 3) â€œæ€»æŠ¥è­¦æ—¶é•¿â€æ”¾åœ¨å›¾ä¾‹ä¸‹æ–¹
-            string totalLine = "æ€»æŠ¥è­¦æ—¶é•¿ï¼š" + FormatDuration(_pieTotalSeconds);
+            // 3) ¡°×Ü±¨¾¯Ê±³¤¡±·ÅÔÚÍ¼ÀıÏÂ·½
+            string totalLine = "×Ü±¨¾¯Ê±³¤£º" + FormatDuration(_pieTotalSeconds);
             using var totalPaint = new SKPaint
             {
                 IsAntialias = true,
@@ -1681,7 +1659,7 @@ namespace EW_Assistant
             private static IReadOnlyDictionary<DateTime, DayRaw> _byDay = new Dictionary<DateTime, DayRaw>();
 
             /// <summary>
-            /// åªåšIOè¯»å–æœ€è¿‘ N å¤©ï¼Œç¼“å­˜åŸå§‹è¡Œï¼›ä¸åšä»»ä½•ç»Ÿè®¡ã€‚
+            /// Ö»×öIO¶ÁÈ¡×î½ü N Ìì£¬»º´æÔ­Ê¼ĞĞ£»²»×öÈÎºÎÍ³¼Æ¡£
             /// </summary>
             public static void LoadRecent(string root, int days = 7)
             {
@@ -1701,7 +1679,7 @@ namespace EW_Assistant
                     try
                     {
                         var enc = DetectEncoding();
-                        var lines = ReadAllLinesShared(path, enc, keepEmpty: true); // åŸæ ·ä¿ç•™ï¼ˆåŒ…æ‹¬ç©ºè¡Œï¼‰
+                        var lines = ReadAllLinesShared(path, enc, keepEmpty: true); // Ô­Ñù±£Áô£¨°üÀ¨¿ÕĞĞ£©
                         map[day] = new DayRaw
                         {
                             Date = day,
@@ -1723,7 +1701,7 @@ namespace EW_Assistant
                 }
             }
 
-            /// <summary>å–æŸå¤©çš„åŸå§‹ç¼“å­˜ï¼ˆå¯èƒ½ Missingï¼‰ã€‚ä¸åšIOã€‚</summary>
+            /// <summary>È¡Ä³ÌìµÄÔ­Ê¼»º´æ£¨¿ÉÄÜ Missing£©¡£²»×öIO¡£</summary>
             public static DayRaw? GetDayRaw(DateTime date)
             {
                 var d = date.Date;
@@ -1733,7 +1711,7 @@ namespace EW_Assistant
                 }
             }
 
-            /// <summary>æŒ‰æ—¶é—´é¡ºåºå–æœ€è¿‘ N å¤©çš„åŸå§‹ç¼“å­˜å¿«ç…§ï¼ˆä¸åšIOï¼‰ã€‚</summary>
+            /// <summary>°´Ê±¼äË³ĞòÈ¡×î½ü N ÌìµÄÔ­Ê¼»º´æ¿ìÕÕ£¨²»×öIO£©¡£</summary>
             public static IReadOnlyList<DayRaw> SnapshotRecent(int days = 7)
             {
                 if (days <= 0) days = 7;
@@ -1751,7 +1729,7 @@ namespace EW_Assistant
                 return list;
             }
 
-            // ============== å†…éƒ¨ï¼šå…±äº«è¯»å– & ç¼–ç æ¢æµ‹ï¼ˆä¸åšç»Ÿè®¡ï¼‰ ==============
+            // ============== ÄÚ²¿£º¹²Ïí¶ÁÈ¡ & ±àÂëÌ½²â£¨²»×öÍ³¼Æ£© ==============
             private static List<string> ReadAllLinesShared(string path, Encoding enc, bool keepEmpty)
             {
                 var list = new List<string>();
@@ -1768,14 +1746,14 @@ namespace EW_Assistant
 
             private static Encoding DetectEncoding()
             {
-                try { return Encoding.GetEncoding("GB18030"); } // è¦†ç›–GB2312/GBK
+                try { return Encoding.GetEncoding("GB18030"); } // ¸²¸ÇGB2312/GBK
                 catch { return new UTF8Encoding(false); }
             }
         }
 
         private static class AlarmLogCompute
         {
-            // ===== å¯¹æœ€è¿‘Nå¤©è®¡ç®—â€œæ¯å¤©æŠ¥è­¦æ¡æ•°â€ï¼ˆæ’é™¤è¡¨å¤´ä¸ç©ºè¡Œï¼‰ =====
+            // ===== ¶Ô×î½üNÌì¼ÆËã¡°Ã¿Ìì±¨¾¯ÌõÊı¡±£¨ÅÅ³ı±íÍ·Óë¿ÕĞĞ£© =====
             public static IReadOnlyList<(DateTime Date, int Count, bool Missing)> GetDailyCountsFromCache(int days = 7)
             {
                 var raws = AlarmLogCache.SnapshotRecent(days);
@@ -1796,7 +1774,7 @@ namespace EW_Assistant
                         var line = r.LinesAll[i];
                         if (string.IsNullOrWhiteSpace(line)) continue;
 
-                        // æœ‰/æ— åˆ†éš”ç¬¦éƒ½ç®—æœ‰æ•ˆè®°å½•ï¼ˆä½ ä¹Ÿå¯ä»¥æ”¹æˆï¼šè‡³å°‘åŒ…å«ä¸€ä¸ª , ; \t æ‰ç®—ï¼‰
+                        // ÓĞ/ÎŞ·Ö¸ô·û¶¼ËãÓĞĞ§¼ÇÂ¼£¨ÄãÒ²¿ÉÒÔ¸Ä³É£ºÖÁÉÙ°üº¬Ò»¸ö , ; \t ²ÅËã£©
                         cnt++;
                     }
 
@@ -1805,7 +1783,7 @@ namespace EW_Assistant
                 return list;
             }
 
-            // ===== è®¡ç®—â€œæŒ‡å®šæ—¥æœŸçš„æŠ¥è­¦ç±»å‹ TOP Nâ€ =====
+            // ===== ¼ÆËã¡°Ö¸¶¨ÈÕÆÚµÄ±¨¾¯ÀàĞÍ TOP N¡± =====
             public static List<(string Category, int Count)> GetTopCategoriesFromCache(DateTime date, int topN = 5)
             {
                 var raw = AlarmLogCache.GetDayRaw(date);
@@ -1813,7 +1791,7 @@ namespace EW_Assistant
 
                 var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
                 int idxCategory = FindHeaderIndex(headerCols,
-                    "æŠ¥è­¦ç±»åˆ«", "æŠ¥è­¦ç±»å‹", "ç±»åˆ«", "Type", "Category");
+                    "±¨¾¯Àà±ğ", "±¨¾¯ÀàĞÍ", "Àà±ğ", "Type", "Category");
 
                 var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 for (int i = startRow; i < raw.LinesAll.Length; i++)
@@ -1839,13 +1817,13 @@ namespace EW_Assistant
                            .Select(kv => (kv.Key, kv.Value))
                            .ToList();
             }
-            // æ”¾åœ¨ AlarmLogCompute ç±»é‡Œï¼ˆä¸ GetDailyCountsFromCache / GetTopCategoriesFromCache åŒçº§ï¼‰
+            // ·ÅÔÚ AlarmLogCompute ÀàÀï£¨Óë GetDailyCountsFromCache / GetTopCategoriesFromCache Í¬¼¶£©
 
             /// <summary>
-            /// è®¡ç®—æŒ‡å®šæ—¥æœŸâ€œæ¯å°æ—¶æŠ¥è­¦æ¡æ•°â€ï¼ˆé•¿åº¦=24ï¼‰ã€‚
-            /// ä¼˜å…ˆä½¿ç”¨ç¼“å­˜ AlarmLogCache.GetDayRaw(date)ï¼Œè‡ªåŠ¨è¯†åˆ«è¡¨å¤´ä¸â€œæ—¶é—´/å°æ—¶â€åˆ—ï¼›
-            /// è‹¥æ²¡æœ‰æ˜ç¡®å°æ—¶åˆ—ï¼Œä¼šåœ¨æ¯ä¸€è¡Œçš„æ‰€æœ‰åˆ—ä¸­å°è¯•è§£ææ—¶é—´å­—ç¬¦ä¸²å¾—åˆ°å°æ—¶ï¼›
-            /// ä¸å¯ç”¨/ç¼ºå¤±æ—¶è¿”å›å…¨ 0 æ•°ç»„ï¼ˆé•¿åº¦ 24ï¼‰ã€‚
+            /// ¼ÆËãÖ¸¶¨ÈÕÆÚ¡°Ã¿Ğ¡Ê±±¨¾¯ÌõÊı¡±£¨³¤¶È=24£©¡£
+            /// ÓÅÏÈÊ¹ÓÃ»º´æ AlarmLogCache.GetDayRaw(date)£¬×Ô¶¯Ê¶±ğ±íÍ·Óë¡°Ê±¼ä/Ğ¡Ê±¡±ÁĞ£»
+            /// ÈôÃ»ÓĞÃ÷È·Ğ¡Ê±ÁĞ£¬»áÔÚÃ¿Ò»ĞĞµÄËùÓĞÁĞÖĞ³¢ÊÔ½âÎöÊ±¼ä×Ö·û´®µÃµ½Ğ¡Ê±£»
+            /// ²»¿ÉÓÃ/È±Ê§Ê±·µ»ØÈ« 0 Êı×é£¨³¤¶È 24£©¡£
             /// </summary>
             public static int[] GetHourlyCountsFromCache(DateTime date)
             {
@@ -1853,15 +1831,15 @@ namespace EW_Assistant
 
                 var raw = AlarmLogCache.GetDayRaw(date);
                 if (raw is null || raw.Missing || raw.LinesAll is null || raw.LinesAll.Length == 0)
-                    return result; // å…¨ 0
+                    return result; // È« 0
 
                 var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
 
-                // å¸¸è§â€œæ—¶é—´/å°æ—¶â€å­—æ®µå
+                // ³£¼û¡°Ê±¼ä/Ğ¡Ê±¡±×Ö¶ÎÃû
                 int idxHour = FindHeaderIndex(headerCols,
-                    "å°æ—¶", "Hour", "HOUR",
-                    "æ—¶é—´", "å‘ç”Ÿæ—¶é—´", "æ—¶åˆ»", "æ—¶æ®µ",
-                    "æ—¶é—´æˆ³", "Timestamp", "DateTime", "æŠ¥è­¦æ—¶é—´", "å¼€å§‹æ—¶é—´");
+                    "Ğ¡Ê±", "Hour", "HOUR",
+                    "Ê±¼ä", "·¢ÉúÊ±¼ä", "Ê±¿Ì", "Ê±¶Î",
+                    "Ê±¼ä´Á", "Timestamp", "DateTime", "±¨¾¯Ê±¼ä", "¿ªÊ¼Ê±¼ä");
 
                 for (int i = startRow; i < raw.LinesAll.Length; i++)
                 {
@@ -1872,11 +1850,11 @@ namespace EW_Assistant
 
                     int hour = -1;
 
-                    // å…ˆç”¨å·²è¯†åˆ«çš„å°æ—¶/æ—¶é—´åˆ—
+                    // ÏÈÓÃÒÑÊ¶±ğµÄĞ¡Ê±/Ê±¼äÁĞ
                     if (idxHour >= 0 && idxHour < cols.Length)
                         hour = ExtractHourLoose(cols[idxHour]);
 
-                    // å›é€€ï¼šæ‰«ææ•´è¡Œæ‰€æœ‰åˆ—ï¼Œæ‰¾åˆ°ç¬¬ä¸€ä¸ªèƒ½è§£æå‡ºå°æ—¶çš„å•å…ƒ
+                    // »ØÍË£ºÉ¨ÃèÕûĞĞËùÓĞÁĞ£¬ÕÒµ½µÚÒ»¸öÄÜ½âÎö³öĞ¡Ê±µÄµ¥Ôª
                     if (hour < 0)
                     {
                         for (int c = 0; c < cols.Length; c++)
@@ -1895,14 +1873,14 @@ namespace EW_Assistant
             private static int ExtractHourLoose(string s)
             {
                 if (string.IsNullOrWhiteSpace(s)) return -1;
-                s = NormalizeCell(s); // å»åŒ…è£¹å¼•å· + Trim
+                s = NormalizeCell(s); // È¥°ü¹üÒıºÅ + Trim
 
-                // 1) çº¯æ•°å­—ï¼ˆ0~23ï¼‰
+                // 1) ´¿Êı×Ö£¨0~23£©
                 int h;
                 if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out h) && h >= 0 && h <= 23)
                     return h;
 
-                // 2) æ—¶é—´åŒºé—´ï¼š"08:00-09:00" / "8:00-9:00"
+                // 2) Ê±¼äÇø¼ä£º"08:00-09:00" / "8:00-9:00"
                 int dash = s.IndexOf('-');
                 if (dash > 0)
                 {
@@ -1913,13 +1891,13 @@ namespace EW_Assistant
                         return dtL.Hour;
                 }
 
-                // 3) æ ‡å‡†/å¸¸è§æ—¶é—´æˆ³æˆ–â€œHH:mm[:ss]â€
+                // 3) ±ê×¼/³£¼ûÊ±¼ä´Á»ò¡°HH:mm[:ss]¡±
                 DateTime dt;
                 if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out dt) ||
                     DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt))
                     return dt.Hour;
 
-                // 4) ä¸­æ–‡æ ¼å¼ï¼š08ç‚¹/8ç‚¹/8æ—¶30åˆ† â€”â€” å–å¼€å¤´è¿ç»­æ•°å­—
+                // 4) ÖĞÎÄ¸ñÊ½£º08µã/8µã/8Ê±30·Ö ¡ª¡ª È¡¿ªÍ·Á¬ĞøÊı×Ö
                 int i = 0; while (i < s.Length && char.IsWhiteSpace(s[i])) i++;
                 int j = i; while (j < s.Length && char.IsDigit(s[j])) j++;
                 if (j > i && int.TryParse(s.Substring(i, j - i), out h) && h >= 0 && h <= 23)
@@ -1935,9 +1913,9 @@ namespace EW_Assistant
 
                 var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
 
-                // ä½ çš„è¡¨å¤´ï¼šæŠ¥è­¦ä»£ç  | æŠ¥è­¦å†…å®¹ | æŠ¥è­¦ç±»åˆ« | å¼€å§‹æ—¶é—´ | ç»“æŸæ—¶é—´ | æŠ¥è­¦æ—¶é—´(s)
-                int idxCategory = FindHeaderIndex(headerCols, "æŠ¥è­¦ç±»åˆ«", "ç±»åˆ«", "Category", "Type");
-                int idxSeconds = FindHeaderIndex(headerCols, "æŠ¥è­¦æ—¶é—´(s)", "æŠ¥è­¦æ—¶é•¿(s)", "æŒç»­æ—¶é—´(s)", "Seconds", "Duration");
+                // ÄãµÄ±íÍ·£º±¨¾¯´úÂë | ±¨¾¯ÄÚÈİ | ±¨¾¯Àà±ğ | ¿ªÊ¼Ê±¼ä | ½áÊøÊ±¼ä | ±¨¾¯Ê±¼ä(s)
+                int idxCategory = FindHeaderIndex(headerCols, "±¨¾¯Àà±ğ", "Àà±ğ", "Category", "Type");
+                int idxSeconds = FindHeaderIndex(headerCols, "±¨¾¯Ê±¼ä(s)", "±¨¾¯Ê±³¤(s)", "³ÖĞøÊ±¼ä(s)", "Seconds", "Duration");
 
                 var dict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
@@ -1954,7 +1932,7 @@ namespace EW_Assistant
                     if (idxSeconds >= 0 && idxSeconds < cols.Length)
                     {
                         var s = NormalizeCell(cols[idxSeconds]);
-                        s = s.TrimEnd('s', 'S'); // æ”¯æŒ "123s"
+                        s = s.TrimEnd('s', 'S'); // Ö§³Ö "123s"
                         if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out sec))
                             double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out sec);
                         if (sec < 0) sec = 0;
@@ -1982,7 +1960,7 @@ namespace EW_Assistant
                     var t = NormalizeCell(header[i]).Trim();
                     foreach (var k in keys)
                     {
-                        // ç›´æ¥å¤§å°å†™æ— å…³å¯¹æ¯”ï¼›å¿…è¦æ—¶å¯å†åšå»ç©ºæ ¼/å…¨è§’åŠè§’
+                        // Ö±½Ó´óĞ¡Ğ´ÎŞ¹Ø¶Ô±È£»±ØÒªÊ±¿ÉÔÙ×öÈ¥¿Õ¸ñ/È«½Ç°ë½Ç
                         if (string.Equals(t, k, StringComparison.OrdinalIgnoreCase))
                             return i;
                     }
@@ -1992,20 +1970,20 @@ namespace EW_Assistant
 
 
 
-            // ===== å¼•å·ä¸å•å…ƒè§„èŒƒåŒ– =====
+            // ===== ÒıºÅÓëµ¥Ôª¹æ·¶»¯ =====
             private static string NormalizeCell(string s)
             {
                 if (string.IsNullOrEmpty(s)) return string.Empty;
                 s = s.Trim();
 
-                // å»æ‰åŒ…è£¹å¼•å·ï¼šè‹±æ–‡ "..." æˆ–ä¸­æ–‡ â€œ...â€ï¼Œæˆ– '...'
+                // È¥µô°ü¹üÒıºÅ£ºÓ¢ÎÄ "..." »òÖĞÎÄ ¡°...¡±£¬»ò '...'
                 if (s.Length >= 2)
                 {
                     char a = s[0], b = s[s.Length - 1];
-                    if ((a == '"' && b == '"') || (a == 'â€œ' && b == 'â€') || (a == '\'' && b == '\''))
+                    if ((a == '"' && b == '"') || (a == '¡°' && b == '¡±') || (a == '\'' && b == '\''))
                     {
                         s = s.Substring(1, s.Length - 2);
-                        // CSV çš„ "" è½¬ä¹‰ä¸º "
+                        // CSV µÄ "" ×ªÒåÎª "
                         s = s.Replace("\"\"", "\"");
                     }
                 }
@@ -2024,9 +2002,9 @@ namespace EW_Assistant
                     var joined = string.Join("|", cols);
                     var joinedNorm = StripAllQuotes(joined).ToLowerInvariant();
 
-                    // ç²—ç•¥å…³é”®è¯ï¼šæ—¶é—´/æ—¥æœŸ/ç±»åˆ«/ç±»å‹/code/id ç­‰
-                    if (joinedNorm.Contains("æ—¶") || joinedNorm.Contains("date") ||
-                        joinedNorm.Contains("ç±»") || joinedNorm.Contains("type") ||
+                    // ´ÖÂÔ¹Ø¼ü´Ê£ºÊ±¼ä/ÈÕÆÚ/Àà±ğ/ÀàĞÍ/code/id µÈ
+                    if (joinedNorm.Contains("Ê±") || joinedNorm.Contains("date") ||
+                        joinedNorm.Contains("Àà") || joinedNorm.Contains("type") ||
                         joinedNorm.Contains("category") || joinedNorm.Contains("code"))
                     {
                         return (Math.Min(i + 1, lines.Length), cols);
@@ -2035,21 +2013,21 @@ namespace EW_Assistant
                 return (0, Array.Empty<string>());
             }
 
-            // ä»…ç”¨äºè¡¨å¤´/å…³é”®è¯æ£€æµ‹ï¼šæŠŠå„ç§å¼•å·å»æ‰ï¼ˆä¸å…³å¿ƒå†…å®¹ï¼‰
+            // ½öÓÃÓÚ±íÍ·/¹Ø¼ü´Ê¼ì²â£º°Ñ¸÷ÖÖÒıºÅÈ¥µô£¨²»¹ØĞÄÄÚÈİ£©
             private static string StripAllQuotes(string s)
             {
                 if (string.IsNullOrEmpty(s)) return string.Empty;
-                return s.Replace("\"", "").Replace("â€œ", "").Replace("â€", "").Replace("'", "");
+                return s.Replace("\"", "").Replace("¡°", "").Replace("¡±", "").Replace("'", "");
             }
             private static string[] SmartSplit(string line)
             {
                 if (line == null) return new[] { string.Empty };
                 if (line.Length == 0) return new[] { string.Empty };
 
-                // å…ˆæ ¹æ®â€œå¼•å·å¤–â€çš„åˆ†éš”ç¬¦å‡ºç°æ¬¡æ•°é€‰æ‹©ä¼˜å…ˆåˆ†éš”ç¬¦
+                // ÏÈ¸ù¾İ¡°ÒıºÅÍâ¡±µÄ·Ö¸ô·û³öÏÖ´ÎÊıÑ¡ÔñÓÅÏÈ·Ö¸ô·û
                 char delim = ChooseDelimiter(line);
 
-                // å¦‚æœæ‰¾ä¸åˆ°ä»»ä½•æœ‰æ•ˆåˆ†éš”ç¬¦ï¼Œè¿”å›æ•´è¡Œï¼ˆåç»­ç”±å„å¤„è‡ªè¡Œè§£æï¼‰
+                // Èç¹ûÕÒ²»µ½ÈÎºÎÓĞĞ§·Ö¸ô·û£¬·µ»ØÕûĞĞ£¨ºóĞøÓÉ¸÷´¦×ÔĞĞ½âÎö£©
                 if (delim == '\0') return new[] { line };
 
                 var list = new List<string>(16);
@@ -2061,38 +2039,38 @@ namespace EW_Assistant
                 {
                     char ch = line[i];
 
-                    // å¼•å·çŠ¶æ€æœºï¼šä¼˜å…ˆå¤„ç†å¼•å·çš„è¿›å…¥/é€€å‡º
+                    // ÒıºÅ×´Ì¬»ú£ºÓÅÏÈ´¦ÀíÒıºÅµÄ½øÈë/ÍË³ö
                     if (!inCnQuote && ch == '"')
                     {
                         if (inAsciiQuote)
                         {
-                            // å¤„ç† CSV çš„åŒå¼•å·è½¬ä¹‰ï¼š"" -> "
+                            // ´¦Àí CSV µÄË«ÒıºÅ×ªÒå£º"" -> "
                             bool isEscaped = (i + 1 < line.Length && line[i + 1] == '"');
                             if (isEscaped)
                             {
-                                sb.Append('"'); // å†™å…¥ä¸€ä¸ª "
-                                i++;            // è·³è¿‡ç¬¬äºŒä¸ª "
+                                sb.Append('"'); // Ğ´ÈëÒ»¸ö "
+                                i++;            // Ìø¹ıµÚ¶ş¸ö "
                             }
                             else
                             {
-                                inAsciiQuote = false; // å…³é—­ ASCII å¼•å·
+                                inAsciiQuote = false; // ¹Ø±Õ ASCII ÒıºÅ
                             }
                         }
                         else
                         {
-                            inAsciiQuote = true; // æ‰“å¼€ ASCII å¼•å·
+                            inAsciiQuote = true; // ´ò¿ª ASCII ÒıºÅ
                         }
                         continue;
                     }
-                    else if (!inAsciiQuote && (ch == 'â€œ' || ch == 'â€'))
+                    else if (!inAsciiQuote && (ch == '¡°' || ch == '¡±'))
                     {
-                        // ä¸­æ–‡å¼•å·æˆå¯¹ï¼šâ€œ ... â€
-                        if (!inCnQuote && ch == 'â€œ') { inCnQuote = true; continue; }
-                        if (inCnQuote && ch == 'â€') { inCnQuote = false; continue; }
-                        // å¦‚æœå‡ºç°å•è¾¹å¥‡æ€ªå­—ç¬¦ï¼Œå½“æ™®é€šå­—ç¬¦å¤„ç†
+                        // ÖĞÎÄÒıºÅ³É¶Ô£º¡° ... ¡±
+                        if (!inCnQuote && ch == '¡°') { inCnQuote = true; continue; }
+                        if (inCnQuote && ch == '¡±') { inCnQuote = false; continue; }
+                        // Èç¹û³öÏÖµ¥±ßÆæ¹Ö×Ö·û£¬µ±ÆÕÍ¨×Ö·û´¦Àí
                     }
 
-                    // éå¼•å·çŠ¶æ€ä¸‹æ‰ä½œä¸ºåˆ†éš”ç¬¦
+                    // ·ÇÒıºÅ×´Ì¬ÏÂ²Å×÷Îª·Ö¸ô·û
                     if (!inAsciiQuote && !inCnQuote && ch == delim)
                     {
                         list.Add(NormalizeCell(sb.ToString()));
@@ -2103,12 +2081,12 @@ namespace EW_Assistant
                     sb.Append(ch);
                 }
 
-                // æ”¶å°¾
+                // ÊÕÎ²
                 list.Add(NormalizeCell(sb.ToString()));
                 return list.ToArray();
             }
 
-            // ç»Ÿè®¡â€œå¼•å·å¤–â€çš„åˆ†éš”ç¬¦æ•°é‡ï¼Œä¼˜å…ˆçº§ï¼šé€—å· > åˆ¶è¡¨ > åˆ†å· > ä¸­æ–‡é€—å·
+            // Í³¼Æ¡°ÒıºÅÍâ¡±µÄ·Ö¸ô·ûÊıÁ¿£¬ÓÅÏÈ¼¶£º¶ººÅ > ÖÆ±í > ·ÖºÅ > ÖĞÎÄ¶ººÅ
             private static char ChooseDelimiter(string line)
             {
                 int cComma = 0, cTab = 0, cSemi = 0, cCComma = 0;
@@ -2131,10 +2109,10 @@ namespace EW_Assistant
                         }
                         continue;
                     }
-                    else if (!inAsciiQuote && (ch == 'â€œ' || ch == 'â€'))
+                    else if (!inAsciiQuote && (ch == '¡°' || ch == '¡±'))
                     {
-                        if (!inCnQuote && ch == 'â€œ') { inCnQuote = true; continue; }
-                        if (inCnQuote && ch == 'â€') { inCnQuote = false; continue; }
+                        if (!inCnQuote && ch == '¡°') { inCnQuote = true; continue; }
+                        if (inCnQuote && ch == '¡±') { inCnQuote = false; continue; }
                     }
 
                     if (!inAsciiQuote && !inCnQuote)
@@ -2142,14 +2120,14 @@ namespace EW_Assistant
                         if (ch == ',') cComma++;
                         else if (ch == '\t') cTab++;
                         else if (ch == ';') cSemi++;
-                        else if (ch == 'ï¼Œ') cCComma++;
+                        else if (ch == '£¬') cCComma++;
                     }
                 }
 
                 if (cComma > 0) return ',';
                 if (cTab > 0) return '\t';
                 if (cSemi > 0) return ';';
-                if (cCComma > 0) return 'ï¼Œ';
+                if (cCComma > 0) return '£¬';
                 return '\0';
             }
 
@@ -2157,3 +2135,4 @@ namespace EW_Assistant
 
     }
 }
+
