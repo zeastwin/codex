@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -113,7 +114,27 @@ namespace EW_Assistant
             var w = Instance;
             if (w == null) return;
 
-            w.Dispatcher.Invoke(() => w.AppendInfo(message, level));
+            // 应用退出时可能存在后台线程写日志，需吞掉 Dispatcher 已关闭带来的异常
+            try
+            {
+                if (w.Dispatcher.HasShutdownStarted || w.Dispatcher.HasShutdownFinished)
+                    return;
+
+                if (w.Dispatcher.CheckAccess())
+                    w.AppendInfo(message, level);
+                else
+                    w.Dispatcher.Invoke(() => w.AppendInfo(message, level));
+            }
+            catch (TaskCanceledException) { }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException ex)
+            {
+                Debug.WriteLine($"PostProgramInfo 调用失败：{ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"PostProgramInfo 调用异常：{ex}");
+            }
         }
 
         private void LogMcpMessage(string message, string level)
