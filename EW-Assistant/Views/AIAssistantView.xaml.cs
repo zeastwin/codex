@@ -772,7 +772,7 @@ namespace EW_Assistant.Views
             sb.AppendLine("- 趋势：描述 7 天走势、峰谷出现时间以及 summary.lastDay/lastDayDelta。");
             sb.AppendLine();
             sb.AppendLine("## 风险与改进");
-            sb.AppendLine("- 给出 2–3 条可执行措施，包含负责人/验证指标/预期收益。");
+            sb.AppendLine("- 给出 2–3 条可执行措施，包含验证指标/预期收益。");
             sb.AppendLine();
             sb.AppendLine("## 异常/缺失");
             sb.AppendLine("- 若存在工具报错或缺 CSV，逐条列出；否则写“无”。");
@@ -822,7 +822,7 @@ namespace EW_Assistant.Views
             sb.AppendLine("- 结合 topAlarms 与 AlarmRangeSummary.top，分析前三大报警对产能/良率的影响与占比。");
             sb.AppendLine();
             sb.AppendLine("## 样本与措施");
-            sb.AppendLine("- 至少给出 2–3 条典型报警样本（开始时间、代码、描述、持续时间、涉及工序），并写 L1/L2 处置及验证指标。");
+            sb.AppendLine("- 至少给出 2–3 条典型报警样本（开始时间、代码、描述、持续时间、涉及工序,验证指标。");
             sb.AppendLine("- 汇总需要升级的系统性问题与预计关闭时间。");
             sb.AppendLine();
             sb.AppendLine("## 异常/缺失");
