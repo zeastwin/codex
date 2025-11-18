@@ -78,7 +78,7 @@ namespace EW_Assistant.Views
         private void ChecklistGroups_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             OnPropertyChanged(nameof(HasChecklist));
-            OnPropertyChanged(nameof(CanExportChecklist));
+            OnPropertyChanged(nameof(CanExport));
         }
 
         public MindMapNode SelectedNode
@@ -114,8 +114,7 @@ namespace EW_Assistant.Views
         public bool IsChecklistMode => _currentMode == DocumentAiViewMode.Checklist;
         public bool CanGenerateMindmap => HasFile && !IsBusy;
         public bool CanGenerateChecklist => HasFile && !IsBusy;
-        public bool CanExportMindmap => HasMindmap && !IsBusy;
-        public bool CanExportChecklist => HasChecklist && !IsBusy;
+        public bool CanExport => !IsBusy && ((IsMindmapMode && HasMindmap) || (IsChecklistMode && HasChecklist));
 
         public bool IsBusy
         {
@@ -127,8 +126,7 @@ namespace EW_Assistant.Views
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanGenerateMindmap));
                 OnPropertyChanged(nameof(CanGenerateChecklist));
-                OnPropertyChanged(nameof(CanExportMindmap));
-                OnPropertyChanged(nameof(CanExportChecklist));
+                OnPropertyChanged(nameof(CanExport));
             }
         }
 
@@ -244,14 +242,20 @@ namespace EW_Assistant.Views
             await GenerateChecklistAsync();
         }
 
-        private void BtnExportMindmap_Click(object sender, RoutedEventArgs e)
+        private void BtnExport_Click(object sender, RoutedEventArgs e)
         {
-            ExportMindmapOpml();
-        }
+            if (IsMindmapMode && HasMindmap)
+            {
+                ExportMindmapOpml();
+                return;
+            }
+            if (IsChecklistMode && HasChecklist)
+            {
+                ExportChecklistExcel();
+                return;
+            }
 
-        private void BtnExportChecklist_Click(object sender, RoutedEventArgs e)
-        {
-            ExportChecklistExcel();
+            StatusText = "当前模式暂无可导出的内容";
         }
 
         private async Task GenerateMindmapAsync(bool forceRefresh = false)
@@ -282,7 +286,7 @@ namespace EW_Assistant.Views
                 var tree = await _mindMapParser.ParseAsync(_currentFilePath);
                 _root = tree;
                 OnPropertyChanged(nameof(HasMindmap));
-                OnPropertyChanged(nameof(CanExportMindmap));
+                OnPropertyChanged(nameof(CanExport));
                 _resetViewAfterMeasure = true;
                 Walk(_root, n => n.IsExpanded = false);
                 _root.IsExpanded = false;
@@ -534,7 +538,7 @@ namespace EW_Assistant.Views
                     ChecklistGroups.Add(group);
             }
             OnPropertyChanged(nameof(HasChecklist));
-            OnPropertyChanged(nameof(CanExportChecklist));
+            OnPropertyChanged(nameof(CanExport));
         }
 
         private void ResetMindmap()
@@ -546,7 +550,7 @@ namespace EW_Assistant.Views
             _visualLookup.Clear();
             OutlineSummary = "尚未生成思维导图";
             OnPropertyChanged(nameof(HasMindmap));
-            OnPropertyChanged(nameof(CanExportMindmap));
+            OnPropertyChanged(nameof(CanExport));
         }
 
         private void ResetChecklist()
@@ -562,6 +566,7 @@ namespace EW_Assistant.Views
             OnPropertyChanged(nameof(CurrentMode));
             OnPropertyChanged(nameof(IsMindmapMode));
             OnPropertyChanged(nameof(IsChecklistMode));
+            OnPropertyChanged(nameof(CanExport));
         }
 
         private string BuildMindmapFileName()

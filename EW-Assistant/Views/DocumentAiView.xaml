@@ -262,15 +262,10 @@
                             Style="{StaticResource ModeActionButton}"
                             Click="BtnGenerateChecklist_Click"
                             IsEnabled="{Binding CanGenerateChecklist}"/>
-                    <Button Content="导出 OPML"
-                            Style="{StaticResource ModeActionButton}"
-                            Visibility="{Binding IsMindmapMode, Converter={StaticResource Bool2Visibility}}"
-                            Click="BtnExportMindmap_Click"
-                            IsEnabled="{Binding CanExportMindmap}"/>
                     <Button Content="导出"
                             Style="{StaticResource ModeActionButton}"
-                            Click="BtnExportChecklist_Click"
-                            IsEnabled="{Binding CanExportChecklist}"/>
+                            Click="BtnExport_Click"
+                            IsEnabled="{Binding CanExport}"/>
                 </StackPanel>
             </Grid>
         </Border>
