@@ -19,6 +19,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using System.Xml.Linq;
 
 namespace EW_Assistant.Views
 {
@@ -113,6 +114,7 @@ namespace EW_Assistant.Views
         public bool IsChecklistMode => _currentMode == DocumentAiViewMode.Checklist;
         public bool CanGenerateMindmap => HasFile && !IsBusy;
         public bool CanGenerateChecklist => HasFile && !IsBusy;
+        public bool CanExportMindmap => HasMindmap && !IsBusy;
         public bool CanExportChecklist => HasChecklist && !IsBusy;
 
         public bool IsBusy
@@ -125,6 +127,7 @@ namespace EW_Assistant.Views
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanGenerateMindmap));
                 OnPropertyChanged(nameof(CanGenerateChecklist));
+                OnPropertyChanged(nameof(CanExportMindmap));
                 OnPropertyChanged(nameof(CanExportChecklist));
             }
         }
@@ -241,6 +244,11 @@ namespace EW_Assistant.Views
             await GenerateChecklistAsync();
         }
 
+        private void BtnExportMindmap_Click(object sender, RoutedEventArgs e)
+        {
+            ExportMindmapOpml();
+        }
+
         private void BtnExportChecklist_Click(object sender, RoutedEventArgs e)
         {
             ExportChecklistExcel();
@@ -274,6 +282,7 @@ namespace EW_Assistant.Views
                 var tree = await _mindMapParser.ParseAsync(_currentFilePath);
                 _root = tree;
                 OnPropertyChanged(nameof(HasMindmap));
+                OnPropertyChanged(nameof(CanExportMindmap));
                 _resetViewAfterMeasure = true;
                 Walk(_root, n => n.IsExpanded = false);
                 _root.IsExpanded = false;
@@ -333,6 +342,54 @@ namespace EW_Assistant.Views
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private void ExportMindmapOpml()
+        {
+            if (!HasMindmap || _root == null)
+            {
+                StatusText = "暂无可导出的思维导图";
+                return;
+            }
+            if (!IsMindmapMode)
+            {
+                StatusText = "请切换到思维导图模式后再导出";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "OPML 文件|*.opml",
+                FileName = BuildMindmapFileName()
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            try
+            {
+                var now = DateTime.Now;
+                var document = new XDocument(
+                    new XDeclaration("1.0", "utf-8", "yes"),
+                    new XElement("opml",
+                        new XAttribute("version", "2.0"),
+                        new XElement("head",
+                            new XElement("title", ResolveMindmapTitle()),
+                            new XElement("dateCreated", now.ToString("yyyy-MM-ddTHH:mm:sszzz")),
+                            new XElement("dateModified", now.ToString("yyyy-MM-ddTHH:mm:sszzz"))
+                        ),
+                        new XElement("body", BuildOutlineElement(_root))
+                    )
+                );
+                document.Save(dialog.FileName);
+
+                StatusText = "思维导图 OPML 导出成功";
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] 思维导图 OPML 已导出：{0}", dialog.FileName), "ok");
+            }
+            catch (Exception ex)
+            {
+                StatusText = string.Format("思维导图导出失败：{0}", ex.Message);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] 思维导图 OPML 导出失败：{0}", ex.Message), "error");
             }
         }
 
@@ -489,6 +546,7 @@ namespace EW_Assistant.Views
             _visualLookup.Clear();
             OutlineSummary = "尚未生成思维导图";
             OnPropertyChanged(nameof(HasMindmap));
+            OnPropertyChanged(nameof(CanExportMindmap));
         }
 
         private void ResetChecklist()
@@ -504,6 +562,65 @@ namespace EW_Assistant.Views
             OnPropertyChanged(nameof(CurrentMode));
             OnPropertyChanged(nameof(IsMindmapMode));
             OnPropertyChanged(nameof(IsChecklistMode));
+        }
+
+        private string BuildMindmapFileName()
+        {
+            string candidate = null;
+            if (_root != null && !string.IsNullOrWhiteSpace(_root.Title))
+                candidate = _root.Title;
+            else if (!string.IsNullOrWhiteSpace(CurrentFileName))
+            {
+                var name = Path.GetFileNameWithoutExtension(CurrentFileName);
+                if (!string.IsNullOrWhiteSpace(name))
+                    candidate = name + "_Mindmap";
+            }
+
+            var safeName = SanitizeFileName(candidate, "Mindmap");
+            return safeName + ".opml";
+        }
+
+        private string ResolveMindmapTitle()
+        {
+            if (_root != null && !string.IsNullOrWhiteSpace(_root.Title))
+                return _root.Title;
+            if (!string.IsNullOrWhiteSpace(CurrentFileName))
+                return CurrentFileName;
+            return "Mindmap";
+        }
+
+        private static string SanitizeFileName(string name, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return fallback;
+            var invalid = Path.GetInvalidFileNameChars();
+            var sanitizedChars = name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
+            var sanitized = new string(sanitizedChars).Trim();
+            return string.IsNullOrWhiteSpace(sanitized) ? fallback : sanitized;
+        }
+
+        private XElement BuildOutlineElement(MindMapNode node)
+        {
+            if (node == null)
+                return new XElement("outline");
+
+            var element = new XElement("outline",
+                new XAttribute("text", node.Title ?? string.Empty));
+
+            if (!string.IsNullOrWhiteSpace(node.Body))
+                element.Add(new XAttribute("note", node.Body));
+
+            element.Add(new XAttribute("isOpen", node.IsExpanded ? "true" : "false"));
+
+            if (node.Children != null && node.Children.Count > 0)
+            {
+                foreach (var child in node.Children)
+                {
+                    element.Add(BuildOutlineElement(child));
+                }
+            }
+
+            return element;
         }
 
         private string BuildChecklistFileName()
