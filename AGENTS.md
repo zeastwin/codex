@@ -1,6 +1,10 @@
 ﻿# AGENTS.md — EW-Assistant (WPF) × McpServer (.NET 8)
 ## 语言约定
 - 所有代码注释、技术文档、提交说明一律使用**简体中文**。
+- 在 VS Code “Finished working / 工作日志” 面板中，描述自己执行的步骤时，优先使用简体中文，例如：
+  - ✅「正在搜索 Checklist 导出相关代码」
+  - ✅「准备优化 Excel 导出样式」
+  不要再使用英文步骤标题（如 “Planning Excel export method update”）。
 - 代码中的标识符、API 名称、JSON 字段保持英文；用户可见字符串按 UI 设计需求呈现。
 - 面向开发者的说明、分析、总结全部用简体中文输出。
 - WPF 必须 net48、禁止 C# 8+

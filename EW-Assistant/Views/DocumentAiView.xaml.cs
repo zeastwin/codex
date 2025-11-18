@@ -1,4 +1,5 @@
-﻿using EW_Assistant.Component.Checklist;
+﻿using ClosedXML.Excel;
+using EW_Assistant.Component.Checklist;
 using EW_Assistant.Component.MindMap;
 using EW_Assistant.Services;
 using Microsoft.Win32;
@@ -10,7 +11,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -243,7 +243,7 @@ namespace EW_Assistant.Views
 
         private void BtnExportChecklist_Click(object sender, RoutedEventArgs e)
         {
-            ExportChecklistCsv();
+            ExportChecklistExcel();
         }
 
         private async Task GenerateMindmapAsync(bool forceRefresh = false)
@@ -336,7 +336,7 @@ namespace EW_Assistant.Views
             }
         }
 
-        private void ExportChecklistCsv()
+        private void ExportChecklistExcel()
         {
             if (!HasChecklist)
             {
@@ -346,7 +346,7 @@ namespace EW_Assistant.Views
 
             var dialog = new SaveFileDialog
             {
-                Filter = "CSV 文件|*.csv",
+                Filter = "Excel 文件|*.xlsx",
                 FileName = BuildChecklistFileName()
             };
             if (dialog.ShowDialog() != true)
@@ -354,35 +354,117 @@ namespace EW_Assistant.Views
 
             try
             {
-                var builder = new StringBuilder();
-                builder.AppendLine("GroupOrder,GroupTitle,ItemOrder,ItemTitle,ItemDetail,Status,StatusDisplay,Note");
-                foreach (var group in ChecklistGroups)
+                using (var workbook = new XLWorkbook())
                 {
-                    foreach (var item in group.Items)
+                    var worksheet = workbook.Worksheets.Add("Checklist");
+                    var headers = new[]
                     {
-                        var statusDisplay = ChecklistItemStatusHelper.GetDisplayName(item.Status);
-                        builder.AppendLine(string.Join(",", new[]
-                        {
-                            CsvEscape(group.Order),
-                            CsvEscape(group.Title),
-                            CsvEscape(item.Order),
-                            CsvEscape(item.Title),
-                            CsvEscape(item.Detail),
-                            CsvEscape(item.Status.ToString()),
-                            CsvEscape(statusDisplay),
-                            CsvEscape(item.Note)
-                        }));
+                        "分组序号",
+                        "分组标题",
+                        "步骤序号",
+                        "步骤标题",
+                        "步骤内容",
+                        "状态编码",
+                        "状态文本",
+                        "备注"
+                    };
+                    for (var i = 0; i < headers.Length; i++)
+                    {
+                        var cell = worksheet.Cell(1, i + 1);
+                        cell.Value = headers[i];
                     }
+                    var headerRange = worksheet.Range(1, 1, 1, headers.Length);
+                    headerRange.Style.Font.Bold = true;
+                    headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    headerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                    headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+                    worksheet.Row(1).Height = 20;
+
+                    var row = 2;
+                    foreach (var group in ChecklistGroups.OrderBy(g => g.Order))
+                    {
+                        var items = group.Items ?? new ObservableCollection<ChecklistItem>();
+                        foreach (var item in items.OrderBy(i => i.Order))
+                        {
+                            worksheet.Cell(row, 1).Value = group.Order;
+                            worksheet.Cell(row, 2).Value = group.Title;
+                            worksheet.Cell(row, 3).Value = item.Order;
+                            worksheet.Cell(row, 4).Value = item.Title;
+                            var detailCell = worksheet.Cell(row, 5);
+                            detailCell.Value = item.Detail ?? string.Empty;
+                            detailCell.Style.Alignment.WrapText = true;
+                            worksheet.Cell(row, 6).Value = item.Status.ToString();
+                            worksheet.Cell(row, 7).Value = ChecklistItemStatusHelper.GetDisplayName(item.Status);
+                            var noteCell = worksheet.Cell(row, 8);
+                            noteCell.Value = item.Note ?? string.Empty;
+                            noteCell.Style.Alignment.WrapText = true;
+
+                            var rowRange = worksheet.Range(row, 1, row, headers.Length);
+                            ApplyStatusFill(rowRange, item.Status);
+                            row++;
+                        }
+                    }
+
+                    var lastRow = row - 1;
+                    if (lastRow >= 1)
+                    {
+                        var usedRange = worksheet.Range(1, 1, lastRow, headers.Length);
+                        usedRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                        usedRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                        usedRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+                    }
+
+                    worksheet.Column(1).Width = 10;
+                    worksheet.Column(2).Width = 20;
+                    worksheet.Column(3).Width = 10;
+                    worksheet.Column(4).Width = 30;
+                    worksheet.Column(5).Width = 45;
+                    worksheet.Column(6).Width = 12;
+                    worksheet.Column(7).Width = 12;
+                    worksheet.Column(8).Width = 45;
+
+                    worksheet.Column(5).Style.Alignment.WrapText = true;
+                    worksheet.Column(8).Style.Alignment.WrapText = true;
+
+                    if (lastRow >= 2)
+                    {
+                        worksheet.Column(2).AdjustToContents(2, lastRow);
+                        worksheet.Column(4).AdjustToContents(2, lastRow);
+                    }
+
+                    worksheet.SheetView.FreezeRows(1);
+                    workbook.SaveAs(dialog.FileName);
                 }
-                File.WriteAllText(dialog.FileName, builder.ToString(), new UTF8Encoding(false));
-                StatusText = "Checklist CSV 导出成功";
-                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist CSV 已导出：{0}", dialog.FileName), "ok");
+
+                StatusText = "Checklist Excel 导出成功";
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist Excel 已导出：{0}", dialog.FileName), "ok");
             }
             catch (Exception ex)
             {
                 StatusText = string.Format("导出失败：{0}", ex.Message);
                 MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist 导出失败：{0}", ex.Message), "error");
             }
+        }
+
+        private static void ApplyStatusFill(IXLRange range, ChecklistItemStatus status)
+        {
+            XLColor color;
+            switch (status)
+            {
+                case ChecklistItemStatus.Pending:
+                    color = XLColor.LightGoldenrodYellow;
+                    break;
+                case ChecklistItemStatus.Done:
+                    color = XLColor.LightGreen;
+                    break;
+                case ChecklistItemStatus.Abnormal:
+                    color = XLColor.LightSalmon;
+                    break;
+                default:
+                    return;
+            }
+
+            range.Style.Fill.BackgroundColor = color;
         }
 
         private void ApplyChecklist(DocumentChecklist checklist)
@@ -430,19 +512,9 @@ namespace EW_Assistant.Views
             {
                 var name = Path.GetFileNameWithoutExtension(CurrentFileName);
                 if (!string.IsNullOrWhiteSpace(name))
-                    return name + "_Checklist.csv";
+                    return name + "_Checklist.xlsx";
             }
-            return "Checklist.csv";
-        }
-
-        private static string CsvEscape(object value)
-        {
-            var text = value == null ? string.Empty : value.ToString();
-            if (text.IndexOfAny(new[] { '"', ',', '\r', '\n' }) >= 0)
-                text = "\"" + text.Replace("\"", "\"\"") + "\"";
-            else
-                text = "\"" + text + "\"";
-            return text;
+            return "Checklist.xlsx";
         }
 
         private void RebuildScene(MindMapNode focusNode = null, bool resetView = false)
