@@ -1,4 +1,4 @@
-using EW_Assistant.Component.MindMap;
+﻿using EW_Assistant.Component.MindMap;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -17,10 +17,7 @@ namespace EW_Assistant.Services
         private readonly MindmapService _mindmapService;
         private readonly string _prompt;
 
-        private const string DefaultPrompt =
-            "你是一名“知识结构化与大纲提取”助手，请读取上传的文档，按照既定 JSON 模式输出思维导图。" +
-            "务必只输出 JSON，并确保每个节点包含 title、body、children 字段。";
-
+        private const string DefaultPrompt = "";
         public DocumentMindMapParser(string workflowId = null, string promptOverride = null)
         {
             _mindmapService = new MindmapService(workflowId);

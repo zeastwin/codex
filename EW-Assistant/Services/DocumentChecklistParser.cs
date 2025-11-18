@@ -1,4 +1,4 @@
-using EW_Assistant.Component.Checklist;
+﻿using EW_Assistant.Component.Checklist;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -16,10 +16,7 @@ namespace EW_Assistant.Services
         private readonly MindmapService _workflowService;
         private readonly string _prompt;
 
-        private const string DefaultPrompt =
-            "你是一名工业现场的点检助手，请阅读上传的文档并输出 Checklist JSON。" +
-            "JSON 中至少包含 groups[].title/groups[].description/groups[].items，" +
-            "每条 item 需包含 order/title/detail/status 字段，禁止输出多余文本。";
+        private const string DefaultPrompt = "";
 
         public DocumentChecklistParser(string workflowId = null, string promptOverride = null)
         {
