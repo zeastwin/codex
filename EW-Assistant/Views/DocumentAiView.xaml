@@ -112,19 +112,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="ChecklistExportButtonStyle" TargetType="Button" BasedOn="{StaticResource ModeActionButton}">
-            <Setter Property="Visibility" Value="Collapsed"/>
-            <Style.Triggers>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding HasChecklist}" Value="True"/>
-                        <Condition Binding="{Binding IsChecklistMode}" Value="True"/>
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Visibility" Value="Visible"/>
-                </MultiDataTrigger>
-            </Style.Triggers>
-        </Style>
-
         <DataTemplate x:Key="MindMapNodeTemplate" DataType="{x:Type mm:MindMapVisualNode}">
             <Border x:Name="NodeShell"
                     Padding="16,12"
@@ -276,7 +263,7 @@
                             Click="BtnGenerateChecklist_Click"
                             IsEnabled="{Binding CanGenerateChecklist}"/>
                     <Button Content="导出"
-                            Style="{StaticResource ChecklistExportButtonStyle}"
+                            Style="{StaticResource ModeActionButton}"
                             Click="BtnExportChecklist_Click"
                             IsEnabled="{Binding CanExportChecklist}"/>
                 </StackPanel>
