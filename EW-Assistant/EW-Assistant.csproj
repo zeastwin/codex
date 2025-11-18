@@ -147,8 +147,11 @@
     <Compile Include="Component\MindMap\MindMapDepthToBrushConverter.cs" />
     <Compile Include="Component\MindMap\MindMapLayoutEngine.cs" />
     <Compile Include="Component\MindMap\MindMapNode.cs" />
+    <Compile Include="Component\Checklist\ChecklistModels.cs" />
+    <Compile Include="Component\Checklist\ChecklistStatusBrushConverter.cs" />
     <Compile Include="Services\DifyWorkflowStreaming.cs" />
     <Compile Include="Services\DocumentMindMapParser.cs" />
+    <Compile Include="Services\DocumentChecklistParser.cs" />
     <Compile Include="Services\FileWorkflowClient.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
@@ -164,7 +167,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\KnowledgeMindMapView.xaml">
+    <Page Include="Views\DocumentAiView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -192,8 +195,8 @@
     <Compile Include="Views\AIAssistantView.xaml.cs">
       <DependentUpon>AIAssistantView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\KnowledgeMindMapView.xaml.cs">
-      <DependentUpon>KnowledgeMindMapView.xaml</DependentUpon>
+    <Compile Include="Views\DocumentAiView.xaml.cs">
+      <DependentUpon>DocumentAiView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ConfigView.xaml.cs">
       <DependentUpon>ConfigView.xaml</DependentUpon>

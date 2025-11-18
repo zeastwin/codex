@@ -1,13 +1,16 @@
-﻿using EW_Assistant.Component.MindMap;
+﻿using EW_Assistant.Component.Checklist;
+using EW_Assistant.Component.MindMap;
 using EW_Assistant.Services;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,14 +25,16 @@ namespace EW_Assistant.Views
     /// <summary>
     /// 文档知识导图视图：接入 Workflow，对任意上传文件进行结构化解析并绘制思维导图。
     /// </summary>
-    public partial class KnowledgeMindMapView : UserControl, INotifyPropertyChanged
+    public partial class DocumentAiView : UserControl, INotifyPropertyChanged
     {
-        private readonly DocumentMindMapParser _parser = new DocumentMindMapParser();
+        private readonly DocumentMindMapParser _mindMapParser = new DocumentMindMapParser();
+        private readonly DocumentChecklistParser _checklistParser = new DocumentChecklistParser();
         private MindMapNode _root;
+        private DocumentChecklist _currentChecklist;
         private MindMapNode _selectedNode;
         private bool _isBusy;
         private bool _isDragHover;
-        private string _statusText = "拖拽或选择任意文件，即可自动生成思维导图";
+        private string _statusText = "拖拽或选择文档，然后点击想执行的模式";
         private string _outlineSummary = "尚未加载文档";
         private double _canvasWidth = 1200;
         private double _canvasHeight = 800;
@@ -44,17 +49,36 @@ namespace EW_Assistant.Views
         private MindMapNode _layoutRefreshFocus;
         private bool _layoutRefreshReset;
         private bool _resetViewAfterMeasure;
+        private string _currentFilePath;
+        private string _currentFileName = "未选择文件";
+        private DocumentAiViewMode _currentMode = DocumentAiViewMode.None;
+        private readonly IList<ChecklistStatusOption> _checklistStatusOptions = new List<ChecklistStatusOption>(ChecklistItemStatusHelper.GetOptions());
+        private ScrollViewer _mindMapScroll;
+        private Canvas _mindMapCanvas;
+        private ScaleTransform _zoomTransform;
+        private TranslateTransform _panTransform;
 
-        public KnowledgeMindMapView()
+        public DocumentAiView()
         {
             InitializeComponent();
+            ResolveTemplateReferences();
             VisualNodes = new ObservableCollection<MindMapVisualNode>();
             VisualEdges = new ObservableCollection<MindMapEdge>();
+            ChecklistGroups = new ObservableCollection<ChecklistGroup>();
+            ChecklistGroups.CollectionChanged += ChecklistGroups_CollectionChanged;
             DataContext = this;
         }
 
         public ObservableCollection<MindMapVisualNode> VisualNodes { get; }
         public ObservableCollection<MindMapEdge> VisualEdges { get; }
+        public ObservableCollection<ChecklistGroup> ChecklistGroups { get; }
+        public IList<ChecklistStatusOption> ChecklistStatusOptions => _checklistStatusOptions;
+
+        private void ChecklistGroups_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(HasChecklist));
+            OnPropertyChanged(nameof(CanExportChecklist));
+        }
 
         public MindMapNode SelectedNode
         {
@@ -69,12 +93,40 @@ namespace EW_Assistant.Views
             }
         }
 
-        public bool HasDocument => _root != null;
+        public bool HasMindmap => _root != null;
+        public bool HasChecklist => ChecklistGroups.Count > 0;
+        public bool HasFile => !string.IsNullOrWhiteSpace(_currentFilePath);
+
+        public string CurrentFileName
+        {
+            get => _currentFileName;
+            private set
+            {
+                if (string.Equals(_currentFileName, value, StringComparison.Ordinal)) return;
+                _currentFileName = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public DocumentAiViewMode CurrentMode => _currentMode;
+        public bool IsMindmapMode => _currentMode == DocumentAiViewMode.Mindmap;
+        public bool IsChecklistMode => _currentMode == DocumentAiViewMode.Checklist;
+        public bool CanGenerateMindmap => HasFile && !IsBusy;
+        public bool CanGenerateChecklist => HasFile && !IsBusy;
+        public bool CanExportChecklist => HasChecklist && !IsBusy;
 
         public bool IsBusy
         {
             get => _isBusy;
-            set { if (_isBusy == value) return; _isBusy = value; OnPropertyChanged(); }
+            set
+            {
+                if (_isBusy == value) return;
+                _isBusy = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanGenerateMindmap));
+                OnPropertyChanged(nameof(CanGenerateChecklist));
+                OnPropertyChanged(nameof(CanExportChecklist));
+            }
         }
 
         public bool IsDragHover
@@ -107,7 +159,7 @@ namespace EW_Assistant.Views
             set { if (Math.Abs(_canvasHeight - value) < 0.1) return; _canvasHeight = value; OnPropertyChanged(); }
         }
 
-        private async void DropHost_OnDrop(object sender, DragEventArgs e)
+        private void DropHost_OnDrop(object sender, DragEventArgs e)
         {
             IsDragHover = false;
             if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
@@ -116,10 +168,10 @@ namespace EW_Assistant.Views
             var target = files.FirstOrDefault(IsSupportedFile);
             if (target == null)
             {
-                StatusText = "未找到可解析的文件，请重新选择";
+                StatusText = "未找到可处理的文件，请重新选择";
                 return;
             }
-            await ParseFileAsync(target);
+            SetCurrentFile(target);
         }
 
         private void DropHost_OnPreviewDragOver(object sender, DragEventArgs e)
@@ -146,7 +198,7 @@ namespace EW_Assistant.Views
             IsDragHover = false;
         }
 
-        private async void BtnSelectFile_Click(object sender, RoutedEventArgs e)
+        private void BtnSelectFile_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog
             {
@@ -155,37 +207,242 @@ namespace EW_Assistant.Views
             };
             if (dialog.ShowDialog() == true)
             {
-                await ParseFileAsync(dialog.FileName);
+                SetCurrentFile(dialog.FileName);
             }
         }
 
-        private async Task ParseFileAsync(string path)
+        private void SetCurrentFile(string path)
         {
+            if (string.IsNullOrWhiteSpace(path) || !IsSupportedFile(path))
+            {
+                StatusText = "文件不可用，请重新选择";
+                return;
+            }
+
+            _currentFilePath = path;
+            CurrentFileName = Path.GetFileName(path);
+            ResetMindmap();
+            ResetChecklist();
+            SetMode(DocumentAiViewMode.None);
+            StatusText = string.Format("已选择 {0}，请点击上方按钮生成", CurrentFileName);
+            MainWindow.PostProgramInfo(string.Format("[DocumentAI] 已选择文件 {0}", CurrentFileName), "info");
+            OnPropertyChanged(nameof(HasFile));
+            OnPropertyChanged(nameof(CanGenerateMindmap));
+            OnPropertyChanged(nameof(CanGenerateChecklist));
+        }
+
+        private async void BtnGenerateMindmap_Click(object sender, RoutedEventArgs e)
+        {
+            await GenerateMindmapAsync();
+        }
+
+        private async void BtnGenerateChecklist_Click(object sender, RoutedEventArgs e)
+        {
+            await GenerateChecklistAsync();
+        }
+
+        private void BtnExportChecklist_Click(object sender, RoutedEventArgs e)
+        {
+            ExportChecklistCsv();
+        }
+
+        private async Task GenerateMindmapAsync(bool forceRefresh = false)
+        {
+            if (IsBusy)
+            {
+                StatusText = "正在处理其他任务，请稍候";
+                return;
+            }
+            if (!HasFile)
+            {
+                StatusText = "请先选择文件";
+                return;
+            }
+
+            if (!forceRefresh && _root != null)
+            {
+                SetMode(DocumentAiViewMode.Mindmap);
+                StatusText = string.Format("已加载缓存的思维导图（{0}）", CurrentFileName);
+                return;
+            }
+
             try
             {
                 IsBusy = true;
-                StatusText = $"正在解析：{Path.GetFileName(path)}";
-                MainWindow.PostProgramInfo($"[Mindmap] 正在向 Workflow 请求解析 {Path.GetFileName(path)}", "info");
-                var tree = await _parser.ParseAsync(path);
+                StatusText = string.Format("正在解析：{0}", CurrentFileName);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Mindmap Workflow 开始：{0}", CurrentFileName), "info");
+                var tree = await _mindMapParser.ParseAsync(_currentFilePath);
                 _root = tree;
-                OnPropertyChanged(nameof(HasDocument));
+                OnPropertyChanged(nameof(HasMindmap));
                 _resetViewAfterMeasure = true;
                 Walk(_root, n => n.IsExpanded = false);
                 _root.IsExpanded = false;
                 SelectedNode = tree;
                 RebuildScene(_root, true);
-                StatusText = $"解析完成（{Path.GetFileName(path)}）";
-                MainWindow.PostProgramInfo($"知识导图：已解析 {Path.GetFileName(path)}", "ok");
+                SetMode(DocumentAiViewMode.Mindmap);
+                StatusText = string.Format("解析完成（{0}）", CurrentFileName);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] 思维导图生成完成：{0}", CurrentFileName), "ok");
             }
             catch (Exception ex)
             {
-                StatusText = $"解析失败：{ex.Message}";
-                MainWindow.PostProgramInfo($"知识导图解析失败：{ex.Message}", "error");
+                StatusText = string.Format("解析失败：{0}", ex.Message);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] 思维导图生成失败：{0}", ex.Message), "error");
             }
             finally
             {
                 IsBusy = false;
             }
+        }
+
+        private async Task GenerateChecklistAsync(bool forceRefresh = false)
+        {
+            if (IsBusy)
+            {
+                StatusText = "正在处理其他任务，请稍候";
+                return;
+            }
+            if (!HasFile)
+            {
+                StatusText = "请先选择文件";
+                return;
+            }
+
+            if (!forceRefresh && _currentChecklist != null && ChecklistGroups.Count > 0)
+            {
+                SetMode(DocumentAiViewMode.Checklist);
+                StatusText = string.Format("已加载缓存的 Checklist（{0}）", CurrentFileName);
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+                StatusText = string.Format("正在生成 Checklist：{0}", CurrentFileName);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist Workflow 开始：{0}", CurrentFileName), "info");
+                var checklist = await _checklistParser.ParseAsync(_currentFilePath);
+                ApplyChecklist(checklist);
+                SetMode(DocumentAiViewMode.Checklist);
+                StatusText = string.Format("Checklist 生成完成（{0}）", CurrentFileName);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist 生成完成：{0}", CurrentFileName), "ok");
+            }
+            catch (Exception ex)
+            {
+                StatusText = string.Format("Checklist 生成失败：{0}", ex.Message);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist 生成失败：{0}", ex.Message), "error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private void ExportChecklistCsv()
+        {
+            if (!HasChecklist)
+            {
+                StatusText = "暂无 Checklist 可导出";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "CSV 文件|*.csv",
+                FileName = BuildChecklistFileName()
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            try
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine("GroupOrder,GroupTitle,ItemOrder,ItemTitle,ItemDetail,Status,StatusDisplay,Note");
+                foreach (var group in ChecklistGroups)
+                {
+                    foreach (var item in group.Items)
+                    {
+                        var statusDisplay = ChecklistItemStatusHelper.GetDisplayName(item.Status);
+                        builder.AppendLine(string.Join(",", new[]
+                        {
+                            CsvEscape(group.Order),
+                            CsvEscape(group.Title),
+                            CsvEscape(item.Order),
+                            CsvEscape(item.Title),
+                            CsvEscape(item.Detail),
+                            CsvEscape(item.Status.ToString()),
+                            CsvEscape(statusDisplay),
+                            CsvEscape(item.Note)
+                        }));
+                    }
+                }
+                File.WriteAllText(dialog.FileName, builder.ToString(), new UTF8Encoding(false));
+                StatusText = "Checklist CSV 导出成功";
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist CSV 已导出：{0}", dialog.FileName), "ok");
+            }
+            catch (Exception ex)
+            {
+                StatusText = string.Format("导出失败：{0}", ex.Message);
+                MainWindow.PostProgramInfo(string.Format("[DocumentAI] Checklist 导出失败：{0}", ex.Message), "error");
+            }
+        }
+
+        private void ApplyChecklist(DocumentChecklist checklist)
+        {
+            _currentChecklist = checklist;
+            ChecklistGroups.Clear();
+            if (checklist != null)
+            {
+                foreach (var group in checklist.Groups)
+                    ChecklistGroups.Add(group);
+            }
+            OnPropertyChanged(nameof(HasChecklist));
+            OnPropertyChanged(nameof(CanExportChecklist));
+        }
+
+        private void ResetMindmap()
+        {
+            _root = null;
+            SelectedNode = null;
+            VisualNodes.Clear();
+            VisualEdges.Clear();
+            _visualLookup.Clear();
+            OutlineSummary = "尚未生成思维导图";
+            OnPropertyChanged(nameof(HasMindmap));
+        }
+
+        private void ResetChecklist()
+        {
+            _currentChecklist = null;
+            ChecklistGroups.Clear();
+        }
+
+        private void SetMode(DocumentAiViewMode mode)
+        {
+            if (_currentMode == mode) return;
+            _currentMode = mode;
+            OnPropertyChanged(nameof(CurrentMode));
+            OnPropertyChanged(nameof(IsMindmapMode));
+            OnPropertyChanged(nameof(IsChecklistMode));
+        }
+
+        private string BuildChecklistFileName()
+        {
+            if (!string.IsNullOrWhiteSpace(CurrentFileName))
+            {
+                var name = Path.GetFileNameWithoutExtension(CurrentFileName);
+                if (!string.IsNullOrWhiteSpace(name))
+                    return name + "_Checklist.csv";
+            }
+            return "Checklist.csv";
+        }
+
+        private static string CsvEscape(object value)
+        {
+            var text = value == null ? string.Empty : value.ToString();
+            if (text.IndexOfAny(new[] { '"', ',', '\r', '\n' }) >= 0)
+                text = "\"" + text.Replace("\"", "\"\"") + "\"";
+            else
+                text = "\"" + text + "\"";
+            return text;
         }
 
         private void RebuildScene(MindMapNode focusNode = null, bool resetView = false)
@@ -197,7 +454,7 @@ namespace EW_Assistant.Views
                 _visualLookup.Clear();
                 CanvasWidth = 900;
                 CanvasHeight = 640;
-                OutlineSummary = "尚未载入文档";
+                OutlineSummary = "尚未生成思维导图";
                 if (resetView)
                 {
                     _zoom = 1.0;
@@ -281,10 +538,10 @@ namespace EW_Assistant.Views
             if (resetView)
             {
                 _zoom = 1.0;
-                ZoomTransform.ScaleX = 1;
-                ZoomTransform.ScaleY = 1;
-                PanTransform.X = 0;
-                PanTransform.Y = 0;
+                ZoomTransformElement.ScaleX = 1;
+                ZoomTransformElement.ScaleY = 1;
+                PanTransformElement.X = 0;
+                PanTransformElement.Y = 0;
             }
 
             var totalNodes = CountNodes(_root) - 1;
@@ -361,14 +618,14 @@ namespace EW_Assistant.Views
 
         private void MindMapScroll_OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            var pointer = e.GetPosition(MindMapCanvas);
+            var pointer = e.GetPosition(MindMapCanvasElement);
             var scaleFactor = e.Delta > 0 ? 1.12 : 0.9;
             var targetZoom = Math.Max(MinZoom, Math.Min(MaxZoom, _zoom * scaleFactor));
             scaleFactor = targetZoom / _zoom;
             if (Math.Abs(targetZoom - _zoom) < 0.001) return;
             _zoom = targetZoom;
 
-            var translate = PanTransform;
+            var translate = PanTransformElement;
             var targetX = (translate.X - pointer.X) * scaleFactor + pointer.X;
             var targetY = (translate.Y - pointer.Y) * scaleFactor + pointer.Y;
 
@@ -387,7 +644,7 @@ namespace EW_Assistant.Views
             }
             if (e.LeftButton == MouseButtonState.Pressed && !IsNodeElement(e.OriginalSource))
             {
-                BeginPan(e.GetPosition(MindMapScroll));
+                BeginPan(e.GetPosition(MindMapScrollHost));
                 e.Handled = true;
             }
         }
@@ -395,10 +652,10 @@ namespace EW_Assistant.Views
         private void MindMapCanvas_OnMouseMove(object sender, MouseEventArgs e)
         {
             if (!_isPanning) return;
-            var current = e.GetPosition(MindMapScroll);
+            var current = e.GetPosition(MindMapScrollHost);
             var delta = current - _panStart;
-            PanTransform.X = _panOrigin.X + delta.X;
-            PanTransform.Y = _panOrigin.Y + delta.Y;
+            PanTransformElement.X = _panOrigin.X + delta.X;
+            PanTransformElement.Y = _panOrigin.Y + delta.Y;
             e.Handled = true;
         }
 
@@ -419,18 +676,18 @@ namespace EW_Assistant.Views
         {
             _isPanning = true;
             _panStart = startPoint;
-            _panOrigin = new Point(PanTransform.X, PanTransform.Y);
-            PanTransform.BeginAnimation(TranslateTransform.XProperty, null);
-            PanTransform.BeginAnimation(TranslateTransform.YProperty, null);
-            MindMapCanvas.CaptureMouse();
-            MindMapCanvas.Cursor = Cursors.Hand;
+            _panOrigin = new Point(PanTransformElement.X, PanTransformElement.Y);
+            PanTransformElement.BeginAnimation(TranslateTransform.XProperty, null);
+            PanTransformElement.BeginAnimation(TranslateTransform.YProperty, null);
+            MindMapCanvasElement.CaptureMouse();
+            MindMapCanvasElement.Cursor = Cursors.Hand;
         }
 
         private void EndPan()
         {
             _isPanning = false;
-            MindMapCanvas.ReleaseMouseCapture();
-            MindMapCanvas.Cursor = Cursors.Arrow;
+            MindMapCanvasElement.ReleaseMouseCapture();
+            MindMapCanvasElement.Cursor = Cursors.Arrow;
         }
 
         private static bool IsNodeElement(object source)
@@ -455,7 +712,7 @@ namespace EW_Assistant.Views
             }
             if (e.LeftButton == MouseButtonState.Pressed && !IsNodeElement(e.OriginalSource))
             {
-                BeginPan(e.GetPosition(MindMapScroll));
+                BeginPan(e.GetPosition(MindMapScrollHost));
                 e.Handled = true;
             }
         }
@@ -471,14 +728,14 @@ namespace EW_Assistant.Views
         private void FocusOnVisual(MindMapVisualNode visual, bool resetView = false)
         {
             if (visual == null) return;
-            var viewportWidth = MindMapScroll.ViewportWidth > 0 ? MindMapScroll.ViewportWidth : ActualWidth;
-            var viewportHeight = MindMapScroll.ViewportHeight > 0 ? MindMapScroll.ViewportHeight : ActualHeight;
+            var viewportWidth = MindMapScrollHost.ViewportWidth > 0 ? MindMapScrollHost.ViewportWidth : ActualWidth;
+            var viewportHeight = MindMapScrollHost.ViewportHeight > 0 ? MindMapScrollHost.ViewportHeight : ActualHeight;
             var targetX = viewportWidth / 2.0 - visual.CenterX * _zoom;
             var targetY = viewportHeight / 2.0 - visual.CenterY * _zoom;
             if (resetView)
             {
-                PanTransform.X = targetX;
-                PanTransform.Y = targetY;
+                PanTransformElement.X = targetX;
+                PanTransformElement.Y = targetY;
             }
             else
             {
@@ -536,8 +793,8 @@ namespace EW_Assistant.Views
             var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
             var animX = new DoubleAnimation(targetX, duration) { EasingFunction = easing };
             var animY = new DoubleAnimation(targetY, duration) { EasingFunction = easing };
-            PanTransform.BeginAnimation(TranslateTransform.XProperty, animX);
-            PanTransform.BeginAnimation(TranslateTransform.YProperty, animY);
+            PanTransformElement.BeginAnimation(TranslateTransform.XProperty, animX);
+            PanTransformElement.BeginAnimation(TranslateTransform.YProperty, animY);
         }
 
         private void AnimateZoomTo(double targetZoom)
@@ -548,20 +805,42 @@ namespace EW_Assistant.Views
             var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
             var animX = new DoubleAnimation(targetZoom, duration) { EasingFunction = easing };
             var animY = new DoubleAnimation(targetZoom, duration) { EasingFunction = easing };
-            ZoomTransform.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
-            ZoomTransform.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
+            ZoomTransformElement.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
+            ZoomTransformElement.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        private ScrollViewer MindMapScrollHost => _mindMapScroll ?? (_mindMapScroll = FindElement<ScrollViewer>("MindMapScroll"));
+        private Canvas MindMapCanvasElement => _mindMapCanvas ?? (_mindMapCanvas = FindElement<Canvas>("MindMapCanvas"));
+        private ScaleTransform ZoomTransformElement => _zoomTransform ?? (_zoomTransform = FindElement<ScaleTransform>("ZoomTransform"));
+        private TranslateTransform PanTransformElement => _panTransform ?? (_panTransform = FindElement<TranslateTransform>("PanTransform"));
+
+        private void ResolveTemplateReferences()
+        {
+            _mindMapScroll = FindElement<ScrollViewer>("MindMapScroll");
+            _mindMapCanvas = FindElement<Canvas>("MindMapCanvas");
+            _zoomTransform = FindElement<ScaleTransform>("ZoomTransform");
+            _panTransform = FindElement<TranslateTransform>("PanTransform");
+        }
+
+        private T FindElement<T>(string name) where T : class
+        {
+            var element = FindName(name) as T;
+            if (element == null)
+                throw new InvalidOperationException(string.Format("DocumentAiView.xaml 中未找到名为 {0} 的元素。", name));
+            return element;
+        }
+
+    }
+
+    public enum DocumentAiViewMode
+    {
+        None = 0,
+        Mindmap = 1,
+        Checklist = 2
     }
 }
-
-
-
-
-
-
-
 

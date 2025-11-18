@@ -244,7 +244,7 @@ namespace EW_Assistant.Services
             };
         }
 
-        public async Task<string> BuildMindmapJsonAsync(string filePath, string prompt, string userId, CancellationToken token)
+        public async Task<string> BuildMindmapJsonAsync(string filePath, string prompt, string userId, CancellationToken token, IDictionary<string, object> extraInputs = null)
         {
             using var client = new FileWorkflowClient(_options);
             var request = new FileWorkflowRequest
@@ -254,7 +254,8 @@ namespace EW_Assistant.Services
                 UserId = userId,
                 FileVariableName = "localfile",
                 PromptVariableName = "prompt",
-                OutputFieldName = "text"
+                OutputFieldName = "text",
+                ExtraInputs = extraInputs
             };
 
             var result = await client.RunAsync(request, token).ConfigureAwait(false);

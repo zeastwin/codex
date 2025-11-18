@@ -39,7 +39,7 @@ namespace EW_Assistant
         {
             ["总览"] = () => new DashboardView() ,
             ["AI助手"] = () => new AIAssistantView(),
-            ["知识导图"] = () => new KnowledgeMindMapView(),
+            ["AI文档"] = () => new DocumentAiView(),
             ["产能看板"] = () => new ProductionBoardView(),
             ["报警看板"] = () => new AlarmView(),
             ["机台控制"] = () => new MachineControl(),

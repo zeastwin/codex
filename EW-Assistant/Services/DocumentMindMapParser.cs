@@ -2,6 +2,7 @@ using EW_Assistant.Component.MindMap;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,8 +37,9 @@ namespace EW_Assistant.Services
             var prompt = BuildPrompt(Path.GetFileName(filePath));
             var userId = BuildUserId();
 
+            var extraInputs = BuildExtraInputs();
             var jsonText = await _mindmapService
-                .BuildMindmapJsonAsync(filePath, prompt, userId, token)
+                .BuildMindmapJsonAsync(filePath, prompt, userId, token, extraInputs)
                 .ConfigureAwait(false);
 
             var normalized = NormalizeJson(jsonText);
@@ -62,6 +64,15 @@ namespace EW_Assistant.Services
             if (string.IsNullOrWhiteSpace(user))
                 user = "mindmap";
             return "mindmap-" + user.ToLowerInvariant();
+        }
+
+        private static IDictionary<string, object> BuildExtraInputs()
+        {
+            return new Dictionary<string, object>
+            {
+                ["mindmap"] = true,
+                ["checklist"] = false
+            };
         }
 
         private static string NormalizeJson(string raw)
