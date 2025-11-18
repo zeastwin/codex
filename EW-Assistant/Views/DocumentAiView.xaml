@@ -111,6 +111,19 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="ChecklistExportButtonStyle" TargetType="Button" BasedOn="{StaticResource ModeActionButton}">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding HasChecklist}" Value="True"/>
+                        <Condition Binding="{Binding IsChecklistMode}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
 
         <DataTemplate x:Key="MindMapNodeTemplate" DataType="{x:Type mm:MindMapVisualNode}">
             <Border x:Name="NodeShell"
@@ -262,6 +275,10 @@
                             Style="{StaticResource ModeActionButton}"
                             Click="BtnGenerateChecklist_Click"
                             IsEnabled="{Binding CanGenerateChecklist}"/>
+                    <Button Content="导出"
+                            Style="{StaticResource ChecklistExportButtonStyle}"
+                            Click="BtnExportChecklist_Click"
+                            IsEnabled="{Binding CanExportChecklist}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -405,20 +422,9 @@
                           HorizontalScrollBarVisibility="Disabled">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                Margin="0,0,0,12"
-                                Visibility="{Binding HasChecklist, Converter={StaticResource Bool2Visibility}}">
-                        <Button Content="导出 Checklist CSV"
-                                Style="{StaticResource ModeActionButton}"
-                                Click="BtnExportChecklist_Click"
-                                IsEnabled="{Binding CanExportChecklist}"/>
-                    </StackPanel>
-                    <ItemsControl Grid.Row="1" ItemsSource="{Binding ChecklistGroups}">
+                    <ItemsControl Grid.Row="0" ItemsSource="{Binding ChecklistGroups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type chk:ChecklistGroup}">
                                 <Border Padding="18"
@@ -458,12 +464,22 @@
                                                             BorderBrush="{Binding Status, Converter={StaticResource ChecklistStatusBrushConverter}, ConverterParameter=border}"
                                                             BorderThickness="1.2"
                                                             CornerRadius="14">
-                                                        <Grid>
+                                                        <Grid>
+
+                                                            <Grid.RowDefinitions>
+
+                                                                <RowDefinition Height="Auto"/>
+
+                                                                <RowDefinition Height="Auto"/>
+
+                                                            </Grid.RowDefinitions>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="260"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <StackPanel>
+                                                            <StackPanel Grid.Row="0"
+
+                                                                        Grid.Column="0">
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <TextBlock Text="{Binding Order}"
                                                                                FontWeight="Bold"
@@ -479,29 +495,60 @@
                                                                            Foreground="#334155"
                                                                            TextWrapping="Wrap"/>
                                                             </StackPanel>
-                                                            <StackPanel Grid.Column="1"
-                                Margin="16,0,0,0">
-                            <TextBlock Text="状态"
-                                       FontSize="12"
-                                       Foreground="#475569"/>
-                            <ComboBox ItemsSource="{Binding DataContext.ChecklistStatusOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                      SelectedValuePath="Status"
-                                      DisplayMemberPath="DisplayName"
-                                      SelectedValue="{Binding Status, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      Margin="0,2,0,8"
-                                      Height="28"/>
-                            <TextBlock Text="备注"
-                                       FontSize="12"
-                                       Foreground="#475569"/>
-                            <TextBox Text="{Binding Note, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="60"
-                                     TextWrapping="Wrap"
-                                     AcceptsReturn="True"
-                                     Padding="6"
-                                     BorderBrush="#CBD5F5"
-                                     BorderThickness="1"
-                                     Background="White"/>
-                        </StackPanel>
+                                                            <StackPanel Grid.Row="0"
+
+                                                                        Grid.Column="1"
+
+                                                                        Margin="16,0,0,0">
+                                                                <TextBlock Text="状态"
+
+                                                                           FontSize="12"
+
+                                                                           Foreground="#475569"/>
+
+                                                                <ComboBox ItemsSource="{Binding DataContext.ChecklistStatusOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+
+                                                                          SelectedValuePath="Status"
+
+                                                                          DisplayMemberPath="DisplayName"
+
+                                                                          SelectedValue="{Binding Status, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+
+                                                                          Margin="0,2,0,8"
+
+                                                                          Height="28"/>
+
+                                                            </StackPanel>
+
+                                                            <StackPanel Grid.Row="1"
+
+                                                                        Grid.ColumnSpan="2"
+
+                                                                        Margin="0,12,0,0">
+
+                                                                <TextBlock Text="备注"
+
+                                                                           FontSize="12"
+
+                                                                           Foreground="#475569"/>
+
+                                                                <TextBox Text="{Binding Note, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+
+                                                                         Height="60"
+
+                                                                         TextWrapping="Wrap"
+
+                                                                         AcceptsReturn="True"
+
+                                                                         Padding="6"
+
+                                                                         BorderBrush="#CBD5F5"
+
+                                                                         BorderThickness="1"
+
+                                                                         Background="White"/>
+
+                                                            </StackPanel>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
@@ -512,7 +559,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <Border Grid.Row="1"
+                    <Border Grid.Row="0"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Padding="36"
