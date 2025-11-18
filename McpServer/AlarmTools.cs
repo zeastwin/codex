@@ -477,11 +477,11 @@ public static class ProdAlarmTools
     // ---------- 2) 跨天影响分析（含逐小时明细 rows） ----------
     [McpServerTool, Description("跨天影响分析：计算报警秒数与产量/良率的相关性，并输出低良率小时的Top报警（已去重并集，绝不钳位）。可加时段窗口，如 10-14。")]
     public static Task<string> GetAlarmImpactSummary(
-     [Description("开始日期，yyyy-MM-dd / MM-dd / dd")] string startDate,
-     [Description("结束日期，yyyy-MM-dd / MM-dd / dd")] string endDate,
-     [Description("时段窗口，如 '10-14' 或 '10:00-14:00'；留空=全天")] string window = null,
-     [Description("低良率阈值%，默认95")] double lowYieldThreshold = 95,
-     [Description("兼容参数：已忽略，不再钳位")] bool capHourlySeconds = false)
+        [Description("开始日期，yyyy-MM-dd / MM-dd / dd")] string startDate,
+        [Description("结束日期，yyyy-MM-dd / MM-dd / dd")] string endDate,
+        [Description("时段窗口，如 '10-14' 或 '10:00-14:00'；留空=全天")] string window = null,
+        [Description("低良率阈值%，默认95")] double lowYieldThreshold = 95,
+        [Description("兼容参数：已忽略，不再钳位")] bool capHourlySeconds = false)
     {
         DateTime d0, d1; int sh, eh;
 
@@ -506,6 +506,9 @@ public static class ProdAlarmTools
 
         var hourlyLoadSec = new int[24];
         var byDay = new List<object>();
+
+        // ===== 新增：周度汇总累加器 =====
+        int weekAlarmSeconds = 0;   // 周度去重后的报警总秒数（设备真实挂报警时间）
 
         for (var d = d0; d <= d1; d = d.AddDays(1))
         {
@@ -575,6 +578,9 @@ public static class ProdAlarmTools
             int sumSec = agg.Where(a => a != null).Sum(a => a.DurationSec);
             int sumCnt = agg.Where(a => a != null).Sum(a => a.Count);
 
+            // 周度影响时长累加（去重后）
+            weekAlarmSeconds += sumSec;
+
             byDay.Add(new
             {
                 date = d.ToString("yyyy-MM-dd"),
@@ -596,11 +602,28 @@ public static class ProdAlarmTools
             .Select(kv => new { code = kv.Key, seconds = kv.Value })
             .ToList();
 
+        // 统计活跃小时数 & 低良率小时数
+        int activeHours = 0;
+        for (int i = 0; i < hourlyLoadSec.Length; i++)
+        {
+            if (hourlyLoadSec[i] > 0) activeHours++;
+        }
+        int lowYieldRowCount = lowRows.Count;
+
         var payload = new
         {
             type = "prod.alarm.impact",
             range = new { start = d0.ToString("yyyy-MM-dd"), end = d1.ToString("yyyy-MM-dd") },
             window = string.Format("{0:00}:00-{1:00}:00", sh, eh),
+
+            // ===== 新增：周度汇总，专门给周报用 =====
+            weeklyTotals = new
+            {
+                alarmSeconds = weekAlarmSeconds,   // 周度去重后的报警总秒数
+                activeHours = activeHours,         // 有报警秒数的小时数
+                lowYieldRowCount = lowYieldRowCount// 低良率小时条数（rows.Count）
+            },
+
             correlation = new
             {
                 alarmSeconds_vs_total = r_total,
@@ -620,6 +643,7 @@ public static class ProdAlarmTools
 
         return Task.FromResult(JsonConvert.SerializeObject(payload));
     }
+
 
 
     // ---------- 3) 低良率聚焦 ----------

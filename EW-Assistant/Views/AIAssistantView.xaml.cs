@@ -741,48 +741,50 @@ namespace EW_Assistant.Views
             sb.AppendLine($"请输出 **{range}（最近7天）** 的产能周报，必须使用 Markdown，禁止 JSON、原始日志或随意发挥。");
             sb.AppendLine();
             sb.AppendLine("请按以下步骤执行：");
-            sb.AppendLine($"1) 仅调用 MCP 工具 GetWeeklyProductionSummary(endDate=\"{endDate}\")，取得 `summary`（pass/fail/total/yield/avgYield/medianTotal/volatility/lastDay/bestDays/worstDays）与 `days`（逐日明细）以及 `warnings`。");
-            sb.AppendLine("2) 所有周度 KPI 均直接引用 summary；日度表格来自 days。禁止私自补算缺失字段。");
+            sb.AppendLine($"1) 仅调用 MCP 工具 GetWeeklyProductionSummary(endDate=\"{endDate}\")，取得 `summary`（pass/fail/total/yield/avgYield/medianTotal/volatility/lastDay/lastDayDelta/bestDays/worstDays）、`days`（逐日明细）以及 `warnings`。");
+            sb.AppendLine("2) 所有周度 KPI 必须直接引用 summary；日度表格数据来自 days，不得自行演算或猜测缺失字段。");
             sb.AppendLine("3) 若 warnings 不为空或某天缺 CSV，须在“异常/缺失”章节逐条说明，并在日度表中标注原因。");
-            sb.AppendLine("4) 基于 bestDays/worstDays/lastDayDelta 给出有洞见的亮点、薄弱点与改进建议。");
+            sb.AppendLine("4) 基于 bestDays / worstDays / lastDayDelta 给出有洞见的亮点、薄弱点与改进建议，尽量结合具体日期与数值。");
             sb.AppendLine();
-            sb.AppendLine("输出模板（章节与表头不可删改，可补充描述）：");
+            sb.AppendLine("输出模板（章节与表头不可删改，可补充文字说明）：");
             sb.AppendLine($"# 产能周报（{range}）");
             sb.AppendLine();
             sb.AppendLine("## 周度KPI");
             sb.AppendLine("| 指标 | 数值 | 说明 |");
             sb.AppendLine("|---|---:|---|");
-            sb.AppendLine("| PASS 总量 | {summary.pass 千分位} | Σpass |");
-            sb.AppendLine("| FAIL 总量 | {summary.fail 千分位} | Σfail |");
-            sb.AppendLine("| 总产量 | {summary.total 千分位} | PASS+FAIL |");
-            sb.AppendLine("| 周整体良率 | {summary.yield 百分比2位} | summary.pass/summary.total |");
-            sb.AppendLine("| 周均良率 | {summary.avgYield 百分比2位} | days 平均 yield |");
-            sb.AppendLine("| 中位产量 | {summary.medianTotal 千分位} | days 中位 total |");
-            sb.AppendLine("| 产能波动 CV | {summary.volatility 百分比2位} | std(total)/avg(total) |");
-            sb.AppendLine("| 最后1天 vs 周均 | {summary.lastDayDelta.total 百分比1位}/{summary.lastDayDelta.yield 百分比1位} | 产量/良率偏差 |");
+            sb.AppendLine("| PASS 总量 | {summary.pass 千分位} | 一周内通过品数量总和 |");
+            sb.AppendLine("| FAIL 总量 | {summary.fail 千分位} | 一周内不良品数量总和 |");
+            sb.AppendLine("| 总产量 | {summary.total 千分位} | 一周内实际测试的总数量（PASS + FAIL） |");
+            sb.AppendLine("| 周整体良率 | {summary.yield 百分比2位} | 以一周总产量为基准的整体通过率 |");
+            sb.AppendLine("| 周均良率 | {summary.avgYield 百分比2位} | 7 天良率的平均水平，代表本周“常态”表现 |");
+            sb.AppendLine("| 中位产量 | {summary.medianTotal 千分位} | 7 天日产量从小到大排序后的中间值，代表典型日产量 |");
+            sb.AppendLine("| 产能波动（CV） | {summary.volatility 百分比2位} | 反映每天产量波动程度，数值越大波动越明显 |");
+            sb.AppendLine("| 最后1天 vs 周均 | {summary.lastDayDelta.total 百分比1位}/{summary.lastDayDelta.yield 百分比1位} | 最后一天产量/良率相对本周平均的增减（正值=高于周均） |");
+            sb.AppendLine();
             sb.AppendLine();
             sb.AppendLine("## 日度表现");
             sb.AppendLine("| 日期 | PASS | FAIL | 总量 | 良率 | 备注 |");
             sb.AppendLine("|---|---:|---:|---:|---:|---|");
-            sb.AppendLine("按 days 的顺序逐日渲染，备注写明 warnings 对应的缺失、异常或特别说明。");
+            sb.AppendLine("按 days 的顺序逐日渲染，备注列写明 warnings 对应的缺失、异常或特别说明；正常日期可写“正常”或留空。");
             sb.AppendLine();
             sb.AppendLine("## 重点洞察");
-            sb.AppendLine("- 亮点：引用 summary.bestDays 中的事实说明高产工况。");
-            sb.AppendLine("- 薄弱：引用 summary.worstDays 分析瓶颈、对周均的拖累。");
-            sb.AppendLine("- 趋势：描述 7 天走势、峰谷出现时间以及 summary.lastDay/lastDayDelta。");
+            sb.AppendLine("- 亮点：结合 summary.bestDays，说明哪些日期/班次产能和良率表现突出，以及可能原因。");
+            sb.AppendLine("- 薄弱：结合 summary.worstDays，分析拖累周度指标的薄弱日期/工况，对周均的影响有多大。");
+            sb.AppendLine("- 趋势：描述 7 天产能与良率走势、明显峰谷，以及 summary.lastDay / lastDayDelta 反映的最新状态。");
             sb.AppendLine();
             sb.AppendLine("## 风险与改进");
-            sb.AppendLine("- 给出 2–3 条可执行措施，包含验证指标/预期收益。");
+            sb.AppendLine("- 给出 2–3 条可执行措施，明确对应的验证指标（例如目标良率、目标日产量）和预计改善幅度。");
             sb.AppendLine();
             sb.AppendLine("## 异常/缺失");
-            sb.AppendLine("- 若存在工具报错或缺 CSV，逐条列出；否则写“无”。");
+            sb.AppendLine("- 若存在工具报错或缺 CSV，逐条列出日期与原因；否则写“无”。");
             sb.AppendLine();
-            sb.AppendLine("> 所有指标必须来自 GetWeeklyProductionSummary 的结果，严禁输出 JSON。");
+            sb.AppendLine("> 所有指标必须来自 GetWeeklyProductionSummary 的结果，严禁输出 JSON 或凭空编造数据。");
 
             var prompt = sb.ToString();
             try { MainWindow.PostProgramInfo("AI产能周报提示注入完成", "info"); } catch { }
             SendCurrentAsyncByInfo(prompt);
         }
+
 
         private void QuickWeeklyAlarmBtn_Click(object sender, RoutedEventArgs e)
         {
@@ -791,13 +793,29 @@ namespace EW_Assistant.Views
             var range = $"{startDate} ~ {endDate}";
             var sb = new StringBuilder();
 
-            sb.AppendLine($"请输出 **{range}（最近7天）** 的报警周报，仅允许 Markdown 表达，禁止 JSON/原始日志。");
+            sb.AppendLine($"请输出 **{range}（最近7天）** 的报警周报，仅允许 Markdown 表达，禁止 JSON / 原始日志 / 代码块里的 JSON。");
             sb.AppendLine();
-            sb.AppendLine("执行步骤：");
-            sb.AppendLine($"1) 调用 ProdAlarmTools.GetAlarmImpactSummary(startDate=\"{startDate}\", endDate=\"{endDate}\", window=\"\")，获取 byDay/byHour/topAlarms/rows/Pearson 相关/warnings。");
-            sb.AppendLine($"2) 调用 AlarmCsvTools.GetAlarmRangeWindowSummary(startDate=\"{startDate}\", endDate=\"{endDate}\", window=\"\", topN=10, sortBy=\"duration\")，得到类别占比与 top 列表。");
-            sb.AppendLine("3) 若需引用案例，可使用 QueryAlarms(startDate, endDate, code=某个 topAlarmCode, keyword=\"\", take=3) 抽取样本，写明开始时间/代码/描述/持续时长。");
-            sb.AppendLine("4) 报告需覆盖：低良率小时（rows）、报警对良率/产量的影响、主要报警类别、Top 报警原因与措施，以及 warnings。");
+            sb.AppendLine("数据准备：");
+            sb.AppendLine($"1) 调用 `ProdAlarmTools.GetAlarmImpactSummary(startDate=\"{startDate}\", endDate=\"{endDate}\", window=\"\")`，得到：");
+            sb.AppendLine("   - `weeklyTotals.alarmSeconds`：周度去重后的报警总时长（秒，按小时并集 ≤24*3600*7，用于衡量设备真实挂报警时间）；");
+            sb.AppendLine("   - `weeklyTotals.activeHours`：有报警秒数的小时数（覆盖小时数）；");
+            sb.AppendLine("   - `weeklyTotals.lowYieldRowCount`：低良率小时条数（= lowYield.rows.Count）；");
+            sb.AppendLine("   - `correlation.alarmSeconds_vs_yield`：报警秒数 vs 良率 的皮尔逊相关系数；");
+            sb.AppendLine("   - `byDay`：每日聚合（`date / pass / fail / total / yield / alarmSeconds / alarmCount`）；");
+            sb.AppendLine("   - `lowYield.rows`：低良率小时明细（含 `date / hour / total / yield / alarmSeconds / alarmCount / topAlarmCode / topAlarmSeconds`）；");
+            sb.AppendLine("   - `lowYield.topAlarmCodes`：在低良率时段中累计时长靠前的报警代码。");
+            sb.AppendLine();
+            sb.AppendLine($"2) 调用 `AlarmCsvTools.GetAlarmRangeWindowSummary(startDate=\"{startDate}\", endDate=\"{endDate}\", window=\"\", topN=10, sortBy=\"duration\")`，得到：");
+            sb.AppendLine("   - `totals.count`：报警记录条数（统计口径：CSV 明细行数）；");
+            sb.AppendLine("   - `totals.durationSeconds`：报警记录累计时长（可能大于实际时间，用于类别占比和 Top 排序）；");
+            sb.AppendLine("   - `byCategory`：各类别的次数 / 时长及占比；");
+            sb.AppendLine("   - `top`：Top 报警代码列表（含 `code / content / count / duration`）。");
+            sb.AppendLine();
+            sb.AppendLine("3) 如需引用具体样本，可按需调用：");
+            sb.AppendLine("   `AlarmCsvTools.QueryAlarms(startDate, endDate, code=某个 top.code, keyword=\"\", window=\"\", take=3)`，");
+            sb.AppendLine("   并从返回的 `items` 中抽取典型案例，写明开始时间 / 代码 / 描述 / 持续时间 / 来源文件。");
+            sb.AppendLine();
+            sb.AppendLine("4) 所有数值和结论必须基于上述工具返回的数据进行计算和归纳，不得凭空猜测。");
             sb.AppendLine();
             sb.AppendLine("输出模板：");
             sb.AppendLine($"# 报警周报（{range}）");
@@ -805,34 +823,43 @@ namespace EW_Assistant.Views
             sb.AppendLine("## 周度KPI");
             sb.AppendLine("| 指标 | 数值 | 说明 |");
             sb.AppendLine("|---|---:|---|");
-            sb.AppendLine("| 报警次数 | {week_alarm_count 千分位} | Σ alarmCount |");
-            sb.AppendLine("| 报警总时长 | {week_alarm_seconds 转 xhym} | Σ alarmSeconds |");
-            sb.AppendLine("| 平均单次时长 | {avg_duration 秒1位} | week_alarm_seconds / max(1, week_alarm_count) |");
-            sb.AppendLine("| 覆盖小时数 | {active_hours}/168 | seconds>0 的小时数 |");
-            sb.AppendLine("| 低良率小时 | {rows.Count 千分位} | rows（yield<threshold） |");
-            sb.AppendLine("| 报警-良率相关 | {pearson 百分比2位} | alarmSeconds_vs_yield r |");
+            sb.AppendLine("| 报警次数 | {alarm_record_count 千分位} | 一周内记录到的报警总次数 |");
+            sb.AppendLine("| 报警总时长 | {impact_seconds 转 xhym} | 一周内设备处于报警状态的累计时间 |");
+            sb.AppendLine("| 平均单次时长 | {avg_duration 秒1位} | 每次报警平均持续多长时间，建议写成“约 X 分钟/次” |");
+            sb.AppendLine("| 覆盖小时数 | {active_hours}/168 | 本周有报警发生的小时数，占一周 168 小时的多少 |");
+            sb.AppendLine("| 低良率小时 | {low_yield_hours 千分位} | 本周良率低于设定阈值（如 95%）的小时数 |");
+            sb.AppendLine("| 报警-良率相关 | {pearson 百分比2位} | 报警时间与良率高低的关联程度（数值越接近 100% 关联越强） |");
+            sb.AppendLine();
+            sb.AppendLine("> 表格中的“说明”面向现场/管理人员，请用通俗中文描述，不要出现接口名或内部字段名。");
+            sb.AppendLine();
             sb.AppendLine();
             sb.AppendLine("## 日度趋势");
-            sb.AppendLine("| 日期 | 报警次数 | 报警时长 | 良率 | Top 报警 |");
+            sb.AppendLine("| 日期 | 报警次数 | 报警时长 | 良率 | Top 报警（概括） |");
             sb.AppendLine("|---|---:|---:|---:|---|");
-            sb.AppendLine("按日期升序展示 byDay，并写出当日时长最高的报警代码/现象。");
+            sb.AppendLine("- 按日期升序遍历 `GetAlarmImpactSummary.byDay`，列出 `date / alarmCount / alarmSeconds / yield`。");
+            sb.AppendLine("- 对每一天，可结合 `GetAlarmRangeWindowSummary.top` 和必要时的 `QueryAlarms`，用 1–2 句自然语言概括当日最典型或影响最大的报警现象（不强制精确到绝对 Top 代码）。");
             sb.AppendLine();
             sb.AppendLine("## 低良率与 Top 报警");
-            sb.AppendLine("- 罗列 rows 里的关键小时：`HH:00-HH+1:00 / yield / alarmSeconds / topAlarmCode`，解释低良率原因。");
-            sb.AppendLine("- 结合 topAlarms 与 AlarmRangeSummary.top，分析前三大报警对产能/良率的影响与占比。");
+            sb.AppendLine("- 从 `lowYield.rows` 中筛选关键小时，按 `日期 + HH:00-HH+1:00 / yield / alarmSeconds / alarmCount / topAlarmCode` 展开，解释这些小时良率下降的主要原因。");
+            sb.AppendLine("- 结合 `lowYield.topAlarmCodes` 与 `AlarmRangeWindowSummary.top`，分析前三大报警在：");
+            sb.AppendLine("  - 低良率小时中的累计时长和次数；");
+            sb.AppendLine("  - 对整体产能 / 良率的影响（例如：贡献了多少比例的低良率小时报警时长）。");
             sb.AppendLine();
             sb.AppendLine("## 样本与措施");
-            sb.AppendLine("- 至少给出 2–3 条典型报警样本（开始时间、代码、描述、持续时间、涉及工序,验证指标。");
-            sb.AppendLine("- 汇总需要升级的系统性问题与预计关闭时间。");
+            sb.AppendLine("- 至少给出 2–3 条典型报警样本：包含开始时间、报警代码、报警内容、持续时间（换算成 min）、涉及工序 / 工位（如能识别）、以及对应的产能 / 良率影响。");
+            sb.AppendLine("- 针对 Top 报警，总结本周已采取或计划采取的措施，例如：参数优化、软件修正、治具维护、培训等，并给出预计改善方向或关闭时间。");
             sb.AppendLine();
-            sb.AppendLine("## 异常/缺失");
-            sb.AppendLine("- 把 warnings、缺 CSV 或工具报错逐条列出；若无则写“无”。");
+            sb.AppendLine("## 异常 / 缺失");
+            sb.AppendLine("- 将 `GetAlarmImpactSummary.warnings` 中的内容逐条整理，例如：缺失某天产能 / 报警文件。");
+            sb.AppendLine("- 若本周数据完整且无特别异常，请明确写出“无”。");
             sb.AppendLine();
-            sb.AppendLine("> 严格使用 Markdown，所有结论都须引用上述工具。");
+            sb.AppendLine("> 严格使用 Markdown 输出整份周报，禁止输出任何 JSON 结构或原始 CSV 行。");
 
             var prompt = sb.ToString();
             try { MainWindow.PostProgramInfo("AI报警周报提示注入完成", "info"); } catch { }
             SendCurrentAsyncByInfo(prompt);
+
+
         }
 
         // 低良率扫描（当天，阈值可调） —— 升级版
