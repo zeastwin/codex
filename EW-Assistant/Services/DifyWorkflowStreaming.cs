@@ -47,7 +47,7 @@ namespace EW_Assistant.Net
             CancellationToken ct = default)
         {
             var cfg = EW_Assistant.Services.ConfigService.Current;
-            if (string.IsNullOrWhiteSpace(cfg?.AutoURL) || string.IsNullOrWhiteSpace(cfg?.AutoKey))
+            if (string.IsNullOrWhiteSpace(cfg?.URL+ "/workflows/run") || string.IsNullOrWhiteSpace(cfg?.AutoKey))
             {
                 Post("AutoURL / AutoKey 未配置。", "warn");
                 return null;
@@ -64,7 +64,7 @@ namespace EW_Assistant.Net
             try
             {
                 var handle = await RunWorkflowStreamingAsync(
-                    baseUrl: cfg.AutoURL,
+                    baseUrl: cfg.URL + "/workflows/run",
                     apiKey: cfg.AutoKey,
                     errorCode: errorCode ?? "0",
                     prompt: prompt ?? string.Empty,
@@ -100,7 +100,7 @@ namespace EW_Assistant.Net
             bool onlyMajorNodes = true)
         {
             var cfg = EW_Assistant.Services.ConfigService.Current;
-            if (cfg == null || string.IsNullOrWhiteSpace(cfg.AutoURL) || string.IsNullOrWhiteSpace(cfg.AutoKey))
+            if (cfg == null || string.IsNullOrWhiteSpace(cfg.URL + "/workflows/run") || string.IsNullOrWhiteSpace(cfg.AutoKey))
             {
                 Post("AutoURL / AutoKey 未配置。", "warn");
                 return false;
@@ -120,7 +120,7 @@ namespace EW_Assistant.Net
                 try
                 {
                     await RunWorkflowStreamingAsync(
-                        baseUrl: cfg.AutoURL,
+                        baseUrl: cfg.URL + "/workflows/run",
                         apiKey: cfg.AutoKey,
                         errorCode: string.IsNullOrWhiteSpace(errorCode) ? "0" : errorCode,
                         prompt: prompt ?? string.Empty,
@@ -363,7 +363,7 @@ namespace EW_Assistant.Net
             var taskId = _currentTaskId;
             if (string.IsNullOrEmpty(taskId)) return false;
 
-            var url = $"{ConfigService.Current.AutoURL.TrimEnd('/')}/workflows/tasks/{taskId}/stop";
+            var url = $"{ConfigService.Current.URL + "/workflows/run".TrimEnd('/')}/workflows/tasks/{taskId}/stop";
             using var client = new HttpClient();
             using var req = new HttpRequestMessage(HttpMethod.Post, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ConfigService.Current.AutoKey);

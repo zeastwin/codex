@@ -99,7 +99,7 @@ namespace EW_Assistant.Services
             if (autoGenerateName.HasValue) payload["auto_generate_name"] = autoGenerateName.Value;
             if (files != null) payload["files"] = files;
 
-            using var req = new HttpRequestMessage(HttpMethod.Post, ConfigService.Current.ChatURL);
+            using var req = new HttpRequestMessage(HttpMethod.Post, ConfigService.Current.URL+ "/chat-messages");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ConfigService.Current.ChatKey);
             req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
             req.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
@@ -302,7 +302,7 @@ namespace EW_Assistant.Services
         {
             if (string.IsNullOrEmpty(LastTaskId)) return false;
 
-            var url = $"{ConfigService.Current.ChatURL}/{LastTaskId}/stop";
+            var url = $"{ConfigService.Current.URL + "/chat-messages"}/{LastTaskId}/stop";
             using var req = new HttpRequestMessage(HttpMethod.Post, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ConfigService.Current.ChatKey);
             req.Content = new StringContent(JsonConvert.SerializeObject(new { user = "abc-123" }), Encoding.UTF8, "application/json");

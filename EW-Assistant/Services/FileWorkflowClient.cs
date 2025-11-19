@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -231,14 +231,14 @@ namespace EW_Assistant.Services
         public MindmapService(string workflowId = null)
         {
             var cfg = ConfigService.Current ?? throw new InvalidOperationException("ConfigService 尚未初始化。");
-            if (string.IsNullOrWhiteSpace(cfg.AutoURL))
-                throw new InvalidOperationException("AutoURL 未配置，无法调用 Workflow。");
+            if (string.IsNullOrWhiteSpace(cfg.URL))
+                throw new InvalidOperationException("URL 未配置，无法调用 Workflow。");
             if (string.IsNullOrWhiteSpace(cfg.AutoKey))
-                throw new InvalidOperationException("AutoKey 未配置，无法调用 Workflow。");
+                throw new InvalidOperationException("Key 未配置，无法调用 Workflow。");
 
             _options = new FileWorkflowClientOptions
             {
-                BaseUrl = cfg.AutoURL,
+                BaseUrl = cfg.URL,
                 ApiKey = cfg.AutoKey,
                 WorkflowId = workflowId
             };

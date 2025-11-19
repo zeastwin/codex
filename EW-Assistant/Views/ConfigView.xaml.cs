@@ -27,8 +27,11 @@ namespace EW_Assistant.Views
             try
             {
                 if (string.IsNullOrWhiteSpace(Config.CsvRootPath)
-                    || string.IsNullOrWhiteSpace(Config.ChatURL) || string.IsNullOrWhiteSpace(Config.ChatKey)
-                     || string.IsNullOrWhiteSpace(Config.AutoURL) || string.IsNullOrWhiteSpace(Config.AutoKey) || string.IsNullOrWhiteSpace(Config.AlarmLogPath))
+                     || string.IsNullOrWhiteSpace(Config.AlarmLogPath)
+                     || string.IsNullOrWhiteSpace(Config.URL)
+                     || string.IsNullOrWhiteSpace(Config.AutoKey)
+                     || string.IsNullOrWhiteSpace(Config.ChatKey)
+                     || string.IsNullOrWhiteSpace(Config.DocumentKey))
                 {
                     MainWindow.PostProgramInfo(
                                $"内容不能为空。", "warn");
@@ -51,15 +54,14 @@ namespace EW_Assistant.Views
                 // 从磁盘重新加载 AppConfig.json
                 var fresh = EW_Assistant.Services.ConfigService.Load();
 
-                // 为了不替换 DataContext 引用，逐项覆盖（后面有新字段时照着加）
                 if (this.Config != null)
                 {
                     this.Config.CsvRootPath = fresh.CsvRootPath;
-                    this.Config.ChatURL = fresh.ChatURL;
-                    this.Config.ChatKey = fresh.ChatKey;
-                    this.Config.AutoURL = fresh.AutoURL;
-                    this.Config.AutoKey = fresh.AutoKey;
                     this.Config.AlarmLogPath = fresh.AlarmLogPath;
+                    this.Config.URL = fresh.URL;
+                    this.Config.AutoKey = fresh.AutoKey;
+                    this.Config.ChatKey = fresh.ChatKey;
+                    this.Config.DocumentKey = fresh.DocumentKey;
                 }
                 else
                 {
@@ -97,6 +99,7 @@ namespace EW_Assistant.Settings
 {
     using System.ComponentModel;
     using System.Runtime.CompilerServices;
+    using System.Security.Policy;
 
     public class AppConfig : INotifyPropertyChanged
     {
@@ -112,11 +115,11 @@ namespace EW_Assistant.Settings
             get => _alarmLogPath;
             set { if (_alarmLogPath != value) { _alarmLogPath = value; OnPropertyChanged(); } }
         }
-        private string _autoURL = "";
-        public string AutoURL
+        private string _URL = "";
+        public string URL
         {
-            get => _autoURL;
-            set { if (_autoURL != value) { _autoURL = value; OnPropertyChanged(); } }
+            get => _URL;
+            set { if (_URL != value) { _URL = value; OnPropertyChanged(); } }
         }
 
         private string _autoKey = "";
@@ -125,18 +128,19 @@ namespace EW_Assistant.Settings
             get => _autoKey;
             set { if (_autoKey != value) { _autoKey = value; OnPropertyChanged(); } }
         }
-        private string _chatURL = "";
-        public string ChatURL
-        {
-            get => _chatURL;
-            set { if (_chatURL != value) { _chatURL = value; OnPropertyChanged(); } } // ← 修正这里
-        }
 
         private string _chatKey = "";
         public string ChatKey
         {
             get => _chatKey;
             set { if (_chatKey != value) { _chatKey = value; OnPropertyChanged(); } }
+        }
+
+        private string _documentKey = "";
+        public string DocumentKey
+        {
+            get => _documentKey;
+            set { if (_documentKey != value) { _documentKey = value; OnPropertyChanged(); } }
         }
         public static AppConfig CreateDefault() => new AppConfig();
 

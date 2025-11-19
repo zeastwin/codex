@@ -135,7 +135,7 @@ namespace EW_Assistant.Views
           //  AddBotMarkdown("你好！这里是 **AI 对话** 组件（UserControl）。\n\n- 支持 **Markdown** 渲染\n- 支持 **流式** 追加\n- 外部通过 `StreamRequested` 推 token 即可");
 
             // 初始化 Dify 适配器（复用你已有的静态 HttpClient）
-            _dify = new DifyChatAdapter(s_http, ConfigService.Current.ChatURL, ConfigService.Current.ChatKey, ChatUserId);
+            _dify = new DifyChatAdapter(s_http, ConfigService.Current.URL + "/chat-messages", ConfigService.Current.ChatKey, ChatUserId);
 
             // 绑定外部流事件（把“外部实现推流”用 Dify 来实现）
             this.StreamRequested += OnStreamRequested_Dify;
