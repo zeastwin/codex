@@ -121,29 +121,27 @@
                 <Grid Grid.Row="4" MaxWidth="980" HorizontalAlignment="Left">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <!-- CsvRootPath -->
+                        <!-- 0 CsvRootPath -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- AlarmLogPath -->
+                        <!-- 2 AlarmLogPath -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- URL -->
-                        <RowDefinition Height="8"/>
+                        <!-- 4 AutoURL -->
+                        <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- AutoKey -->
-                        <RowDefinition Height="8"/>
+                        <!-- 6 AutoKey -->
+                        <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- ChatKey -->
-                        <RowDefinition Height="8"/>
-                        
-                        <!-- DocumentKey -->
+                        <!-- 8 ChatKey -->
+                        <RowDefinition Height="12"/>
+
                         <RowDefinition Height="Auto"/>
-                        
-                        <!-- DocumentKey -->
+                        <!-- 10 DocumentKey -->
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="120"/>
@@ -166,7 +164,7 @@
 
                     <!-- URL -->
                     <TextBlock Grid.Row="4" Grid.Column="0"
-                               Text="Auto API URL：" VerticalAlignment="Center" Foreground="#374151"/>
+                               Text="API URL：" VerticalAlignment="Center" Foreground="#374151"/>
                     <TextBox   Grid.Row="4" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding URL, UpdateSourceTrigger=PropertyChanged}"/>
@@ -179,16 +177,16 @@
                                Text="{Binding AutoKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- ChatKey -->
-                    <TextBlock Grid.Row="10" Grid.Column="0"
+                    <TextBlock Grid.Row="8" Grid.Column="0"
                                Text="Chat API Key：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <TextBox   Grid.Row="10" Grid.Column="1"
+                    <TextBox   Grid.Row="8" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding ChatKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- DocumentKey -->
-                    <TextBlock Grid.Row="14" Grid.Column="0"
+                    <TextBlock Grid.Row="10" Grid.Column="0"
                                Text="Document API Key：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <TextBox   Grid.Row="14" Grid.Column="1"
+                    <TextBox   Grid.Row="10" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding DocumentKey, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>

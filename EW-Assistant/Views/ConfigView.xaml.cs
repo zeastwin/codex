@@ -191,19 +191,34 @@ namespace EW_Assistant.Services
             ConfigChanged?.Invoke(null, _current);
             return _current;
         }
-       
+
         public static void Save(AppConfig cfg)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            var dir = Path.GetDirectoryName(FilePath);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
             var json = JsonConvert.SerializeObject(cfg, Formatting.Indented);
             File.WriteAllText(FilePath, json, new UTF8Encoding(false));
 
-            // 保持 Current 引用，便于已有绑定不中断
-            if (_current == null) _current = cfg;
-            else _current.CsvRootPath = cfg.CsvRootPath;
+            if (_current == null)
+            {
+                _current = cfg;
+            }
+            else
+            {
+                _current.CsvRootPath = cfg.CsvRootPath;
+                _current.AlarmLogPath = cfg.AlarmLogPath;
+                _current.URL = cfg.URL;
+                _current.AutoKey = cfg.AutoKey;
+                _current.ChatKey = cfg.ChatKey;
+                _current.DocumentKey = cfg.DocumentKey;
+            }
 
             ConfigChanged?.Invoke(null, _current);
         }
+
+
     }
 
 }

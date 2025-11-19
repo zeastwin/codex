@@ -233,13 +233,13 @@ namespace EW_Assistant.Services
             var cfg = ConfigService.Current ?? throw new InvalidOperationException("ConfigService 尚未初始化。");
             if (string.IsNullOrWhiteSpace(cfg.URL))
                 throw new InvalidOperationException("URL 未配置，无法调用 Workflow。");
-            if (string.IsNullOrWhiteSpace(cfg.AutoKey))
+            if (string.IsNullOrWhiteSpace(cfg.DocumentKey))
                 throw new InvalidOperationException("Key 未配置，无法调用 Workflow。");
 
             _options = new FileWorkflowClientOptions
             {
                 BaseUrl = cfg.URL,
-                ApiKey = cfg.AutoKey,
+                ApiKey = cfg.DocumentKey,
                 WorkflowId = workflowId
             };
         }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -16,6 +17,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Path = System.IO.Path;
 
 namespace EW_Assistant
 {
@@ -104,13 +106,60 @@ namespace EW_Assistant
             RightHost.Children.Add(view);
         }
 
+        // ===== 日志相关静态字段 =====
+        /// <summary>程序信息日志根目录。</summary>
+        private const string ProgramLogRoot = @"D:\Data\AiLog\UI\";   // 你可以改成自己习惯的路径
+
+        /// <summary>写日志的锁，防止多线程同时写同一个文件。</summary>
+        private static readonly object _programLogLock = new object();
+
+        /// <summary>
+        /// 安全写入一行程序信息日志，不抛异常。
+        /// </summary>
+        private static void SafeWriteProgramLog(string message, string level)
+        {
+            try
+            {
+                // 兜底
+                if (message == null) message = string.Empty;
+                if (string.IsNullOrWhiteSpace(level)) level = "info";
+
+                // 准备目录 & 文件名（按天分文件）
+                Directory.CreateDirectory(ProgramLogRoot);
+                string fileName = DateTime.Now.ToString("yyyy-MM-dd") + ".log";
+                string filePath = Path.Combine(ProgramLogRoot, fileName);
+
+                // 时间 + 级别 + 文本
+                string line = string.Format(
+                    "[{0:yyyy-MM-dd HH:mm:ss}] [{1}] {2}",
+                    DateTime.Now,
+                    level.ToUpperInvariant(),
+                    message.Replace(Environment.NewLine, " ")  // 简单处理多行
+                );
+
+                lock (_programLogLock)
+                {
+                    File.AppendAllText(filePath, line + Environment.NewLine, Encoding.UTF8);
+                }
+            }
+            catch (Exception ex)
+            {
+                // 日志失败绝对不能再影响主程序，这里只写 Debug 输出
+                Debug.WriteLine("[ProgramLog] 写日志失败：" + ex.Message);
+            }
+        }
+
         // ===== 面向全程序开放的静态接口 =====
         /// <summary>
-        /// 从任意地方/线程抛信息到信息卡。
+        /// 从任意地方/线程抛信息到信息卡 + 落地到日志文件。
         /// level: "info" | "ok" | "warn" | "error"
         /// </summary>
         public static void PostProgramInfo(string message, string level = "info")
         {
+            // 1) 先写文件日志（与 UI 无关）
+            SafeWriteProgramLog(message, level);
+
+            // 2) 再投递到主窗口信息卡（原有逻辑）
             var w = Instance;
             if (w == null) return;
 
