@@ -1,28 +1,11 @@
-# .editorconfig
 root = true
 
-[*]
-charset = utf-8-bom
-end_of_line = crlf
-insert_final_newline = true
-trim_trailing_whitespace = true
-
-[*.{cs,csx}]
+[*.cs]
+charset = utf-8
 indent_style = space
 indent_size = 4
 
-# 统一一些常见 C# 风格（可按需微调）
-dotnet_style_qualification_for_field = false:suggestion
-dotnet_style_qualification_for_property = false:suggestion
-dotnet_style_qualification_for_method = false:suggestion
-csharp_prefer_braces = when_multiline:suggestion
-csharp_style_var_for_built_in_types = true:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = false:none
-
-# 分目录的规则（示例）：WPF 项目里更严格
-[EW-Assistant/**.cs]
-# 提醒：这里仅做风格约束；真正的语言版本请在 csproj 里设置 7.3
-
-[McpServer/**.cs]
-# 服务器侧可使用较新的模式/风格（按需添加）
+[*.xaml]
+charset = utf-8
+indent_style = space
+indent_size = 4

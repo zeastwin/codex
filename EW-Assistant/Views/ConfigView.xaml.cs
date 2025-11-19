@@ -81,15 +81,7 @@ namespace EW_Assistant.Views
 
         private async void BtnTest_Click(object sender, RoutedEventArgs e)
         {
-            // 后台逻辑里调用，不涉及 UI：
-            var service = new MindmapService();
 
-            string mindmapJson = await service.BuildMindmapJsonAsync(
-                filePath: @"C:\Users\zeast\Desktop\3C定制化设备AI赋能生产运维项目立项书.docx",
-                prompt: "请为该文件生成一棵完整的知识导图，突出整体结构和关键要点。",
-                userId: "user-001",
-                token: CancellationToken.None);
-            MainWindow.PostProgramInfo(mindmapJson, "error");
         }
     }
 }
