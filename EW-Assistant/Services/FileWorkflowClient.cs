@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -18,6 +18,8 @@ namespace EW_Assistant.Services
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
         private readonly string _workflowId;
+        /// <summary>HTTP 超时时间（秒），默认 300；设为 0 或负数则表示无限制。</summary>
+        public int TimeoutSeconds { get; set; } = 300;
 
         public FileWorkflowClient(FileWorkflowClientOptions options)
         {
@@ -28,12 +30,18 @@ namespace EW_Assistant.Services
                 throw new ArgumentNullException(nameof(options.ApiKey));
 
             _baseUrl = options.BaseUrl.TrimEnd('/');
-            _workflowId = options.WorkflowId?.Trim();
+            _workflowId = options.WorkflowId != null ? options.WorkflowId.Trim() : null;
 
             _httpClient = new HttpClient();
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", options.ApiKey);
+
+            if (TimeoutSeconds > 0)
+                _httpClient.Timeout = TimeSpan.FromSeconds(TimeoutSeconds);
+            else
+                _httpClient.Timeout = System.Threading.Timeout.InfiniteTimeSpan;
         }
+
 
         public async Task<FileWorkflowResult> RunAsync(FileWorkflowRequest request, CancellationToken ct = default)
         {
@@ -61,6 +69,21 @@ namespace EW_Assistant.Services
                     throw new InvalidOperationException($"调用 Workflow 失败，HTTP {(int)response.StatusCode}: {respText}");
 
                 return ParseResult(respText, request.OutputFieldName);
+            }
+            catch (TaskCanceledException ex)
+            {
+                string reason = ct.IsCancellationRequested
+                    ? "调用方主动取消了请求。"
+                    : "HTTP 请求在超时时间内未完成，可能是 Workflow 处理时间过长。";
+
+                MainWindow.PostProgramInfo("[FileWorkflow] 执行失败（超时/取消）：" + reason, "error");
+
+                return new FileWorkflowResult
+                {
+                    Succeeded = false,
+                    OutputText = null,
+                    RawResponse = ex.ToString()
+                };
             }
             catch (Exception ex)
             {
