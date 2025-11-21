@@ -1,6 +1,7 @@
 using EW_Assistant.ViewModels;
 using EW_Assistant.Warnings;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -104,22 +105,50 @@ namespace EW_Assistant.Views
             try
             {
                 var root = LocalDataConfig.AlarmCsvRoot;
+                var watchMode = LocalDataConfig.WatchMode;
                 if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
                     return _lastAlarmWriteTime;
 
-                var max = DateTime.MinValue;
-                var files = Directory.GetFiles(root, "*.csv");
-                foreach (var path in files)
-                {
-                    var t = File.GetLastWriteTime(path);
-                    if (t > max) max = t;
-                }
-                return max;
+                return watchMode
+                    ? GetLatestWatchModeWriteTime(root)
+                    : GetLatestFlatWriteTime(root);
             }
             catch
             {
                 return _lastAlarmWriteTime;
             }
+        }
+
+        private DateTime GetLatestFlatWriteTime(string root)
+        {
+            var max = DateTime.MinValue;
+            var files = Directory.GetFiles(root, "*.csv", SearchOption.TopDirectoryOnly);
+            foreach (var path in files)
+            {
+                var t = File.GetLastWriteTime(path);
+                if (t > max) max = t;
+            }
+            return max == DateTime.MinValue ? _lastAlarmWriteTime : max;
+        }
+
+        private DateTime GetLatestWatchModeWriteTime(string root)
+        {
+            var max = DateTime.MinValue;
+            var dirs = Directory.GetDirectories(root, "*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                var name = Path.GetFileName(dir);
+                if (!DateTime.TryParseExact(name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                    continue;
+
+                var files = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly);
+                foreach (var path in files)
+                {
+                    var t = File.GetLastWriteTime(path);
+                    if (t > max) max = t;
+                }
+            }
+            return max == DateTime.MinValue ? _lastAlarmWriteTime : max;
         }
 
         private DispatcherTimer _refreshTimer;

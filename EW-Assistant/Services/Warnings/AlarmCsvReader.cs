@@ -24,8 +24,9 @@ namespace EW_Assistant.Warnings
         {
             var windowStart = now.AddHours(-24);
             var result = new Dictionary<string, AlarmHourStat>(StringComparer.OrdinalIgnoreCase);
+            var watchMode = LocalDataConfig.WatchMode;
 
-            foreach (var file in EnumerateRecentFiles(windowStart))
+            foreach (var file in EnumerateRecentFiles(windowStart, now, watchMode))
             {
                 var fileDate = GuessDateFromFile(file);
                 foreach (var row in ReadRows(file, fileDate))
@@ -67,9 +68,18 @@ namespace EW_Assistant.Warnings
             return result.Values.OrderBy(x => x.Hour).ToList();
         }
 
-        private IEnumerable<string> EnumerateRecentFiles(DateTime windowStart)
+        private IEnumerable<string> EnumerateRecentFiles(DateTime windowStart, DateTime now, bool watchMode)
         {
             if (!Directory.Exists(_root)) yield break;
+
+            if (watchMode)
+            {
+                foreach (var path in EnumerateWatchModeFiles(windowStart, now))
+                {
+                    yield return path;
+                }
+                yield break;
+            }
 
             var dir = new DirectoryInfo(_root);
             foreach (var file in dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
@@ -78,6 +88,47 @@ namespace EW_Assistant.Warnings
                 if (file.LastWriteTime < windowStart.AddDays(-1)) continue;
                 yield return file.FullName;
             }
+        }
+
+        private IEnumerable<string> EnumerateWatchModeFiles(DateTime windowStart, DateTime now)
+        {
+            var startDay = windowStart.Date.AddDays(-1);
+            var endDay = now.Date;
+            var dir = new DirectoryInfo(_root);
+
+            var dayDirs = dir.EnumerateDirectories()
+                .Select(d => new { Dir = d, Day = ParseDayFromDirectory(d.Name) })
+                .Where(x => x.Day.HasValue && x.Day.Value >= startDay && x.Day.Value <= endDay)
+                .OrderByDescending(x => x.Day.Value);
+
+            foreach (var d in dayDirs)
+            {
+                var file = PickLatestCsv(d.Dir);
+                if (!string.IsNullOrWhiteSpace(file))
+                {
+                    yield return file;
+                }
+            }
+        }
+
+        private static DateTime? ParseDayFromDirectory(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            if (DateTime.TryParseExact(name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
+            {
+                return day.Date;
+            }
+            return null;
+        }
+
+        private static string? PickLatestCsv(DirectoryInfo dir)
+        {
+            if (dir == null || !dir.Exists) return null;
+            var file = dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
+                          .OrderByDescending(f => f.LastWriteTime)
+                          .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                          .FirstOrDefault();
+            return file?.FullName;
         }
 
         private IEnumerable<AlarmRow> ReadRows(string path, DateTime fileDate)
@@ -228,6 +279,12 @@ namespace EW_Assistant.Warnings
                 && int.TryParse(match.Groups["d"].Value, out var d))
             {
                 try { return new DateTime(y, m, d); } catch { }
+            }
+
+            var dirName = Path.GetFileName(Path.GetDirectoryName(path) ?? string.Empty) ?? string.Empty;
+            if (DateTime.TryParseExact(dirName, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var byDir))
+            {
+                return byDir.Date;
             }
 
             return File.GetLastWriteTime(path).Date;

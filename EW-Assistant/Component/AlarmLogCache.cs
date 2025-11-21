@@ -32,13 +32,14 @@ namespace EW_Assistant.Warnings
         {
             if (days <= 0) days = 7;
             var dir = string.IsNullOrWhiteSpace(root) ? LocalDataConfig.AlarmCsvRoot : root;
+            var watchMode = LocalDataConfig.WatchMode;
 
             var map = new Dictionary<DateTime, DayRaw>();
 
             for (int i = days - 1; i >= 0; i--)
             {
                 var day = DateTime.Today.AddDays(-i).Date;
-                if (!TrySeekCsv(dir, day, out var file))
+                if (!TrySeekCsv(dir, day, watchMode, out var file))
                 {
                     map[day] = new DayRaw { Date = day, Missing = true };
                     continue;
@@ -96,70 +97,88 @@ namespace EW_Assistant.Warnings
         }
 
         // ===== 内部工具：定位文件/编码/读取 =====
-        private static bool TrySeekCsv(string dir, DateTime day, out string? file)
+        private static bool TrySeekCsv(string dir, DateTime day, bool watchMode, out string? file)
         {
             file = null;
             try
             {
                 if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) return false;
 
-                var tokens = new[]
+                if (watchMode)
                 {
-                    day.ToString("yyyyMMdd"),
-                    day.ToString("yyyy-MM-dd"),
-                    day.ToString("yyyy_MM_dd"),
-                    day.ToString("yyyy.MM.dd"),
-                    day.ToString("yyyy-M-d"),
-                    day.ToString("yyyy_M_d"),
-                };
+                    var dayDir = Path.Combine(dir, day.ToString("yyyy-MM-dd"));
+                    if (!Directory.Exists(dayDir)) return false;
+
+                    var files = Directory.GetFiles(dayDir, "*.csv", SearchOption.TopDirectoryOnly);
+                    file = PickCsvForDay(day, files, allowFallback: true);
+                    return !string.IsNullOrWhiteSpace(file);
+                }
 
                 var all = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly);
-
-                var candidates = all
-                    .Where(f =>
-                    {
-                        var name = Path.GetFileNameWithoutExtension(f);
-                        foreach (var t in tokens)
-                        {
-                            if (!string.IsNullOrEmpty(t) &&
-                                name.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0)
-                                return true;
-                        }
-                        return false;
-                    })
-                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-
-                if (candidates.Length > 0)
-                {
-                    file = candidates[0];
-                    return true;
-                }
-
-                var rx = new Regex(@"(?<!\d)(20\d{2})[-_.]?(0?[1-9]|1[0-2])[-_.]?(0?[1-9]|[12]\d|3[01])(?!\d)",
-                                   RegexOptions.IgnoreCase);
-                foreach (var f in all)
-                {
-                    var name = Path.GetFileName(f);
-                    var m = rx.Match(name);
-                    if (m.Success)
-                    {
-                        int y = int.Parse(m.Groups[1].Value);
-                        int mo = int.Parse(m.Groups[2].Value);
-                        int d = int.Parse(m.Groups[3].Value);
-                        if (y == day.Year && mo == day.Month && d == day.Day)
-                        {
-                            file = f;
-                            return true;
-                        }
-                    }
-                }
-                return false;
+                file = PickCsvForDay(day, all, allowFallback: false);
+                return !string.IsNullOrWhiteSpace(file);
             }
             catch
             {
                 return false;
             }
+        }
+
+        private static string? PickCsvForDay(DateTime day, IEnumerable<string> files, bool allowFallback)
+        {
+            if (files == null) return null;
+            var list = files.ToArray();
+            if (list.Length == 0) return null;
+
+            var tokens = new[]
+            {
+                day.ToString("yyyyMMdd"),
+                day.ToString("yyyy-MM-dd"),
+                day.ToString("yyyy_MM_dd"),
+                day.ToString("yyyy.MM.dd"),
+                day.ToString("yyyy-M-d"),
+                day.ToString("yyyy_M_d"),
+            };
+
+            var candidates = list
+                .Where(f =>
+                {
+                    var name = Path.GetFileNameWithoutExtension(f);
+                    foreach (var t in tokens)
+                    {
+                        if (!string.IsNullOrEmpty(t) &&
+                            name.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0)
+                            return true;
+                    }
+                    return false;
+                })
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (candidates.Length > 0) return candidates[0];
+
+            var rx = new Regex(@"(?<!\d)(20\d{2})[-_.]?(0?[1-9]|1[0-2])[-_.]?(0?[1-9]|[12]\d|3[01])(?!\d)",
+                               RegexOptions.IgnoreCase);
+            foreach (var f in list)
+            {
+                var name = Path.GetFileName(f);
+                var m = rx.Match(name);
+                if (m.Success)
+                {
+                    int y = int.Parse(m.Groups[1].Value);
+                    int mo = int.Parse(m.Groups[2].Value);
+                    int d = int.Parse(m.Groups[3].Value);
+                    if (y == day.Year && mo == day.Month && d == day.Day)
+                        return f;
+                }
+            }
+
+            if (allowFallback)
+            {
+                return list.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            }
+
+            return null;
         }
 
         private static List<string> ReadAllLinesShared(string path, Encoding enc, bool keepEmpty)

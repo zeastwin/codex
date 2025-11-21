@@ -188,7 +188,7 @@
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 14 Watch -->
+                        <!-- 14 报警文件层级模式 -->
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="120"/>
@@ -244,13 +244,13 @@
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding EarlyWarningKey, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <!-- Watch 开关 -->
+                    <!-- 报警文件层级模式 -->
                     <TextBlock Grid.Row="14" Grid.Column="0"
-                               Text="Watch 开关：" VerticalAlignment="Center" Foreground="#374151"/>
+                               Text="报警文件层级模式：" VerticalAlignment="Center" Foreground="#374151"/>
                     <ToggleButton Grid.Row="14" Grid.Column="1"
                                   HorizontalAlignment="Left"
                                   Style="{StaticResource SwitchToggleButton}"
-                                  IsChecked="{Binding Watch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  IsChecked="{Binding FlatFileLayout, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>
             </Grid>
         </Border>

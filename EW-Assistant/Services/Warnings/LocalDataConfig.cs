@@ -29,5 +29,17 @@ namespace EW_Assistant.Warnings
                 return @"D:\Data\T66Data";
             }
         }
+
+        /// <summary>
+        /// 是否启用报警文件层级模式（flatFileLayout=true）。
+        /// </summary>
+        public static bool WatchMode
+        {
+            get
+            {
+                var cfg = ConfigService.Current;
+                return cfg != null && cfg.FlatFileLayout;
+            }
+        }
     }
 }
