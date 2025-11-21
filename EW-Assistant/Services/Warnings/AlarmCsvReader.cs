@@ -85,6 +85,9 @@ namespace EW_Assistant.Warnings
             foreach (var file in dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
                                     .OrderByDescending(f => f.LastWriteTime))
             {
+                if (!IsAlarmLogFileName(file.Name)) continue;
+                if (!TryParseDayFromFileName(file.Name, out var day)) continue;
+                if (day < windowStart.Date.AddDays(-1) || day > now.Date) continue;
                 if (file.LastWriteTime < windowStart.AddDays(-1)) continue;
                 yield return file.FullName;
             }
@@ -103,7 +106,7 @@ namespace EW_Assistant.Warnings
 
             foreach (var d in dayDirs)
             {
-                var file = PickLatestCsv(d.Dir);
+                var file = PickLatestCsv(d.Dir, d.Day.Value);
                 if (!string.IsNullOrWhiteSpace(file))
                 {
                     yield return file;
@@ -121,10 +124,11 @@ namespace EW_Assistant.Warnings
             return null;
         }
 
-        private static string? PickLatestCsv(DirectoryInfo dir)
+        private static string? PickLatestCsv(DirectoryInfo dir, DateTime day)
         {
             if (dir == null || !dir.Exists) return null;
             var file = dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
+                          .Where(f => MatchesDayFileName(f.Name, day))
                           .OrderByDescending(f => f.LastWriteTime)
                           .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
                           .FirstOrDefault();
@@ -272,14 +276,7 @@ namespace EW_Assistant.Warnings
         private static DateTime GuessDateFromFile(string path)
         {
             var fileName = Path.GetFileNameWithoutExtension(path) ?? string.Empty;
-            var match = Regex.Match(fileName, @"(?<y>20\d{2})[-_/\.]?(?<m>\d{1,2})[-_/\.]?(?<d>\d{1,2})");
-            if (match.Success
-                && int.TryParse(match.Groups["y"].Value, out var y)
-                && int.TryParse(match.Groups["m"].Value, out var m)
-                && int.TryParse(match.Groups["d"].Value, out var d))
-            {
-                try { return new DateTime(y, m, d); } catch { }
-            }
+            if (TryParseDayFromFileName($"{fileName}.csv", out var parsedDay)) return parsedDay;
 
             var dirName = Path.GetFileName(Path.GetDirectoryName(path) ?? string.Empty) ?? string.Empty;
             if (DateTime.TryParseExact(dirName, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var byDir))
@@ -288,6 +285,47 @@ namespace EW_Assistant.Warnings
             }
 
             return File.GetLastWriteTime(path).Date;
+        }
+
+        private static bool TryParseDayFromFileName(string fileName, out DateTime day)
+        {
+            day = default;
+            if (string.IsNullOrWhiteSpace(fileName)) return false;
+
+            var match = Regex.Match(fileName.Trim(), @"^(?<y>20\d{2})-(?<m>\d{2})-(?<d>\d{2})(?:-报警记录表)?\.csv$", RegexOptions.IgnoreCase);
+            if (match.Success
+                && int.TryParse(match.Groups["y"].Value, out var y)
+                && int.TryParse(match.Groups["m"].Value, out var m)
+                && int.TryParse(match.Groups["d"].Value, out var d))
+            {
+                try
+                {
+                    day = new DateTime(y, m, d);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsAlarmLogFileName(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName)) return false;
+            var name = fileName.Trim();
+            return Regex.IsMatch(name, @"^\d{4}-\d{2}-\d{2}-报警记录表\.csv$", RegexOptions.IgnoreCase)
+                   || Regex.IsMatch(name, @"^\d{4}-\d{2}-\d{2}\.csv$", RegexOptions.IgnoreCase);
+        }
+
+        private static bool MatchesDayFileName(string fileName, DateTime day)
+        {
+            var withSuffix = $"{day:yyyy-MM-dd}-报警记录表.csv";
+            var plain = $"{day:yyyy-MM-dd}.csv";
+            return string.Equals(fileName, withSuffix, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(fileName, plain, StringComparison.OrdinalIgnoreCase);
         }
 
         private sealed class AlarmRow

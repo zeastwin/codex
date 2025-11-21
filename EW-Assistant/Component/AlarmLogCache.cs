@@ -110,12 +110,12 @@ namespace EW_Assistant.Warnings
                     if (!Directory.Exists(dayDir)) return false;
 
                     var files = Directory.GetFiles(dayDir, "*.csv", SearchOption.TopDirectoryOnly);
-                    file = PickCsvForDay(day, files, allowFallback: true);
+                    file = PickCsvForDay(day, files);
                     return !string.IsNullOrWhiteSpace(file);
                 }
 
                 var all = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly);
-                file = PickCsvForDay(day, all, allowFallback: false);
+                file = PickCsvForDay(day, all);
                 return !string.IsNullOrWhiteSpace(file);
             }
             catch
@@ -124,58 +124,20 @@ namespace EW_Assistant.Warnings
             }
         }
 
-        private static string? PickCsvForDay(DateTime day, IEnumerable<string> files, bool allowFallback)
+        private static string? PickCsvForDay(DateTime day, IEnumerable<string> files)
         {
             if (files == null) return null;
-            var list = files.ToArray();
-            if (list.Length == 0) return null;
-
-            var tokens = new[]
+            var expectedNames = new[]
             {
-                day.ToString("yyyyMMdd"),
-                day.ToString("yyyy-MM-dd"),
-                day.ToString("yyyy_MM_dd"),
-                day.ToString("yyyy.MM.dd"),
-                day.ToString("yyyy-M-d"),
-                day.ToString("yyyy_M_d"),
+                $"{day:yyyy-MM-dd}-报警记录表.csv",
+                $"{day:yyyy-MM-dd}.csv"
             };
 
-            var candidates = list
-                .Where(f =>
-                {
-                    var name = Path.GetFileNameWithoutExtension(f);
-                    foreach (var t in tokens)
-                    {
-                        if (!string.IsNullOrEmpty(t) &&
-                            name.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0)
-                            return true;
-                    }
-                    return false;
-                })
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (candidates.Length > 0) return candidates[0];
-
-            var rx = new Regex(@"(?<!\d)(20\d{2})[-_.]?(0?[1-9]|1[0-2])[-_.]?(0?[1-9]|[12]\d|3[01])(?!\d)",
-                               RegexOptions.IgnoreCase);
-            foreach (var f in list)
+            foreach (var expected in expectedNames)
             {
-                var name = Path.GetFileName(f);
-                var m = rx.Match(name);
-                if (m.Success)
-                {
-                    int y = int.Parse(m.Groups[1].Value);
-                    int mo = int.Parse(m.Groups[2].Value);
-                    int d = int.Parse(m.Groups[3].Value);
-                    if (y == day.Year && mo == day.Month && d == day.Day)
-                        return f;
-                }
-            }
-
-            if (allowFallback)
-            {
-                return list.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+                var hit = files.FirstOrDefault(f =>
+                    string.Equals(Path.GetFileName(f), expected, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrWhiteSpace(hit)) return hit;
             }
 
             return null;
@@ -255,7 +217,7 @@ namespace EW_Assistant.Warnings
 
             var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
             int idxCategory = FindHeaderIndex(headerCols,
-                "报警类别", "报警类型", "类别", "Type", "Category");
+                "报警类别", "报警类型", "类别", "Type", "Category", "错误类型");
 
             var dict = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int i = startRow; i < raw.LinesAll.Length; i++)
@@ -293,11 +255,11 @@ namespace EW_Assistant.Warnings
             var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
 
             int idxDate = FindHeaderIndex(headerCols, "日期", "Date");
-            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间");
+            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间", "起始时间");
             int idxHour = FindHeaderIndex(headerCols,
                 "小时", "Hour", "HOUR",
                 "时间", "发生时间", "时刻", "时段",
-                "时间戳", "Timestamp", "DateTime", "报警时间", "开始时间");
+                "时间戳", "Timestamp", "DateTime", "报警时间", "开始时间", "起始时间");
 
             for (int i = startRow; i < raw.LinesAll.Length; i++)
             {
@@ -340,12 +302,12 @@ namespace EW_Assistant.Warnings
             var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
 
             int idxDate = FindHeaderIndex(headerCols, "日期", "Date");
-            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间");
+            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间", "起始时间");
             int idxHour = FindHeaderIndex(headerCols,
                 "小时", "Hour", "HOUR",
                 "时间", "发生时间", "时刻", "时段",
-                "时间戳", "Timestamp", "DateTime", "报警时间", "开始时间");
-            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
+                "时间戳", "Timestamp", "DateTime", "报警时间", "开始时间", "起始时间");
+            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration", "维修耗时");
 
             for (int i = startRow; i < raw.LinesAll.Length; i++)
             {
@@ -384,8 +346,8 @@ namespace EW_Assistant.Warnings
             if (raw is null || raw.Missing || raw.LinesAll is null || raw.LinesAll.Length == 0) return new();
 
             var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
-            int idxCategory = FindHeaderIndex(headerCols, "报警类别", "报警类型", "类别", "Type", "Category");
-            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
+            int idxCategory = FindHeaderIndex(headerCols, "报警类别", "报警类型", "类别", "Type", "Category", "错误类型");
+            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration", "维修耗时");
 
             var dict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
@@ -417,13 +379,13 @@ namespace EW_Assistant.Warnings
 
             var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
             int idxDate = FindHeaderIndex(headerCols, "日期", "Date");
-            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间");
+            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间", "起始时间");
             int idxHour = FindHeaderIndex(headerCols,
                 "小时", "Hour", "HOUR",
                 "时间", "发生时间", "时刻", "时段",
-                "时间戳", "Timestamp", "DateTime", "报警时间", "开始时间");
-            int idxCategory = FindHeaderIndex(headerCols, "报警类别", "报警类型", "类别", "Type", "Category");
-            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
+                "时间戳", "Timestamp", "DateTime", "报警时间", "开始时间", "起始时间");
+            int idxCategory = FindHeaderIndex(headerCols, "报警类别", "报警类型", "类别", "Type", "Category", "错误类型");
+            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration", "维修耗时");
 
             var dict = new Dictionary<string, (int Count, double Seconds)>(StringComparer.OrdinalIgnoreCase);
 
@@ -476,11 +438,11 @@ namespace EW_Assistant.Warnings
 
             var (startRow, headerCols) = TryDetectHeader(raw.LinesAll);
             int idxDate = FindHeaderIndex(headerCols, "日期", "Date");
-            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间");
-            int idxCode = FindHeaderIndex(headerCols, "报警代码", "代码", "Code");
-            int idxCat = FindHeaderIndex(headerCols, "报警类别", "类别", "Category", "Type");
-            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
-            int idxMsg = FindHeaderIndex(headerCols, "报警内容", "描述", "Message", "Content", "备注");
+            int idxStart = FindHeaderIndex(headerCols, "开始时间", "发生时间", "Start", "StartTime", "时间", "起始时间");
+            int idxCode = FindHeaderIndex(headerCols, "报警代码", "代码", "Code", "错误编码");
+            int idxCat = FindHeaderIndex(headerCols, "报警类别", "类别", "Category", "Type", "报警类型", "错误类型");
+            int idxSeconds = FindHeaderIndex(headerCols, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration", "维修耗时");
+            int idxMsg = FindHeaderIndex(headerCols, "报警内容", "描述", "Message", "Content", "备注", "错误信息");
 
             for (int i = startRow; i < raw.LinesAll.Length; i++)
             {
