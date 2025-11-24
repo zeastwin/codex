@@ -186,7 +186,7 @@ namespace McpServer
                 var baseDir = AppDomain.CurrentDomain.BaseDirectory ?? AppContext.BaseDirectory;
                 if (!string.IsNullOrWhiteSpace(baseDir))
                 {
-                    var iconPath = Path.Combine(baseDir, "Tray", "wrench.ico");
+                    var iconPath = Path.Combine(baseDir, "Tray", "gear.ico");
                     if (File.Exists(iconPath))
                         return new Icon(iconPath);
                 }

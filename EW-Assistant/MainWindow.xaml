@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="MainWindow" Height="720" Width="1280" WindowState="Maximized">
+        Title="EW-Assistant" Height="720" Width="1280" WindowState="Maximized">
 
     <!-- ===== 左侧栏配色与样式（仿图风格） ===== -->
     <Window.Resources>
