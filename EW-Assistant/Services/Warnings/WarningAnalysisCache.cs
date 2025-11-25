@@ -44,8 +44,7 @@ namespace EW_Assistant.Warnings
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory ?? ".";
-                var dataDir = Path.Combine(baseDir, "Data");
+                var dataDir = Path.Combine(@"D:\", "DataAI");
                 _filePath = Path.Combine(dataDir, "WarningAnalysisCache.json");
             }
             else

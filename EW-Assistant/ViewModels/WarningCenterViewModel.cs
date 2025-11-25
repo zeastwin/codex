@@ -268,6 +268,8 @@ namespace EW_Assistant.ViewModels
                 Key = item.Key,
                 Level = item.Level ?? "Info",
                 Type = item.Type ?? "Yield",
+                LevelDisplay = MapLevelDisplay(item.Level),
+                TypeDisplay = MapTypeDisplay(item.Type),
                 TimeRange = timeRange,
                 Title = title,
                 Summary = item.Summary ?? string.Empty,
@@ -297,6 +299,31 @@ namespace EW_Assistant.ViewModels
             }
         }
 
+        private static string MapLevelDisplay(string level)
+        {
+            var lv = (level ?? string.Empty).Trim().ToLowerInvariant();
+            switch (lv)
+            {
+                case "critical": return "严重";
+                case "warning": return "警告";
+                case "info": return "提示";
+                default: return string.IsNullOrEmpty(level) ? "提示" : level;
+            }
+        }
+
+        private static string MapTypeDisplay(string type)
+        {
+            var tp = (type ?? string.Empty).Trim().ToLowerInvariant();
+            switch (tp)
+            {
+                case "yield": return "良率";
+                case "throughput": return "产能";
+                case "alarm": return "报警";
+                case "combined": return "综合";
+                default: return string.IsNullOrEmpty(type) ? "其他" : type;
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -317,6 +344,8 @@ namespace EW_Assistant.ViewModels
         public string Key { get; set; }
         public string Level { get; set; }
         public string Type { get; set; }
+        public string LevelDisplay { get; set; }
+        public string TypeDisplay { get; set; }
 
         public string Title { get; set; }
         public string Summary { get; set; }

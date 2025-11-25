@@ -3,22 +3,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d">
+             xmlns:md="clr-namespace:MdXaml;assembly=MdXaml"
+             mc:Ignorable="d"
+             FontFamily="Segoe UI"
+             FontSize="14">
     <UserControl.Resources>
         <SolidColorBrush x:Key="CriticalBrush" Color="#F87171"/>
         <SolidColorBrush x:Key="WarningBrush" Color="#FBBF24"/>
         <SolidColorBrush x:Key="InfoBrush" Color="#60A5FA"/>
         <CollectionViewSource x:Key="WarningsByLevel" Source="{Binding Warnings}">
             <CollectionViewSource.GroupDescriptions>
-                <PropertyGroupDescription PropertyName="Level"/>
+                <PropertyGroupDescription PropertyName="LevelDisplay"/>
             </CollectionViewSource.GroupDescriptions>
         </CollectionViewSource>
     </UserControl.Resources>
+
     <Grid Background="#F5F7FB">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="6"/>
+            <RowDefinition Height="2*"/>
         </Grid.RowDefinitions>
 
         <!-- 标题区域 -->
@@ -28,53 +33,133 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="预警中心" FontSize="24" FontWeight="SemiBold" Foreground="#0B1220"/>
-                <TextBlock Text="显示当前机台最近 24 小时的预警概况，即使 AI 未连接也能使用。"
-                           FontSize="13" Foreground="#6B7280" Margin="0,4,0,0"/>
-                <TextBlock Margin="0,8,0,0"
-                           FontSize="12"
-                           Foreground="Gray"
-                           Text="{Binding Warnings.Count, StringFormat=已显示 {0} 条预警（最近 24 小时）}"/>
+                <TextBlock Text="预警中心" FontSize="26" FontWeight="SemiBold" Foreground="#0B1220"/>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
+                    <TextBlock FontSize="13" Foreground="Gray"
+                               Text="{Binding Warnings.Count, StringFormat=已显示 {0} 条预警（最近 24 小时）}"/>
+                </StackPanel>
+                <!-- 概览：严重/警告/提示 -->
+                <ItemsControl Margin="0,4,0,0"
+                              ItemsSource="{Binding Source={StaticResource WarningsByLevel}, Path=View.Groups}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="6,2" Margin="0,0,8,0" CornerRadius="8" Background="#EEF2F7">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="#CBD5E1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Name}" Value="严重">
+                                                        <Setter Property="Fill" Value="{StaticResource CriticalBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Name}" Value="警告">
+                                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Name}" Value="提示">
+                                                        <Setter Property="Fill" Value="{StaticResource InfoBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#0B1220" FontSize="13"/>
+                                    <TextBlock Text="{Binding ItemCount, StringFormat= 共 {0} 条}" Margin="4,0,0,0" Foreground="#6B7280" FontSize="13"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
             <TextBlock Grid.Column="1"
                        VerticalAlignment="Bottom"
                        FontSize="12"
                        Foreground="#94A3B8"
                        Text="{Binding LastUpdatedText}"
-                       Margin="12,0,0,2"/>
+                       Margin="12,0,0,4"/>
         </Grid>
 
         <!-- 预警列表 -->
-        <ScrollViewer Grid.Row="1"
-                      Margin="8"
-                      VerticalScrollBarVisibility="Auto">
+        <Border Grid.Row="1"
+                Margin="8"
+                Background="White"
+                CornerRadius="12"
+                Padding="4"
+                SnapsToDevicePixels="True">
+            <Border.Effect>
+                <DropShadowEffect Color="#14000000" BlurRadius="8" ShadowDepth="1"/>
+            </Border.Effect>
             <ListBox x:Name="WarningList"
                      ItemsSource="{Binding Source={StaticResource WarningsByLevel}}"
                      SelectedItem="{Binding SelectedWarning}"
                      BorderThickness="0"
-                     Background="Transparent">
+                     Background="Transparent"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="0"/>
                         <Setter Property="Margin" Value="0,0,0,4"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#EEF3FF"/>
-                            </Trigger>
-                        </Style.Triggers>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            Padding="{TemplateBinding Padding}"
+                                            SnapsToDevicePixels="True">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="#3B82F6"/>
+                                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,8"
+                        <Border Margin="0,0,0,4"
                                 Padding="12"
                                 CornerRadius="8"
-                                Background="White"
+                                Background="#FCFDFE"
+                                BorderBrush="#E5E7EB"
+                                BorderThickness="1"
                                 SnapsToDevicePixels="True">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                                    <Setter Property="Background" Value="#FCFDFE"/>
+                                </Style>
+                            </Border.Style>
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
@@ -86,20 +171,19 @@
 
                                 <!-- 左侧色条 -->
                                 <Border Grid.RowSpan="3"
-                                        Background="#E5E7EB"
                                         CornerRadius="4"
                                         Margin="0,0,12,0">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="#E5E7EB"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                                <DataTrigger Binding="{Binding LevelDisplay}" Value="严重">
                                                     <Setter Property="Background" Value="{StaticResource CriticalBrush}"/>
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                                <DataTrigger Binding="{Binding LevelDisplay}" Value="警告">
                                                     <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding Level}" Value="Info">
+                                                <DataTrigger Binding="{Binding LevelDisplay}" Value="提示">
                                                     <Setter Property="Background" Value="{StaticResource InfoBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -117,26 +201,28 @@
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="#E5E7EB"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                                    <DataTrigger Binding="{Binding LevelDisplay}" Value="严重">
                                                         <Setter Property="Background" Value="#FEE2E2"/>
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Level}" Value="Warning">
+                                                    <DataTrigger Binding="{Binding LevelDisplay}" Value="警告">
                                                         <Setter Property="Background" Value="#FEF3C7"/>
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Level}" Value="Info">
+                                                    <DataTrigger Binding="{Binding LevelDisplay}" Value="提示">
                                                         <Setter Property="Background" Value="#DBEAFE"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock Text="{Binding Level}"
-                                               FontWeight="Bold"
-                                               FontSize="12"
-                                               Foreground="#0B1220"/>
+                                        <TextBlock Text="{Binding LevelDisplay}"
+                                                   FontWeight="Bold"
+                                                   FontSize="13"
+                                                   Foreground="#0B1220"/>
                                     </Border>
                                     <TextBlock Text="{Binding Title}"
-                                               FontSize="14"
-                                               FontWeight="SemiBold"/>
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="#0B1220"
+                                               TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
 
                                 <!-- Type 标签 -->
@@ -147,8 +233,9 @@
                                         CornerRadius="10"
                                         VerticalAlignment="Center"
                                         Background="#F0F2FF">
-                                    <TextBlock Text="{Binding Type}"
-                                               FontSize="12"/>
+                                    <TextBlock Text="{Binding TypeDisplay}"
+                                               FontSize="13"
+                                               Foreground="#0B1220"/>
                                 </Border>
 
                                 <!-- Summary 行 -->
@@ -157,7 +244,9 @@
                                            Margin="0,4,0,0"
                                            Text="{Binding Summary}"
                                            TextWrapping="Wrap"
-                                           FontSize="12"/>
+                                           TextTrimming="CharacterEllipsis"
+                                           FontSize="14"
+                                           Foreground="#4B5563"/>
 
                                 <!-- 底部：时间 + 指标 + 状态 -->
                                 <StackPanel Grid.Row="2"
@@ -166,24 +255,24 @@
                                             Orientation="Horizontal"
                                             VerticalAlignment="Center">
                                     <TextBlock Text="时间："
-                                               FontSize="12"
+                                               FontSize="14"
                                                Foreground="Gray"/>
                                     <TextBlock Text="{Binding TimeRange}"
-                                               FontSize="12"
+                                               FontSize="14"
                                                Margin="0,0,16,0"/>
 
                                     <TextBlock Text="指标："
-                                               FontSize="12"
+                                               FontSize="14"
                                                Foreground="Gray"/>
                                     <TextBlock Text="{Binding MetricText}"
-                                               FontSize="12"
+                                               FontSize="14"
                                                Margin="0,0,16,0"/>
 
                                     <TextBlock Text="状态："
-                                               FontSize="12"
+                                               FontSize="14"
                                                Foreground="Gray"/>
                                     <TextBlock Text="{Binding Status}"
-                                               FontSize="12"/>
+                                               FontSize="14"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -204,13 +293,13 @@
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Fill" Value="#CBD5E1"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Name}" Value="Critical">
+                                                        <DataTrigger Binding="{Binding Name}" Value="严重">
                                                             <Setter Property="Fill" Value="{StaticResource CriticalBrush}"/>
                                                         </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Name}" Value="Warning">
+                                                        <DataTrigger Binding="{Binding Name}" Value="警告">
                                                             <Setter Property="Fill" Value="{StaticResource WarningBrush}"/>
                                                         </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Name}" Value="Info">
+                                                        <DataTrigger Binding="{Binding Name}" Value="提示">
                                                             <Setter Property="Fill" Value="{StaticResource InfoBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -219,11 +308,11 @@
                                         </Ellipse>
                                         <TextBlock Text="{Binding Name}"
                                                    FontWeight="SemiBold"
-                                                   FontSize="13"
+                                                   FontSize="14"
                                                    Margin="8,0,6,0"
                                                    Foreground="#0B1220"/>
                                         <TextBlock Text="{Binding ItemCount, StringFormat=共 {0} 条}"
-                                                   FontSize="12"
+                                                   FontSize="13"
                                                    Foreground="#6B7280"/>
                                     </StackPanel>
                                 </Border>
@@ -237,23 +326,43 @@
                     </GroupStyle>
                 </ListBox.GroupStyle>
             </ListBox>
-        </ScrollViewer>
+        </Border>
+
+        <!-- 分隔条 -->
+        <GridSplitter Grid.Row="2"
+                      Height="6"
+                      HorizontalAlignment="Stretch"
+                      Background="#E5E7EB"
+                      ShowsPreview="True"/>
 
         <!-- AI 预留卡片 -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Margin="8,0,8,8"
                 Padding="12"
                 CornerRadius="8"
                 Background="White"
-                SnapsToDevicePixels="True">
-            <StackPanel>
+                SnapsToDevicePixels="True"
+                MinHeight="200"
+                MaxHeight="500">
+            <Border.Effect>
+                <DropShadowEffect Color="#11000000" BlurRadius="8" ShadowDepth="1"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
                 <TextBlock Text="AI 分析"
                            FontWeight="SemiBold"
-                           Margin="0,0,0,4"/>
-                <TextBlock Text="{Binding AiAnalysisText}"
-                           FontSize="12"
-                           TextWrapping="Wrap"/>
-            </StackPanel>
+                           FontSize="15"
+                           Margin="0,0,0,6"/>
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              Padding="0,4,0,0">
+                    <md:MarkdownScrollViewer Markdown="{Binding AiAnalysisText}"
+                                             FontSize="14"/>
+                </ScrollViewer>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
