@@ -44,6 +44,7 @@ namespace EW_Assistant
             ["AI文档"] = () => new DocumentAiView(),
             ["产能看板"] = () => new ProductionBoardView(),
             ["报警看板"] = () => new AlarmView(),
+            ["预警中心"] = () => new WarningCenterView(),
             ["机台控制"] = () => new MachineControl(),
             ["设置"] = () => new ConfigView(),
         };

@@ -179,6 +179,14 @@
     <Compile Include="Services\DocumentChecklistParser.cs" />
     <Compile Include="Services\FileWorkflowClient.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
+    <Compile Include="Services\Warnings\AiWarningAnalysisService.cs" />
+    <Compile Include="Services\Warnings\WarningAnalysisCache.cs" />
+    <Compile Include="ViewModels\WarningCenterViewModel.cs" />
+    <Compile Include="Services\Warnings\AlarmCsvReader.cs" />
+    <Compile Include="Services\Warnings\LocalDataConfig.cs" />
+    <Compile Include="Services\Warnings\ProductionCsvReader.cs" />
+    <Compile Include="Services\Warnings\WarningItem.cs" />
+    <Compile Include="Services\Warnings\WarningRuleEngine.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
       <DependentUpon>AlarmView.xaml</DependentUpon>
     </Compile>
@@ -193,6 +201,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\DocumentAiView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\WarningCenterView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -228,6 +240,9 @@
     </Compile>
     <Compile Include="Views\DashboardView.xaml.cs">
       <DependentUpon>DashboardView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\WarningCenterView.xaml.cs">
+      <DependentUpon>WarningCenterView.xaml</DependentUpon>
     </Compile>
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>

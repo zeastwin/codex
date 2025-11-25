@@ -27,11 +27,12 @@ namespace EW_Assistant.Views
             try
             {
                 if (string.IsNullOrWhiteSpace(Config.CsvRootPath)
-                     || string.IsNullOrWhiteSpace(Config.AlarmLogPath)
-                     || string.IsNullOrWhiteSpace(Config.URL)
-                     || string.IsNullOrWhiteSpace(Config.AutoKey)
-                     || string.IsNullOrWhiteSpace(Config.ChatKey)
-                     || string.IsNullOrWhiteSpace(Config.DocumentKey))
+                    || string.IsNullOrWhiteSpace(Config.AlarmLogPath)
+                    || string.IsNullOrWhiteSpace(Config.URL)
+                    || string.IsNullOrWhiteSpace(Config.AutoKey)
+                    || string.IsNullOrWhiteSpace(Config.ChatKey)
+                    || string.IsNullOrWhiteSpace(Config.DocumentKey)
+                    || string.IsNullOrWhiteSpace(Config.EarlyWarningKey))
                 {
                     MainWindow.PostProgramInfo(
                                $"内容不能为空。", "warn");
@@ -62,6 +63,7 @@ namespace EW_Assistant.Views
                     this.Config.AutoKey = fresh.AutoKey;
                     this.Config.ChatKey = fresh.ChatKey;
                     this.Config.DocumentKey = fresh.DocumentKey;
+                    this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
                 }
                 else
                 {
@@ -134,6 +136,12 @@ namespace EW_Assistant.Settings
             get => _documentKey;
             set { if (_documentKey != value) { _documentKey = value; OnPropertyChanged(); } }
         }
+        private string _earlyWarningKey = "";
+        public string EarlyWarningKey
+        {
+            get => _earlyWarningKey;
+            set { if (_earlyWarningKey != value) { _earlyWarningKey = value; OnPropertyChanged(); } }
+        }
         public static AppConfig CreateDefault() => new AppConfig();
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -205,6 +213,7 @@ namespace EW_Assistant.Services
                 _current.AutoKey = cfg.AutoKey;
                 _current.ChatKey = cfg.ChatKey;
                 _current.DocumentKey = cfg.DocumentKey;
+                _current.EarlyWarningKey = cfg.EarlyWarningKey;
             }
 
             ConfigChanged?.Invoke(null, _current);

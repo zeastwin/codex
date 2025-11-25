@@ -157,6 +157,8 @@
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="报警看板" Checked="NavItem_Checked" Tag="&#xE81F;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="预警中心" Checked="NavItem_Checked" Tag="&#xE7BA;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="机台控制" Checked="NavItem_Checked" Tag="&#xE707;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="设置" Checked="NavItem_Checked" Tag="&#xE713;"/>
