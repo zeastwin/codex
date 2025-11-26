@@ -11,6 +11,10 @@
         <SolidColorBrush x:Key="CriticalBrush" Color="#F87171"/>
         <SolidColorBrush x:Key="WarningBrush" Color="#FBBF24"/>
         <SolidColorBrush x:Key="InfoBrush" Color="#60A5FA"/>
+
+        <!-- 选中项淡蓝底色 -->
+        <SolidColorBrush x:Key="SelectedItemBackgroundBrush" Color="#EEF3FF"/>
+
         <CollectionViewSource x:Key="WarningsByLevel" Source="{Binding Warnings}">
             <CollectionViewSource.GroupDescriptions>
                 <PropertyGroupDescription PropertyName="LevelDisplay"/>
@@ -86,7 +90,7 @@
 
         <!-- 预警列表 -->
         <Border Grid.Row="1"
-                Margin="8"
+                Margin="8,0,8,4"
                 Background="White"
                 CornerRadius="12"
                 Padding="4"
@@ -100,6 +104,7 @@
                      BorderThickness="0"
                      Background="Transparent"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.CanContentScroll="True"
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.IsVirtualizingWhenGrouping="True"
                      VirtualizingPanel.VirtualizationMode="Recycling">
@@ -111,7 +116,7 @@
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="0"/>
-                        <Setter Property="Margin" Value="0,0,0,4"/>
+                        <Setter Property="Margin" Value="0,0,0,8"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="Background" Value="Transparent"/>
                         <Setter Property="BorderThickness" Value="0"/>
@@ -128,8 +133,8 @@
                                         <ContentPresenter />
                                     </Border>
                                     <ControlTemplate.Triggers>
+                                        <!-- 这里只保留描边，底色交给 DataTemplate 里的 Card 处理 -->
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="Transparent"/>
                                             <Setter TargetName="Bd" Property="BorderBrush" Value="#3B82F6"/>
                                             <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
                                         </Trigger>
@@ -142,24 +147,20 @@
                         </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
+
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="0,0,0,4"
+                        <!-- 卡片本体：选中底色会作用在这里 -->
+                        <Border x:Name="Card"
+                                Margin="0,0,0,0"
                                 Padding="12"
                                 CornerRadius="8"
-                                Background="#FCFDFE"
+                                Background="White"
                                 BorderBrush="#E5E7EB"
                                 BorderThickness="1"
                                 SnapsToDevicePixels="True">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="BorderBrush" Value="#E5E7EB"/>
-                                    <Setter Property="Background" Value="#FCFDFE"/>
-                                </Style>
-                            </Border.Style>
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
@@ -169,32 +170,10 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- 左侧色条 -->
-                                <Border Grid.RowSpan="3"
-                                        CornerRadius="4"
-                                        Margin="0,0,12,0">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="#E5E7EB"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding LevelDisplay}" Value="严重">
-                                                    <Setter Property="Background" Value="{StaticResource CriticalBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding LevelDisplay}" Value="警告">
-                                                    <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding LevelDisplay}" Value="提示">
-                                                    <Setter Property="Background" Value="{StaticResource InfoBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                </Border>
-
                                 <!-- 标题行：等级 + 标题 -->
                                 <StackPanel Orientation="Horizontal"
                                             Grid.Row="0"
-                                            Grid.Column="1"
+                                            Grid.Column="0"
                                             VerticalAlignment="Center">
                                     <Border Padding="8,2" CornerRadius="8" Margin="0,0,8,0">
                                         <Border.Style>
@@ -227,7 +206,7 @@
 
                                 <!-- Type 标签 -->
                                 <Border Grid.Row="0"
-                                        Grid.Column="2"
+                                        Grid.Column="1"
                                         Padding="8,2"
                                         Margin="8,0,0,0"
                                         CornerRadius="10"
@@ -276,8 +255,18 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
+
+                        <!-- 选中态：让整张卡片淡蓝底色 + 蓝色边 -->
+                        <DataTemplate.Triggers>
+                            <DataTrigger Value="True"
+                                         Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}">
+                                <Setter TargetName="Card" Property="Background" Value="{StaticResource SelectedItemBackgroundBrush}"/>
+                                <Setter TargetName="Card" Property="BorderBrush" Value="#3B82F6"/>
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
+
                 <ListBox.GroupStyle>
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
@@ -320,7 +309,7 @@
                         </GroupStyle.HeaderTemplate>
                         <GroupStyle.Panel>
                             <ItemsPanelTemplate>
-                                <StackPanel />
+                                <VirtualizingStackPanel />
                             </ItemsPanelTemplate>
                         </GroupStyle.Panel>
                     </GroupStyle>
@@ -328,25 +317,28 @@
             </ListBox>
         </Border>
 
-        <!-- 分隔条 -->
+        <!-- 分隔条（更细一点，并与上下卡片留缝隙） -->
         <GridSplitter Grid.Row="2"
-                      Height="6"
+                      Height="4"
+                      Margin="12,0,12,0"
                       HorizontalAlignment="Stretch"
                       Background="#E5E7EB"
                       ShowsPreview="True"/>
 
         <!-- AI 预留卡片 -->
         <Border Grid.Row="3"
-                Margin="8,0,8,8"
+                Margin="8,4,8,8"
                 Padding="12"
                 CornerRadius="8"
                 Background="White"
                 SnapsToDevicePixels="True"
                 MinHeight="200"
                 MaxHeight="500">
+            <!-- 去掉第二层阴影，避免接缝发黑
             <Border.Effect>
                 <DropShadowEffect Color="#11000000" BlurRadius="8" ShadowDepth="1"/>
             </Border.Effect>
+            -->
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -356,12 +348,11 @@
                            FontWeight="SemiBold"
                            FontSize="15"
                            Margin="0,0,0,6"/>
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Auto"
-                              Padding="0,4,0,0">
-                    <md:MarkdownScrollViewer Markdown="{Binding AiAnalysisText}"
-                                             FontSize="14"/>
-                </ScrollViewer>
+                <md:MarkdownScrollViewer Grid.Row="1"
+                                         Padding="0,4,0,0"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Markdown="{Binding AiAnalysisText}"
+                                         FontSize="14"/>
             </Grid>
         </Border>
     </Grid>
