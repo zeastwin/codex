@@ -55,6 +55,7 @@ namespace EW_Assistant.Views
         // ===== 数据结构 =====
         private class DayItem { public DateTime Date; public int Count; public bool Missing; }
         private readonly List<DayItem> _week = new();
+        private DateTime _weekAnchor = DateTime.Today;
 
         private readonly int[] _hour = new int[24];
         private bool _hourMissing = false;
@@ -125,31 +126,53 @@ namespace EW_Assistant.Views
             SafeReloadAll(false);
         }
 
-        private void SafeReloadAll(bool animate)
+        private void SafeReloadAll(bool animate, bool reloadWeek = true)
         {
             if (_isReloading) return;
             _isReloading = true;
-            try { ReloadAll(animate); }
+            try { ReloadAll(animate, reloadWeek); }
             catch { /* log if needed */ }
             finally { _isReloading = false; }
         }
 
         // ====== 顶部日期选择 UI ======
+        private static DateTime ClampToRecentRange(DateTime d)
+        {
+            var today = DateTime.Today;
+            var min = today.AddDays(-6);
+            if (d < min) d = min;
+            if (d > today) d = today;
+            return d.Date;
+        }
+
         private void InitDateUi()
         {
             CboRecent.Items.Clear();
+            var today = DateTime.Today;
             for (int i = 0; i < 7; i++)
             {
-                var d = DateTime.Today.AddDays(-i);
+                var d = today.AddDays(-i);
                 CboRecent.Items.Add(d.ToString("yyyy-MM-dd"));
             }
-            CboRecent.SelectedIndex = 0;
-            DpPick.SelectedDate = DateTime.Today;
+
+            _day = ClampToRecentRange(_day);
+            int idx = 0;
+            for (int i = 0; i < CboRecent.Items.Count; i++)
+            {
+                if (DateTime.TryParse((string)CboRecent.Items[i], out var d) && d.Date == _day)
+                {
+                    idx = i;
+                    break;
+                }
+            }
+            CboRecent.SelectedIndex = idx;
             UpdateDateButtons();
         }
 
         private void UpdateDateButtons()
         {
+            var minDay = DateTime.Today.AddDays(-6);
+            BtnPrev.IsEnabled = _day.Date > minDay;
             BtnNext.IsEnabled = _day.Date < DateTime.Today;
             BtnToday.IsEnabled = _day.Date != DateTime.Today;
             TxtSubTitle.Text = $"  · 当前：{_day:yyyy-MM-dd}";
@@ -168,10 +191,6 @@ namespace EW_Assistant.Views
             if (CboRecent.SelectedItem is string s && DateTime.TryParse(s, out var d))
                 SetDay(d.Date);
         }
-        private void DpPick_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (DpPick.SelectedDate is DateTime d) SetDay(d.Date);
-        }
         private void BtnRefresh_Click(object sender, RoutedEventArgs e)
         {
             ReloadAll();
@@ -180,25 +199,32 @@ namespace EW_Assistant.Views
 
         private void SetDay(DateTime d)
         {
-            _day = d.Date;
+            var clamped = ClampToRecentRange(d);
+            if (clamped.Date == _day.Date)
+            {
+                UpdateDateButtons();
+                return;
+            }
+
+            _day = clamped;
             for (int i = 0; i < CboRecent.Items.Count; i++)
             {
                 if (DateTime.TryParse((string)CboRecent.Items[i], out var cd) && cd.Date == _day)
                 { CboRecent.SelectedIndex = i; break; }
             }
-            DpPick.SelectedDate = _day;
             UpdateDateButtons();
-            ReloadAll();
+            ReloadAll(reloadWeek: false);
         }
 
         // 原: private void ReloadAll()
         // 改:
-        private void ReloadAll(bool animate = true)
+        private void ReloadAll(bool animate = true, bool reloadWeek = true)
         {
-            ReloadWeekAnchoredToDay();
+            bool needWeek = reloadWeek || _weekAnchor.Date != DateTime.Today;
+            if (needWeek) ReloadRecentWeek();
             ReloadDay(_day);
 
-            TitleWeek.Text = string.Format("最近 7 天报警次数（截至 {0:MM-dd}）", _day);
+            TitleWeek.Text = string.Format("最近 7 天报警次数（截至 {0:MM-dd}）", DateTime.Today);
             TitlePie.Text = string.Format("报警时长占比（{0:MM-dd}）", _day);
             TitleHour.Text = string.Format("24 小时报警次数（{0:MM-dd}）", _day);
             TitleTop.Text = string.Format("报警类别 TOP（{0:MM-dd}）", _day);
@@ -278,6 +304,13 @@ namespace EW_Assistant.Views
 
             _kpiCount = 0;
             _kpiSeconds = 0;
+
+            var today = DateTime.Today;
+            if (day.Date < today.AddDays(-6) || day.Date > today)
+            {
+                _hourMissing = true;
+                return;
+            }
 
             try
             {
@@ -399,12 +432,14 @@ namespace EW_Assistant.Views
 
 
 
-        private void ReloadWeekAnchoredToDay()
+        private void ReloadRecentWeek()
         {
             _week.Clear();
+            _weekAnchor = DateTime.Today;
+            var today = DateTime.Today;
             for (int i = 6; i >= 0; i--)
             {
-                var d = _day.AddDays(-i);
+                var d = today.AddDays(-i);
                 int count = SumDayCountFromCsv(d);
                 _week.Add(new DayItem { Date = d, Count = Math.Max(0, count), Missing = false });
             }
@@ -414,6 +449,9 @@ namespace EW_Assistant.Views
         {
             try
             {
+                var today = DateTime.Today;
+                if (d.Date < today.AddDays(-6) || d.Date > today) return 0; // 只读取最近7天
+
                 if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", d, out var file, requireExact: true) || string.IsNullOrEmpty(file))
                     return 0;
 
@@ -448,6 +486,9 @@ namespace EW_Assistant.Views
         {
             try
             {
+                var today = DateTime.Today;
+                if (d.Date < today.AddDays(-6) || d.Date > today) return 0.0; // 只读取最近7天
+
                 if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", d, out var file, requireExact: true) || string.IsNullOrEmpty(file))
                     return 0.0;
 
@@ -556,6 +597,9 @@ namespace EW_Assistant.Views
 
         private IEnumerable<AlarmRow> EnumerateAlarmsFromCsv(DateTime day)
         {
+            var today = DateTime.Today;
+            if (day.Date < today.AddDays(-6) || day.Date > today) yield break; // 超出最近7天直接返回
+
             if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", day, out var file, requireExact: true) || string.IsNullOrEmpty(file))
                 yield break;
 

@@ -61,11 +61,6 @@
             <Setter Property="Margin" Value="6,0,0,0"/>
         </Style>
 
-        <Style TargetType="DatePicker" x:Key="CompactDate">
-            <Setter Property="Margin" Value="6,0,0,0"/>
-            <Setter Property="Width" Value="140"/>
-        </Style>
-
         <!-- 配色 -->
         <SolidColorBrush x:Key="FgStrong" Color="#0F172A"/>
         <SolidColorBrush x:Key="FgBody"   Color="#111827"/>
@@ -115,7 +110,6 @@
                 <Button x:Name="BtnToday" Style="{StaticResource GhostBtn}" Content="今天" Click="BtnToday_Click"/>
                 <Button x:Name="BtnNext" Style="{StaticResource GhostBtn}" Content="后一天 ▶" Click="BtnNext_Click"/>
                 <ComboBox x:Name="CboRecent" Style="{StaticResource CompactCbo}" SelectionChanged="CboRecent_SelectionChanged"/>
-                <DatePicker x:Name="DpPick" Style="{StaticResource CompactDate}" SelectedDateChanged="DpPick_SelectedDateChanged"/>
                 <Button x:Name="BtnRefresh" Style="{StaticResource SolidBtn}" Content="刷新" Click="BtnRefresh_Click"/>
             </StackPanel>
         </Grid>
