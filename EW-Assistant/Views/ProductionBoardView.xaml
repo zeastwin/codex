@@ -55,9 +55,9 @@
             <Setter Property="BorderBrush" Value="#E5E7EB"/>
         </Style>
 
-        <Style TargetType="DatePicker" x:Key="CompactDate">
+        <Style TargetType="ComboBox" x:Key="CompactCbo">
             <Setter Property="Margin" Value="6,0,0,0"/>
-            <Setter Property="Width" Value="150"/>
+            <Setter Property="MinWidth" Value="140"/>
         </Style>
     </UserControl.Resources>
 
@@ -89,11 +89,11 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <DatePicker x:Name="DayPicker"
-                                Style="{StaticResource CompactDate}"
-                                SelectedDateChanged="DayPicker_SelectedDateChanged"/>
-                    <Button Content="今天" Style="{StaticResource GhostBtn}" Click="BtnToday_Click"/>
-                    <Button Content="刷新" Style="{StaticResource SolidBtn}" Click="BtnRefresh_Click"/>
+                    <Button x:Name="BtnPrev" Content="◀ 前一天" Style="{StaticResource GhostBtn}" Click="BtnPrev_Click"/>
+                    <Button x:Name="BtnToday" Content="今天" Style="{StaticResource GhostBtn}" Click="BtnToday_Click"/>
+                    <Button x:Name="BtnNext" Content="后一天 ▶" Style="{StaticResource GhostBtn}" Click="BtnNext_Click"/>
+                    <ComboBox x:Name="CboRecent" Style="{StaticResource CompactCbo}" SelectionChanged="CboRecent_SelectionChanged"/>
+                    <Button x:Name="BtnRefresh" Content="刷新" Style="{StaticResource SolidBtn}" Click="BtnRefresh_Click"/>
                     <Button Content="打开 CSV 文件夹" Style="{StaticResource GhostBtn}" Click="BtnOpenFolder_Click"/>
                 </StackPanel>
             </Grid>

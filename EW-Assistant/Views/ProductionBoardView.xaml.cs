@@ -41,8 +41,10 @@ namespace EW_Assistant.Views
         private bool _isReloading;
         private double _anim = 1.0;
         private DateTime _day = DateTime.Today;
+        private DateTime _weekAnchor = DateTime.MinValue;
         private string? _dayFile;
         private bool _dayMissing;
+        private bool _suppressDateChange;
 
         private readonly List<DayData> _week = new();
         private readonly int[] _hourPass = new int[24];
@@ -59,9 +61,6 @@ namespace EW_Assistant.Views
 
             TopList.ItemsSource = _topRows;
 
-            DayPicker.SelectedDate = _day;
-            TitleDay.Text = FormatDay(_day);
-
             Loaded += ProductionBoardView_Loaded;
             Unloaded += ProductionBoardView_Unloaded;
 
@@ -70,6 +69,7 @@ namespace EW_Assistant.Views
             _autoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
             _autoTimer.Tick += AutoTimer_Tick;
 
+            RefreshRecentList();
             _ = Dispatcher.InvokeAsync(() => ReloadAll(animate: false, reloadWeek: true));
         }
 
@@ -108,22 +108,95 @@ namespace EW_Assistant.Views
 
         private bool ShouldAutoRefresh() => _autoRefreshEnabled && _day.Date == DateTime.Today;
 
-        private void DayPicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        private static DateTime ClampToRecentRange(DateTime day)
         {
-            if (DayPicker.SelectedDate is not DateTime dt) return;
-            _day = dt.Date;
+            var today = DateTime.Today;
+            var min = today.AddDays(-6);
+            if (day < min) day = min;
+            if (day > today) day = today;
+            return day.Date;
+        }
+
+        private void RefreshRecentList()
+        {
+            var today = DateTime.Today;
+            var clamped = ClampToRecentRange(_day);
+            _suppressDateChange = true;
+            CboRecent.Items.Clear();
+            int selected = 0;
+            for (int i = 0; i < 7; i++)
+            {
+                var d = today.AddDays(-i);
+                var text = d.ToString("yyyy-MM-dd");
+                CboRecent.Items.Add(text);
+                if (d.Date == clamped.Date) selected = i;
+            }
+            CboRecent.SelectedIndex = selected;
+            _suppressDateChange = false;
+
+            _day = clamped;
             TitleDay.Text = FormatDay(_day);
-            ReloadAll(animate: false, reloadWeek: true);
+            UpdateDateButtons();
+        }
+
+        private void UpdateDateButtons()
+        {
+            var min = DateTime.Today.AddDays(-6);
+            BtnPrev.IsEnabled = _day.Date > min;
+            BtnNext.IsEnabled = _day.Date < DateTime.Today;
+            BtnToday.IsEnabled = _day.Date != DateTime.Today;
+        }
+
+        private void SetDay(DateTime day, bool reloadWeek)
+        {
+            var clamped = ClampToRecentRange(day);
+            if (clamped.Date == _day.Date && !reloadWeek)
+            {
+                UpdateDateButtons();
+                return;
+            }
+
+            _day = clamped;
+            _suppressDateChange = true;
+            for (int i = 0; i < CboRecent.Items.Count; i++)
+            {
+                if (CboRecent.Items[i] is string s && DateTime.TryParse(s, out var d) && d.Date == _day.Date)
+                {
+                    CboRecent.SelectedIndex = i;
+                    break;
+                }
+            }
+            _suppressDateChange = false;
+            TitleDay.Text = FormatDay(_day);
+            UpdateDateButtons();
+            ReloadAll(animate: false, reloadWeek: reloadWeek);
+        }
+
+        private void CboRecent_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressDateChange) return;
+            if (CboRecent.SelectedItem is string s && DateTime.TryParse(s, out var d))
+                SetDay(d, reloadWeek: false);
         }
 
         private void BtnToday_Click(object sender, RoutedEventArgs e)
         {
-            DayPicker.SelectedDate = DateTime.Today;
+            SetDay(DateTime.Today, reloadWeek: false);
         }
 
         private void BtnRefresh_Click(object sender, RoutedEventArgs e)
         {
             ReloadAll(animate: false, reloadWeek: true);
+        }
+
+        private void BtnPrev_Click(object sender, RoutedEventArgs e)
+        {
+            SetDay(_day.AddDays(-1), reloadWeek: false);
+        }
+
+        private void BtnNext_Click(object sender, RoutedEventArgs e)
+        {
+            SetDay(_day.AddDays(1), reloadWeek: false);
         }
 
         private void BtnOpenFolder_Click(object sender, RoutedEventArgs e)
@@ -157,8 +230,14 @@ namespace EW_Assistant.Views
 
             try
             {
-                if (reloadWeek)
+                RefreshRecentList();
+
+                var needWeek = reloadWeek || _weekAnchor.Date != DateTime.Today;
+                if (needWeek)
+                {
                     ReloadWeek();
+                    _weekAnchor = DateTime.Today;
+                }
 
                 ReloadDayHours();
                 UpdateBindings();
@@ -187,9 +266,10 @@ namespace EW_Assistant.Views
         private void ReloadWeek()
         {
             _week.Clear();
+            var today = DateTime.Today;
             for (int i = 6; i >= 0; i--)
             {
-                var day = _day.AddDays(-i);
+                var day = today.AddDays(-i);
                 var item = new DayData { Date = day, Missing = true };
 
                 if (TryResolveCsv(day, out var file))
