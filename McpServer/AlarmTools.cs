@@ -45,6 +45,7 @@ public class HourAlarm
 public static class AlarmCsvRepository
 {
     public static string CsvEncodingName { get; set; } = "GB2312";
+    public static bool FlatFileLayout { get; set; }
 
     private static readonly ConcurrentDictionary<string, Tuple<DateTime, List<AlarmRecord>>> _cache
         = new ConcurrentDictionary<string, Tuple<DateTime, List<AlarmRecord>>>();
@@ -208,6 +209,12 @@ public static class AlarmCsvRepository
     {
         if (!Directory.Exists(AlarmCsvTools.WarmLogPath)) return null;
 
+        if (FlatFileLayout || AlarmCsvTools.FlatFileLayout)
+        {
+            var watchFile = ResolveWatchModeFile(AlarmCsvTools.WarmLogPath, date);
+            if (!string.IsNullOrWhiteSpace(watchFile)) return watchFile;
+        }
+
         Func<string, string> pickDate = path =>
         {
             var dt = ExtractDateFromFileName(path);
@@ -222,6 +229,41 @@ public static class AlarmCsvRepository
         return all
             .OrderByDescending(p => File.GetLastWriteTime(p))
             .FirstOrDefault(p => ExtractDateFromFileName(p).HasValue && ExtractDateFromFileName(p).Value.Date == date.Date);
+    }
+
+    // flatFileLayout=true 时，报警文件按日期分目录存放，这里优先匹配当日目录下的目标文件。
+    internal static string ResolveWatchModeFile(string root, DateTime date)
+    {
+        var dayDir = Path.Combine(root, date.ToString("yyyy-MM-dd"));
+        if (!Directory.Exists(dayDir)) return null;
+
+        var expected = new[]
+        {
+            Path.Combine(dayDir, $"{date:yyyy-MM-dd}-报警记录表.csv"),
+            Path.Combine(dayDir, $"{date:yyyy-MM-dd}.csv")
+        };
+        foreach (var path in expected)
+        {
+            if (File.Exists(path)) return path;
+        }
+
+        var di = new DirectoryInfo(dayDir);
+        var exact = di.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
+                      .Where(f => MatchesDayFileName(f.Name, date))
+                      .OrderByDescending(f => f.LastWriteTime)
+                      .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                      .FirstOrDefault();
+        if (exact != null) return exact.FullName;
+
+        var fallback = di.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
+                         .Where(f =>
+                         {
+                             var dt = ExtractDateFromFileName(f.FullName);
+                             return dt.HasValue && dt.Value.Date == date.Date;
+                         })
+                         .OrderByDescending(f => f.LastWriteTime)
+                         .FirstOrDefault();
+        return fallback != null ? fallback.FullName : null;
     }
 
     private static List<AlarmRecord> ParseCsv(string path, DateTime fileDate)
@@ -422,6 +464,15 @@ public static class AlarmCsvRepository
             }
         }
         return null;
+    }
+
+    private static bool MatchesDayFileName(string fileName, DateTime day)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return false;
+        var withSuffix = $"{day:yyyy-MM-dd}-报警记录表.csv";
+        var plain = $"{day:yyyy-MM-dd}.csv";
+        return string.Equals(fileName, withSuffix, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(fileName, plain, StringComparison.OrdinalIgnoreCase);
     }
 
     /// 拆分一条报警在“天内各小时段”的占用（hour, seconds）
@@ -933,6 +984,7 @@ public static class ProdAlarmTools
 public static class AlarmCsvTools
 {
     public static string WarmLogPath { get; set; } = @"D:\Data\Alarms";
+    public static bool FlatFileLayout { get; set; }
 
     // 读取单日 CSV（自动识别文件日期；容忍 GB 系列编码）
     private static IEnumerable<AlarmRecord> ReadCsvByDay(string file)
@@ -1001,6 +1053,22 @@ public static class AlarmCsvTools
     {
         var dir = WarmLogPath;
         if (!Directory.Exists(dir)) yield break;
+
+        if (FlatFileLayout)
+        {
+            for (var day = d0.Date; day <= d1.Date; day = day.AddDays(1))
+            {
+                var file = AlarmCsvRepository.ResolveWatchModeFile(dir, day);
+                if (string.IsNullOrWhiteSpace(file)) continue;
+
+                foreach (var r in ReadCsvByDay(file))
+                {
+                    if (!window.HasValue || window.Value.Contains(r.Start.TimeOfDay))
+                        yield return r;
+                }
+            }
+            yield break;
+        }
 
         foreach (var file in Directory.EnumerateFiles(dir, "*.csv", SearchOption.TopDirectoryOnly))
         {

@@ -24,6 +24,8 @@ namespace McpServer
             var appCfg = ReadAppConfig();
             CsvProductionRepository.ProductionLogPath = appCfg.ProductionLogPath;
             AlarmCsvTools.WarmLogPath = appCfg.AlarmLogPath;
+            AlarmCsvRepository.FlatFileLayout = appCfg.FlatFileLayout;
+            AlarmCsvTools.FlatFileLayout = appCfg.FlatFileLayout;
 
             var ioCsv = appCfg.IoMapCsvPath;
             try
