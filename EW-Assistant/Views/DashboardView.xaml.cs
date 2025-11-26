@@ -118,7 +118,7 @@ namespace EW_Assistant
 
             Loaded += (_, __) =>
             {
-                ReloadWeek();
+                ReloadWeek(forceCacheReload: true);
                 ReloadTodayHours();
                 AlarmLogCache.LoadRecent(ConfigService.Current.AlarmLogPath, days: 7);
                 RefreshAlarmFromCache();
@@ -214,7 +214,7 @@ namespace EW_Assistant
                     // 组装需要的计算结果到一个快照对象（省略具体类型）
                     return true;
                 });
-                ReloadWeek();
+                ReloadWeek(forceCacheReload: true);
                 ReloadTodayHours();
                 RefreshAlarmFromCache();
                 LoadAlarmHourlyFromCacheOrFile();   // 优先缓存，失败回落 CSV
@@ -249,7 +249,7 @@ namespace EW_Assistant
         {
             if (d is DashboardView v)
             {
-                v.ReloadWeek();
+                v.ReloadWeek(forceCacheReload: true);
                 v.ReloadTodayHours();
                 v.RefreshAlarmFromCache();
                 v.LoadAlarmHourlyFromCacheOrFile();
@@ -306,32 +306,21 @@ namespace EW_Assistant
         }
         // ===== 数据读取 =====
         // ===== 数据读取（周） =====
-        private void ReloadWeek()
+        private void ReloadWeek(bool forceCacheReload = false)
         {
+            ProductionLogCache.LoadRecent(ConfigService.Current.ProductionLogPath, FilePrefix, days: 7, force: forceCacheReload);
+
             _week.Clear();
-
-            for (int i = 6; i >= 0; i--)
+            var snapshot = ProductionLogCache.SnapshotRecent(7);
+            foreach (var d in snapshot)
             {
-                var day = DateTime.Today.AddDays(-i);
-                var file = System.IO.Path.Combine(ConfigService.Current.ProductionLogPath ?? "", $"{FilePrefix}{day:yyyyMMdd}.csv");
-
-                var item = new DayData { Date = day, Missing = !File.Exists(file) };
-
-                if (!item.Missing)
+                _week.Add(new DayData
                 {
-                    try
-                    {
-                        var (pass, fail) = SumPassFailShared(file);   // ← 用共享读取版
-                        item.Pass = pass;
-                        item.Fail = fail;
-                    }
-                    catch
-                    {
-                        item.Missing = true;
-                        item.Pass = item.Fail = 0;
-                    }
-                }
-                _week.Add(item);
+                    Date = d.Date,
+                    Pass = d.SumPass,
+                    Fail = d.SumFail,
+                    Missing = d.Missing
+                });
             }
 
             if (Subtitle != null)
@@ -340,8 +329,10 @@ namespace EW_Assistant
         }
 
         // ===== 数据读取（今日24小时 & 良率） =====
-        private void ReloadTodayHours()
+        private void ReloadTodayHours(bool forceCacheReload = false)
         {
+            ProductionLogCache.LoadRecent(ConfigService.Current.ProductionLogPath, FilePrefix, days: 7, force: forceCacheReload);
+
             Array.Clear(_hourPass, 0, _hourPass.Length);
             Array.Clear(_hourFail, 0, _hourFail.Length);
             _todayMissing = false;
@@ -349,172 +340,23 @@ namespace EW_Assistant
             _todayFailSum = 0;
             _todayYield = 0;
 
-            var file = System.IO.Path.Combine(ConfigService.Current.ProductionLogPath ?? "", $"{FilePrefix}{DateTime.Today:yyyyMMdd}.csv");
-            if (!File.Exists(file))
+            var data = ProductionLogCache.GetDay(DateTime.Today);
+            if (data == null || data.Missing)
             {
                 _todayMissing = true;
                 return;
             }
 
-            Encoding enc;
-            try { enc = Encoding.GetEncoding("GB2312"); }
-            catch { enc = new UTF8Encoding(false); }
-
-            List<string> lines;
-            try
+            for (int h = 0; h < 24; h++)
             {
-                lines = ReadAllLinesShared(file, enc);   // ← 用共享读取版
-            }
-            catch
-            {
-                _todayMissing = true;
-                return;
+                _hourPass[h] = data.HourPass[h];
+                _hourFail[h] = data.HourFail[h];
             }
 
-            if (lines.Count == 0) { _todayMissing = true; return; }
-
-            var header = SmartSplit(lines[0]);
-            int idxPass = FindIndex(header, "PASS", "良品");
-            int idxFail = FindIndex(header, "FAIL", "不良");
-            int idxHour = FindIndex(header, "小时", "Hour", "HOUR", "时间", "时刻", "时段");
-            bool hasHour = idxHour >= 0;
-
-            for (int i = 1; i < lines.Count; i++)
-            {
-                var row = SmartSplit(lines[i]);
-                if (row.Length == 0) continue;
-
-                int hour = hasHour ? ExtractHour(row[idxHour]) : (i - 1);
-                if (hour < 0 || hour > 23) continue;
-
-                int p = (idxPass >= 0 && idxPass < row.Length) ? ToInt(row[idxPass]) : 0;
-                int f = (idxFail >= 0 && idxFail < row.Length) ? ToInt(row[idxFail]) : 0;
-
-                _hourPass[hour] += Math.Max(0, p);
-                _hourFail[hour] += Math.Max(0, f);
-            }
-
-            _todayPassSum = _hourPass.Sum();
-            _todayFailSum = _hourFail.Sum();
+            _todayPassSum = data.SumPass;
+            _todayFailSum = data.SumFail;
             int total = _todayPassSum + _todayFailSum;
             _todayYield = total > 0 ? (double)_todayPassSum / total : 0.0;
-
-            // 这里无需额外 Invalidate，外部会统一重绘；若你想立即重绘也可：
-            // SkHour?.InvalidateVisual();
-            // SkYield?.InvalidateVisual();
-
-            // --- 本地工具保持与原实现一致 ---
-            static int FindIndex(string[] arr, params string[] keys)
-            {
-                for (int i = 0; i < arr.Length; i++)
-                {
-                    var t = arr[i].Trim().ToUpperInvariant();
-                    foreach (var k in keys)
-                        if (t == k.Trim().ToUpperInvariant()) return i;
-                }
-                return -1;
-            }
-            static int ExtractHour(string s)
-            {
-                if (string.IsNullOrWhiteSpace(s)) return -1;
-                s = s.Trim();
-                if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int h) && h >= 0 && h <= 23) return h;
-                if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt)) return dt.Hour;
-                if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) return dt.Hour;
-                var digits = new string(s.TakeWhile(char.IsDigit).ToArray());
-                if (digits.Length > 0 && int.TryParse(digits, out h) && h >= 0 && h <= 23) return h;
-                return -1;
-            }
-            static string[] SmartSplit(string line)
-            {
-                if (line.Contains(",")) return line.Split(',');
-                if (line.Contains("\t")) return line.Split('\t');
-                if (line.Contains(";")) return line.Split(';');
-                return new[] { line };
-            }
-            static int ToInt(string s)
-            {
-                if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)) return v;
-                if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, out v)) return v;
-                return 0;
-            }
-        }
-
-        // ===== 周汇总：改成共享读取版 =====
-        private static (int pass, int fail) SumPassFailShared(string file)
-        {
-            Encoding enc;
-            try { enc = Encoding.GetEncoding("GB2312"); }
-            catch { enc = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false); }
-
-            var lines = ReadAllLinesShared(file, enc);
-            if (lines.Count == 0) return (0, 0);
-
-            var header = SmartSplit(lines[0]);
-            int idxPass = IndexOf(header, new[] { "PASS", "良品" });
-            int idxFail = IndexOf(header, new[] { "FAIL", "不良" });
-            int idxHour = IndexOf(header, new[] { "小时", "HOUR", "Hour", "时段", "时间", "时别", "时区" });
-            bool hasHour = idxHour >= 0;
-
-            int sumPass = 0, sumFail = 0;
-
-            for (int i = 1; i < lines.Count; i++)
-            {
-                var row = SmartSplit(lines[i]);
-                if (row.Length == 0) continue;
-
-                int hour;
-                if (hasHour)
-                {
-                    if (idxHour >= row.Length) continue;
-                    hour = ExtractHour(row[idxHour]);
-                }
-                else
-                {
-                    hour = i - 1; // 无小时列时按行序推算
-                }
-
-                if (hour < 0 || hour > 23) continue; // 忽略合计与异常行
-
-                if (idxPass >= 0 && idxPass < row.Length) sumPass += Math.Max(0, ToInt(row[idxPass]));
-                if (idxFail >= 0 && idxFail < row.Length) sumFail += Math.Max(0, ToInt(row[idxFail]));
-            }
-            return (sumPass, sumFail);
-
-            static int IndexOf(string[] arr, string[] keys)
-            {
-                for (int i = 0; i < arr.Length; i++)
-                {
-                    var t = arr[i].Trim().ToUpperInvariant();
-                    foreach (var k in keys)
-                        if (t == k.ToUpperInvariant()) return i;
-                }
-                return -1;
-            }
-            static string[] SmartSplit(string line)
-            {
-                if (line.Contains(",")) return line.Split(',');
-                if (line.Contains("\t")) return line.Split('\t');
-                if (line.Contains(";")) return line.Split(';');
-                return new[] { line };
-            }
-            static int ToInt(string s)
-            {
-                if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)) return v;
-                if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, out v)) return v;
-                return 0;
-            }
-            static int ExtractHour(string s)
-            {
-                if (string.IsNullOrWhiteSpace(s)) return -1;
-                s = s.Trim();
-                if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var h) && h >= 0 && h <= 23) return h;
-                if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt)) return dt.Hour;
-                if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) return dt.Hour;
-                var digits = new string(s.TakeWhile(char.IsDigit).ToArray());
-                if (digits.Length > 0 && int.TryParse(digits, out h) && h >= 0 && h <= 23) return h;
-                return -1;
-            }
         }
 
         // ===== 绘图：周图（堆叠 PASS/FAIL） =====

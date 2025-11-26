@@ -232,6 +232,9 @@ namespace EW_Assistant.Views
             {
                 RefreshRecentList();
 
+                var refreshCache = reloadWeek || _day.Date == DateTime.Today;
+                ProductionLogCache.LoadRecent(ConfigService.Current.ProductionLogPath, FilePrefix, days: 7, force: refreshCache);
+
                 var needWeek = reloadWeek || _weekAnchor.Date != DateTime.Today;
                 if (needWeek)
                 {
@@ -266,28 +269,16 @@ namespace EW_Assistant.Views
         private void ReloadWeek()
         {
             _week.Clear();
-            var today = DateTime.Today;
-            for (int i = 6; i >= 0; i--)
+            var snapshot = ProductionLogCache.SnapshotRecent(7);
+            foreach (var d in snapshot)
             {
-                var day = today.AddDays(-i);
-                var item = new DayData { Date = day, Missing = true };
-
-                if (TryResolveCsv(day, out var file))
+                _week.Add(new DayData
                 {
-                    try
-                    {
-                        var (pass, fail) = SumPassFailShared(file);
-                        item.Pass = pass;
-                        item.Fail = fail;
-                        item.Missing = false;
-                    }
-                    catch
-                    {
-                        item.Missing = true;
-                    }
-                }
-
-                _week.Add(item);
+                    Date = d.Date,
+                    Pass = d.SumPass,
+                    Fail = d.SumFail,
+                    Missing = d.Missing
+                });
             }
 
             SkWeek?.InvalidateVisual();
@@ -301,67 +292,20 @@ namespace EW_Assistant.Views
             _dayMissing = false;
             _dayFile = null;
 
-            if (!TryResolveCsv(_day, out var file))
-            {
-                _dayMissing = true;
+            var dayData = ProductionLogCache.GetDay(_day);
+            _dayMissing = dayData == null || dayData.Missing;
+            _dayFile = dayData?.FilePath;
+            if (_dayMissing || dayData == null)
                 return;
-            }
 
-            _dayFile = file;
-
-            Encoding enc;
-            try { enc = Encoding.GetEncoding("GB2312"); }
-            catch { enc = new UTF8Encoding(false); }
-
-            List<string> lines;
-            try
+            for (int h = 0; h < 24; h++)
             {
-                lines = ReadAllLinesShared(file, enc);
-            }
-            catch
-            {
-                _dayMissing = true;
-                return;
+                _hourPass[h] = dayData.HourPass[h];
+                _hourFail[h] = dayData.HourFail[h];
             }
 
-            if (lines.Count == 0)
-            {
-                _dayMissing = true;
-                return;
-            }
-
-            var header = SmartSplit(lines[0]);
-            int idxPass = FindIndex(header, "PASS", "良品", "良率PASS", "OK");
-            int idxFail = FindIndex(header, "FAIL", "不良", "NG");
-            int idxHour = FindIndex(header, "HOUR", "小时", "时段", "时刻");
-            bool hasHour = idxHour >= 0;
-
-            for (int i = 1; i < lines.Count; i++)
-            {
-                var row = SmartSplit(lines[i]);
-                if (row.Length == 0) continue;
-
-                int hour;
-                if (hasHour)
-                {
-                    if (idxHour >= row.Length) continue;
-                    hour = ExtractHour(row[idxHour]);
-                }
-                else
-                {
-                    hour = i - 1;
-                }
-                if (hour < 0 || hour > 23) continue;
-
-                int pass = (idxPass >= 0 && idxPass < row.Length) ? ToInt(row[idxPass]) : 0;
-                int fail = (idxFail >= 0 && idxFail < row.Length) ? ToInt(row[idxFail]) : 0;
-
-                _hourPass[hour] += Math.Max(0, pass);
-                _hourFail[hour] += Math.Max(0, fail);
-            }
-
-            _sumPass = _hourPass.Sum();
-            _sumFail = _hourFail.Sum();
+            _sumPass = dayData.SumPass;
+            _sumFail = dayData.SumFail;
 
             _hourRows.Clear();
             for (int h = 0; h < 24; h++)
@@ -765,122 +709,6 @@ namespace EW_Assistant.Views
                 float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
                 canvas.DrawText(tag, cx - bounds.MidX, baseline, valuePaint);
             }
-        }
-
-        private bool TryResolveCsv(DateTime day, out string path)
-        {
-            path = string.Empty;
-            var root = ConfigService.Current.ProductionLogPath;
-            if (string.IsNullOrWhiteSpace(root)) return false;
-
-            var name = $"{FilePrefix}{day:yyyyMMdd}.csv";
-            var file = Path.Combine(root, name);
-            if (File.Exists(file))
-            {
-                path = file;
-                return true;
-            }
-
-            if (!Directory.Exists(root)) return false;
-
-            var fallback = Directory.GetFiles(root, $"{FilePrefix}{day:yyyyMMdd}*.csv").FirstOrDefault();
-            if (fallback != null)
-            {
-                path = fallback;
-                return true;
-            }
-            return false;
-        }
-
-        private static List<string> ReadAllLinesShared(string path, Encoding enc)
-        {
-            var result = new List<string>();
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: true);
-            string? line;
-            while ((line = sr.ReadLine()) != null)
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                    result.Add(line);
-            }
-            return result;
-        }
-
-        private static (int pass, int fail) SumPassFailShared(string file)
-        {
-            Encoding enc;
-            try { enc = Encoding.GetEncoding("GB2312"); }
-            catch { enc = new UTF8Encoding(false); }
-
-            var lines = ReadAllLinesShared(file, enc);
-            if (lines.Count == 0) return (0, 0);
-
-            var header = SmartSplit(lines[0]);
-            int idxPass = FindIndex(header, "PASS", "良品");
-            int idxFail = FindIndex(header, "FAIL", "不良");
-            int idxHour = FindIndex(header, "HOUR", "小时", "时段", "时刻", "时间", "时别");
-            bool hasHour = idxHour >= 0;
-
-            int sumPass = 0, sumFail = 0;
-            for (int i = 1; i < lines.Count; i++)
-            {
-                var row = SmartSplit(lines[i]);
-                if (row.Length == 0) continue;
-
-                int hour;
-                if (hasHour)
-                {
-                    if (idxHour >= row.Length) continue;
-                    hour = ExtractHour(row[idxHour]);
-                }
-                else
-                {
-                    hour = i - 1;
-                }
-                if (hour < 0 || hour > 23) continue;
-
-                if (idxPass >= 0 && idxPass < row.Length) sumPass += Math.Max(0, ToInt(row[idxPass]));
-                if (idxFail >= 0 && idxFail < row.Length) sumFail += Math.Max(0, ToInt(row[idxFail]));
-            }
-            return (sumPass, sumFail);
-        }
-
-        private static string[] SmartSplit(string line)
-        {
-            if (line.Contains(",")) return line.Split(',');
-            if (line.Contains("\t")) return line.Split('\t');
-            if (line.Contains(";")) return line.Split(';');
-            return new[] { line };
-        }
-
-        private static int FindIndex(string[] arr, params string[] keys)
-        {
-            for (int i = 0; i < arr.Length; i++)
-            {
-                var t = arr[i].Trim().ToUpperInvariant();
-                foreach (var k in keys)
-                    if (t == k.Trim().ToUpperInvariant()) return i;
-            }
-            return -1;
-        }
-
-        private static int ExtractHour(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return -1;
-            s = s.Trim();
-            if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int h) && h >= 0 && h <= 23) return h;
-            if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt)) return dt.Hour;
-            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt)) return dt.Hour;
-            var digits = new string(s.TakeWhile(char.IsDigit).ToArray());
-            if (digits.Length > 0 && int.TryParse(digits, out h) && h >= 0 && h <= 23) return h;
-            return -1;
-        }
-
-        private static int ToInt(string s)
-        {
-            if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)) return v;
-            if (int.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, out v)) return v;
-            return 0;
         }
 
         private static string FormatNumber(int value)
