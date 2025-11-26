@@ -1,14 +1,13 @@
 ﻿using EW_Assistant.Services;
+using EW_Assistant.Warnings;
 using SkiaSharp;
 using SkiaSharp.Views.WPF;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -56,6 +55,7 @@ namespace EW_Assistant.Views
         private class DayItem { public DateTime Date; public int Count; public bool Missing; }
         private readonly List<DayItem> _week = new();
         private DateTime _weekAnchor = DateTime.Today;
+        private DateTime _cacheAnchor = DateTime.MinValue;
 
         private readonly int[] _hour = new int[24];
         private bool _hourMissing = false;
@@ -123,7 +123,7 @@ namespace EW_Assistant.Views
         private void AutoTimer_Tick(object sender, EventArgs e)
         {
             if (_autoRefreshOnlyToday && _day.Date != DateTime.Today) return; // 仅当天自动刷
-            SafeReloadAll(false, reloadWeek: false);
+            SafeReloadAll(false, reloadWeek: true);
         }
 
         private void SafeReloadAll(bool animate, bool reloadWeek = false)
@@ -220,6 +220,14 @@ namespace EW_Assistant.Views
         // 改:
         private void ReloadAll(bool animate = true, bool reloadWeek = true)
         {
+            var cfgPath = ConfigService.Current?.AlarmLogPath;
+            bool needCache = reloadWeek || _cacheAnchor.Date != DateTime.Today;
+            if (needCache)
+            {
+                AlarmLogCache.LoadRecent(cfgPath, days: 7);
+                _cacheAnchor = DateTime.Today;
+            }
+
             bool needWeek = reloadWeek || _weekAnchor.Date != DateTime.Today;
             if (needWeek) ReloadRecentWeek();
             ReloadDay(_day);
@@ -293,7 +301,6 @@ namespace EW_Assistant.Views
         // ====== 数据装填（单日） —— 一次扫描产全量统计 ======
         private void ReloadDay(DateTime day)
         {
-            // 清理：小时“次数”、小时“时长秒数”、Top/Pie、KPI
             Array.Clear(_hour, 0, _hour.Length);
             Array.Clear(_hourSeconds, 0, _hourSeconds.Length);
             _hourMissing = false;
@@ -312,122 +319,47 @@ namespace EW_Assistant.Views
                 return;
             }
 
-            try
-            {
-                string file;
-                if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", day, out file, true) || string.IsNullOrEmpty(file))
-                {
-                    _hourMissing = true;
-                    return;
-                }
-
-                var enc = TryGb2312OrUtf8();
-                var lines = ReadAllLinesShared(file, enc);
-                if (lines.Count == 0)
-                {
-                    _hourMissing = true;
-                    return;
-                }
-
-                // ----- 表头索引 -----
-                var header = SplitAny(lines[0]);
-                int idxDate = Find(header, "日期", "Date");
-                int idxStart = Find(header, "开始时间", "发生时间", "Start", "StartTime", "时间");
-                int idxHour = Find(header, "小时", "Hour", "时间", "发生时间", "时刻", "时段"); // 与 Start 有交集，注意顺序使用
-                int idxCat = Find(header, "报警类别", "类别", "Category", "Type");
-                int idxSeconds = Find(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
-
-                // 类别聚合：类别 -> (次数、总秒数)
-                var catAgg = new Dictionary<string, Tuple<int, double>>(StringComparer.OrdinalIgnoreCase);
-
-                // ----- 单趟扫描 -----
-                for (int i = 1; i < lines.Count; i++)
-                {
-                    var row = SplitAny(lines[i]);
-                    if (row.Length == 0) continue;
-
-                    string startCell = (idxStart >= 0 && idxStart < row.Length) ? row[idxStart] : null;
-                    string dateCell = (idxDate >= 0 && idxDate < row.Length) ? row[idxDate] : null;
-
-                    DateTime ts;
-                    if (TryParseStartLoose(startCell, dateCell, day, out ts))
-                    {
-                        // 严格按当天半开区间过滤
-                        if (ts >= day.Date && ts < day.Date.AddDays(1))
-                        {
-                            int h = ts.Hour;
-                            if (h >= 0 && h <= 23) _hour[h]++;
-
-                            _kpiCount++;
-
-                            double secVal = ParseSecondsFlexible((idxSeconds >= 0 && idxSeconds < row.Length) ? row[idxSeconds] : null);
-                            if (secVal > 0)
-                            {
-                                _kpiSeconds += secVal;
-                                if (h >= 0 && h <= 23) _hourSeconds[h] += secVal;
-                            }
-
-                            string cat = NormalizeCell((idxCat >= 0 && idxCat < row.Length) ? row[idxCat] : "");
-                            if (string.IsNullOrWhiteSpace(cat)) cat = "Unknown";
-
-                            Tuple<int, double> v;
-                            if (!catAgg.TryGetValue(cat, out v)) v = new Tuple<int, double>(0, 0.0);
-                            v = new Tuple<int, double>(v.Item1 + 1, v.Item2 + Math.Max(0, secVal));
-                            catAgg[cat] = v;
-                        }
-                    }
-                    else
-                    {
-                        // Start 解析失败：仅用“小时”列补记“次数”（保持原逻辑）
-                        if (idxHour >= 0 && idxHour < row.Length)
-                        {
-                            int h2 = ExtractHourLoose(row[idxHour]);
-                            if (h2 >= 0 && h2 <= 23) _hour[h2]++;
-                        }
-                    }
-                }
-
-                // ----- 产出 Top & 饼图 -----
-                // 计算类别总秒数（用于“其他”）
-                double totalSeconds = 0.0;
-                var list = new List<TopCat>();
-                foreach (var kv in catAgg)
-                {
-                    var tc = new TopCat();
-                    tc.Name = kv.Key;
-                    tc.Count = kv.Value.Item1;
-                    tc.Seconds = kv.Value.Item2;
-                    list.Add(tc);
-                    totalSeconds += kv.Value.Item2;
-                }
-
-                list = list
-                    .OrderByDescending(x => x.Seconds)
-                    .ThenByDescending(x => x.Count)
-                    .ToList();
-
-                var top6 = new List<TopCat>();
-                for (int k = 0; k < list.Count && k < 6; k++) top6.Add(list[k]);
-                _top.AddRange(top6);
-
-                // 饼图条目：Top6 + 其他
-                double topSum = 0.0;
-                for (int k = 0; k < top6.Count; k++)
-                {
-                    _pie.Add(new ValueTuple<string, double>(top6[k].Name, top6[k].Seconds)); // 兼容 C# 7.3：也可用 ValueTuple，看你工程里已在用
-                    topSum += top6[k].Seconds;
-                }
-                double others = Math.Max(0.0, totalSeconds - topSum);
-                if (others > 0.0)
-                {
-                    _pie.Add(new ValueTuple<string, double>("其他", others));
-                }
-                _pieTotal = Math.Max(0.0, totalSeconds);
-            }
-            catch
+            var raw = AlarmLogCache.GetDayRaw(day);
+            if (raw == null || raw.Missing || raw.LinesAll == null || raw.LinesAll.Length == 0)
             {
                 _hourMissing = true;
+                return;
             }
+
+            var hourlyCounts = AlarmLogCompute.GetHourlyCountsFromCache(day);
+            var hourlySeconds = AlarmLogCompute.GetHourlySecondsFromCache(day);
+
+            for (int i = 0; i < 24; i++)
+            {
+                if (hourlyCounts != null && i < hourlyCounts.Length) _hour[i] = hourlyCounts[i];
+                if (hourlySeconds != null && i < hourlySeconds.Length) _hourSeconds[i] = hourlySeconds[i];
+            }
+
+            _kpiCount = _hour.Sum();
+            _kpiSeconds = _hourSeconds.Sum();
+
+            var catStats = AlarmLogCompute.GetCategoryStatsFromCache(day);
+            var sorted = catStats
+                .OrderByDescending(x => x.Seconds)
+                .ThenByDescending(x => x.Count)
+                .ToList();
+
+            for (int i = 0; i < sorted.Count && i < 6; i++)
+            {
+                var s = sorted[i];
+                _top.Add(new TopCat { Name = s.Category, Count = s.Count, Seconds = s.Seconds });
+            }
+
+            double totalSeconds = Math.Max(0.0, catStats.Sum(x => x.Seconds));
+            double topSum = 0.0;
+            foreach (var t in _top)
+            {
+                _pie.Add(new ValueTuple<string, double>(t.Name, t.Seconds));
+                topSum += t.Seconds;
+            }
+            double others = Math.Max(0.0, totalSeconds - topSum);
+            if (others > 0.0) _pie.Add(new ValueTuple<string, double>("其他", others));
+            _pieTotal = totalSeconds;
         }
 
 
@@ -436,215 +368,32 @@ namespace EW_Assistant.Views
         {
             _week.Clear();
             _weekAnchor = DateTime.Today;
-            var today = DateTime.Today;
-            for (int i = 6; i >= 0; i--)
+            foreach (var (d, count, missing) in AlarmLogCompute.GetDailyCountsFromCache(7))
             {
-                var d = today.AddDays(-i);
-                int count = SumDayCountFromCsv(d);
-                _week.Add(new DayItem { Date = d, Count = Math.Max(0, count), Missing = false });
+                _week.Add(new DayItem
+                {
+                    Date = d.Date,
+                    Count = Math.Max(0, count),
+                    Missing = missing
+                });
             }
         }
-
-        private int SumDayCountFromCsv(DateTime d)
-        {
-            try
-            {
-                var today = DateTime.Today;
-                if (d.Date < today.AddDays(-6) || d.Date > today) return 0; // 只读取最近7天
-
-                if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", d, out var file, requireExact: true) || string.IsNullOrEmpty(file))
-                    return 0;
-
-                var enc = TryGb2312OrUtf8();
-                var lines = ReadAllLinesShared(file, enc);
-                if (lines.Count <= 1) return 0;
-
-                var header = SplitAny(lines[0]);
-                int idxDate = Find(header, "日期", "Date");
-                int idxStart = Find(header, "开始时间", "发生时间", "Start", "StartTime", "时间");
-
-                int cnt = 0;
-                for (int i = 1; i < lines.Count; i++)
-                {
-                    var row = SplitAny(lines[i]);
-                    if (row.Length == 0) continue;
-
-                    if (!TryParseStartLoose(
-                            idxStart >= 0 && idxStart < row.Length ? row[idxStart] : null,
-                            idxDate >= 0 && idxDate < row.Length ? row[idxDate] : null,
-                            d, out var ts))
-                        continue;
-
-                    if (ts >= d.Date && ts < d.Date.AddDays(1)) cnt++;
-                }
-                return cnt;
-            }
-            catch { return 0; }
-        }
-
-        private double SumDaySecondsFromCsv(DateTime d)
-        {
-            try
-            {
-                var today = DateTime.Today;
-                if (d.Date < today.AddDays(-6) || d.Date > today) return 0.0; // 只读取最近7天
-
-                if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", d, out var file, requireExact: true) || string.IsNullOrEmpty(file))
-                    return 0.0;
-
-                var enc = TryGb2312OrUtf8();
-                var lines = ReadAllLinesShared(file, enc);
-                if (lines.Count <= 1) return 0.0;
-
-                var header = SplitAny(lines[0]);
-                int idxDate = Find(header, "日期", "Date");
-                int idxStart = Find(header, "开始时间", "发生时间", "Start", "StartTime", "时间");
-                int idxSecond = Find(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
-
-                double sum = 0;
-                for (int i = 1; i < lines.Count; i++)
-                {
-                    var row = SplitAny(lines[i]);
-                    if (row.Length == 0) continue;
-
-                    if (!TryParseStartLoose(
-                            idxStart >= 0 && idxStart < row.Length ? row[idxStart] : null,
-                            idxDate >= 0 && idxDate < row.Length ? row[idxDate] : null,
-                            d, out var ts))
-                        continue;
-
-                    if (ts < d.Date || ts >= d.Date.AddDays(1)) continue;
-
-                    double sec = ParseSecondsFlexible(idxSecond >= 0 && idxSecond < row.Length ? row[idxSecond] : null);
-                    if (sec > 0) sum += sec;
-                }
-                return sum;
-            }
-            catch { return 0.0; }
-        }
-
-        private static bool TryParseStartLoose(string? timeCell, string? dateCell, DateTime day, out DateTime ts)
-        {
-            ts = default;
-
-            string t = NormalizeCell(timeCell);
-            string d = NormalizeCell(dateCell);
-
-            // 如果有单独日期列，先解析日期
-            DateTime datePart;
-            if (!string.IsNullOrWhiteSpace(d) &&
-                (DateTime.TryParse(d, CultureInfo.CurrentCulture, DateTimeStyles.None, out datePart) ||
-                 DateTime.TryParse(d, CultureInfo.InvariantCulture, DateTimeStyles.None, out datePart)))
-            {
-                if (!string.IsNullOrWhiteSpace(t))
-                {
-                    TimeSpan tod; // 只声明一次
-                    bool timeOnly =
-                        TimeSpan.TryParse(t, out tod) ||
-                        TimeSpan.TryParseExact(
-                            t,
-                            new[] { @"h\:m", @"h\:mm", @"hh\:mm", @"h\:mm\:ss", @"hh\:mm\:ss" },
-                            CultureInfo.InvariantCulture,
-                            out tod);
-
-                    if (timeOnly)
-                    {
-                        ts = datePart.Date + tod;
-                        return true;
-                    }
-
-                    if (DateTime.TryParse(t, CultureInfo.CurrentCulture, DateTimeStyles.None, out ts) ||
-                        DateTime.TryParse(t, CultureInfo.InvariantCulture, DateTimeStyles.None, out ts))
-                    {
-                        return true;
-                    }
-                }
-
-                // 只有日期，没有时间也算当天
-                ts = datePart.Date;
-                return true;
-            }
-
-            // 没有日期列：如果是纯时间，用 day 填充日期
-            if (!string.IsNullOrWhiteSpace(t))
-            {
-                TimeSpan tod; // 同样只声明一次
-                bool timeOnly =
-                    TimeSpan.TryParse(t, out tod) ||
-                    TimeSpan.TryParseExact(
-                        t,
-                        new[] { @"h\:m", @"h\:mm", @"hh\:mm", @"h\:mm\:ss", @"hh\:mm\:ss" },
-                        CultureInfo.InvariantCulture,
-                        out tod);
-
-                if (timeOnly)
-                {
-                    ts = day.Date + tod;
-                    return true;
-                }
-
-                if (DateTime.TryParse(t, CultureInfo.CurrentCulture, DateTimeStyles.None, out ts) ||
-                    DateTime.TryParse(t, CultureInfo.InvariantCulture, DateTimeStyles.None, out ts))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-
 
         private IEnumerable<AlarmRow> EnumerateAlarmsFromCsv(DateTime day)
         {
             var today = DateTime.Today;
             if (day.Date < today.AddDays(-6) || day.Date > today) yield break; // 超出最近7天直接返回
 
-            if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", day, out var file, requireExact: true) || string.IsNullOrEmpty(file))
-                yield break;
-
-            var enc = TryGb2312OrUtf8();
-            var lines = ReadAllLinesShared(file, enc);
-            if (lines.Count <= 1) yield break;
-
-            var header = SplitAny(lines[0]);
-            int idxDate = Find(header, "日期", "Date"); // 新增：日期列（如果有）
-            int idxStart = Find(header, "开始时间", "发生时间", "Start", "StartTime", "时间");
-            int idxCode = Find(header, "报警代码", "代码", "Code");
-            int idxCat = Find(header, "报警类别", "类别", "Category", "Type");
-            int idxSeconds = Find(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
-            int idxMsg = Find(header, "报警内容", "描述", "Message", "Content", "备注");
-
-            for (int i = 1; i < lines.Count; i++)
+            foreach (var r in AlarmLogCompute.EnumerateRecordsFromCache(day))
             {
-                var row = SplitAny(lines[i]);
-                if (row.Length == 0) continue;
-
-                // 关键改动：用“宽松合成”的方式拿到 ts
-                string? startCell = (idxStart >= 0 && idxStart < row.Length) ? row[idxStart] : null;
-                string? dateCell = (idxDate >= 0 && idxDate < row.Length) ? row[idxDate] : null;
-
-                if (!TryParseStartLoose(startCell, dateCell, day, out var ts))
-                    continue;
-
-                // 用半开区间过滤更稳，避免 23:59:59/跨午夜的误杀
-                if (ts < day.Date || ts >= day.Date.AddDays(1))
-                    continue;
-
-                var code = NormalizeCell(idxCode >= 0 && idxCode < row.Length ? row[idxCode] : "");
-                var cat = NormalizeCell(idxCat >= 0 && idxCat < row.Length ? row[idxCat] : "");
-                var msg = NormalizeCell(idxMsg >= 0 && idxMsg < row.Length ? row[idxMsg] : "");
-                var sec = ParseSecondsFlexible(idxSeconds >= 0 && idxSeconds < row.Length ? row[idxSeconds] : null);
-
-
                 yield return new AlarmRow
                 {
-                    Start = ts,
-                    Code = string.IsNullOrWhiteSpace(code) ? "Unknown" : code,
-                    Category = string.IsNullOrWhiteSpace(cat) ? "Unknown" : cat,
-                    Seconds = Math.Max(0, sec),
-                    Content = msg,
-                    FileName = System.IO.Path.GetFileName(file)
+                    Start = r.Start,
+                    Code = string.IsNullOrWhiteSpace(r.Code) ? "Unknown" : r.Code,
+                    Category = string.IsNullOrWhiteSpace(r.Category) ? "Unknown" : r.Category,
+                    Seconds = r.Seconds,
+                    Content = r.Content,
+                    FileName = r.FileName
                 };
             }
         }
@@ -1095,19 +844,6 @@ namespace EW_Assistant.Views
         // ===== 工具 =====
 
 
-        private static Encoding TryGb2312OrUtf8()
-        {
-            try { return Encoding.GetEncoding("GB2312"); } catch { return new UTF8Encoding(false); }
-        }
-        private static List<string> ReadAllLinesShared(string path, Encoding enc)
-        {
-            var list = new List<string>();
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: true);
-            string? line;
-            while ((line = sr.ReadLine()) != null) if (!string.IsNullOrWhiteSpace(line)) list.Add(line);
-            return list;
-        }
         private static string[] SplitAny(string s)
         {
             if (string.IsNullOrEmpty(s)) return Array.Empty<string>();
@@ -1260,145 +996,6 @@ namespace EW_Assistant.Views
             if (minutes < 60) return minutes.ToString("N0", CultureInfo.CurrentCulture) + " m";
             double hours = minutes / 60.0;
             return hours.ToString("0.0", CultureInfo.InvariantCulture) + " h";
-        }
-
-        private static bool TrySeekCsv(string dir, DateTime day, out string? file, bool requireExact = true)
-        {
-            file = null;
-            try
-            {
-                if (!Directory.Exists(dir)) return false;
-
-                // 允许多种日期形态
-                var tokens = new[]
-                {
-            day.ToString("yyyyMMdd"),
-            day.ToString("yyyy-MM-dd"),
-            day.ToString("yyyy_MM_dd"),
-            day.ToString("yyyy.MM.dd"),
-            day.ToString("yyyy-M-d"),     // 单数字月份/日期也试试
-            day.ToString("yyyy_M_d"),
-        };
-
-                var all = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly);
-
-                // 先用多 token 精确匹配
-                var candidates = all
-                    .Where(f =>
-                    {
-                        var name = System.IO.Path.GetFileNameWithoutExtension(f);
-                        foreach (var t in tokens)
-                        {
-                            if (!string.IsNullOrEmpty(t) &&
-                                name.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0)
-                                return true;
-                        }
-                        return false;
-                    })
-                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-
-                if (candidates.Length > 0)
-                {
-                    file = candidates[0];
-                    return true;
-                }
-
-                // 再退一步：在文件名里用正则提取 2025-11-11 / 20251111 等
-                if (requireExact)
-                {
-                    var rx = new Regex(@"(?<!\d)(20\d{2})[-_.]?(0?[1-9]|1[0-2])[-_.]?(0?[1-9]|[12]\d|3[01])(?!\d)",
-                                       RegexOptions.IgnoreCase);
-                    foreach (var f in all)
-                    {
-                        var name = System.IO.Path.GetFileName(f);
-                        var m = rx.Match(name);
-                        if (m.Success)
-                        {
-                            int y = int.Parse(m.Groups[1].Value);
-                            int mo = int.Parse(m.Groups[2].Value);
-                            int d = int.Parse(m.Groups[3].Value);
-                            if (y == day.Year && mo == day.Month && d == day.Day)
-                            {
-                                file = f;
-                                return true;
-                            }
-                        }
-                    }
-                }
-
-                // 仍然找不到，除非允许兜底，否则返回 false
-                if (!requireExact)
-                {
-                    file = all.OrderByDescending(System.IO.File.GetLastWriteTime).FirstOrDefault();
-                    return file != null;
-                }
-                return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-
-
-        private static double[] LoadHourlySecondsFromCsv(DateTime day)
-        {
-            var sec = new double[24];
-            try
-            {
-                if (!TrySeekCsv(ConfigService.Current.AlarmLogPath ?? "", day, out var file, requireExact: true) || string.IsNullOrEmpty(file))
-                    return sec;
-
-
-                var enc = TryGb2312OrUtf8();
-                var lines = ReadAllLinesShared(file, enc);
-                if (lines.Count == 0) return sec;
-
-                var header = SplitAny(lines[0]);
-                int idxHour = Find(header, "小时", "Hour", "时间", "发生时间", "时刻", "时段");
-                int idxStart = Find(header, "开始时间", "发生时间", "Start", "StartTime", "时间");
-                int idxSeconds = Find(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
-
-                for (int i = 1; i < lines.Count; i++)
-                {
-                    var row = SplitAny(lines[i]);
-                    if (row.Length == 0) continue;
-
-                    int h = -1;
-                    if (idxHour >= 0 && idxHour < row.Length)
-                        h = ExtractHourLoose(row[idxHour]);
-
-                    if (h < 0 && idxStart >= 0 && idxStart < row.Length)
-                        h = ExtractHourLoose(row[idxStart]);
-
-                    if (h < 0 || h > 23) continue;
-
-                    double s = ParseSecondsFlexible(idxSeconds >= 0 && idxSeconds < row.Length ? row[idxSeconds] : null);
-                    if (s > 0) sec[h] += s;
-                }
-            }
-            catch { /* ignore */ }
-            return sec;
-        }
-        private static double ParseSecondsFlexible(string? raw)
-        {
-            var s = NormalizeCell(raw).Trim().ToLowerInvariant();
-
-            if (double.TryParse(s.TrimEnd('s'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ||
-                double.TryParse(s.TrimEnd('s'), NumberStyles.Float, CultureInfo.CurrentCulture, out v))
-                return Math.Max(0, v);
-
-            var m = System.Text.RegularExpressions.Regex.Match(s, @"(?:(\d+(?:\.\d+)?)\s*h)?\s*(?:(\d+(?:\.\d+)?)\s*m)?\s*(?:(\d+(?:\.\d+)?)\s*s)?");
-            if (m.Success)
-            {
-                double h = m.Groups[1].Success ? double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) : 0;
-                double min = m.Groups[2].Success ? double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture) : 0;
-                double sec = m.Groups[3].Success ? double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture) : 0;
-                return h * 3600 + min * 60 + sec;
-            }
-            return 0;
         }
 
         // …… 你的类里（AlarmView）新增：

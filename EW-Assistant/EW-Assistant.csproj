@@ -167,6 +167,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Component\AlarmLogCache.cs" />
     <Compile Include="Component\UiCoalescer.cs" />
     <Compile Include="Component\WorkHttpServer.cs" />
     <Compile Include="Component\MindMap\MindMapDepthToBrushConverter.cs" />
