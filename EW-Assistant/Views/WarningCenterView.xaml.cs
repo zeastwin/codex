@@ -2,7 +2,10 @@ using EW_Assistant.ViewModels;
 using EW_Assistant.Warnings;
 using System;
 using System.IO;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EW_Assistant.Views
@@ -19,6 +22,7 @@ namespace EW_Assistant.Views
             ViewModel = new WarningCenterViewModel();
             InitializeComponent();
             DataContext = ViewModel;
+            AiMarkdownViewer.PreviewMouseWheel += AiMarkdownViewer_PreviewMouseWheel;
 
             // 后台生成缺失的 AI 分析结果
             var _ = ViewModel.AnalyzeMissingWarningsAsync();
@@ -33,6 +37,48 @@ namespace EW_Assistant.Views
             _refreshTimer.Interval = TimeSpan.FromSeconds(10);
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
+        }
+
+        private void WarningList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // 选中切换时将 AI 分析滚动条复位到顶部
+            Dispatcher.BeginInvoke(new Action(ScrollAiCardToTop), DispatcherPriority.Background);
+        }
+
+        private void ScrollAiCardToTop()
+        {
+            if (AiMarkdownViewer == null) return;
+            AiMarkdownViewer.UpdateLayout();
+            var scroller = FindChildScrollViewer(AiMarkdownViewer);
+            if (scroller != null)
+            {
+                scroller.ScrollToVerticalOffset(0);
+            }
+        }
+
+        private void AiMarkdownViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var scroller = FindChildScrollViewer(AiMarkdownViewer);
+            if (scroller == null) return;
+
+            // 放大滚动距离，提升滚轮滚动速度
+            var multiplier = 1.5;
+            var target = scroller.VerticalOffset - e.Delta * multiplier;
+            scroller.ScrollToVerticalOffset(target);
+            e.Handled = true;
+        }
+
+        private static ScrollViewer FindChildScrollViewer(DependencyObject root)
+        {
+            if (root == null) return null;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                if (child is ScrollViewer sv) return sv;
+                var result = FindChildScrollViewer(child);
+                if (result != null) return result;
+            }
+            return null;
         }
 
         private void RefreshTimer_Tick(object sender, EventArgs e)

@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:md="clr-namespace:MdXaml;assembly=MdXaml"
              mc:Ignorable="d"
-             FontFamily="Segoe UI"
+             FontFamily="Segoe UI, Microsoft YaHei UI, Microsoft YaHei"
              FontSize="14">
     <UserControl.Resources>
         <SolidColorBrush x:Key="CriticalBrush" Color="#F87171"/>
@@ -14,6 +14,12 @@
 
         <!-- 选中项淡蓝底色 -->
         <SolidColorBrush x:Key="SelectedItemBackgroundBrush" Color="#EEF3FF"/>
+        <!-- 卡片阴影：上下区域统一风格，接缝更柔和 -->
+        <DropShadowEffect x:Key="CardShadowEffect"
+                          Color="#1A000000"
+                          BlurRadius="12"
+                          ShadowDepth="0"
+                          Opacity="0.24"/>
 
         <CollectionViewSource x:Key="WarningsByLevel" Source="{Binding Warnings}">
             <CollectionViewSource.GroupDescriptions>
@@ -26,7 +32,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="3*"/>
-            <RowDefinition Height="6"/>
             <RowDefinition Height="2*"/>
         </Grid.RowDefinitions>
 
@@ -90,17 +95,16 @@
 
         <!-- 预警列表 -->
         <Border Grid.Row="1"
-                Margin="8,0,8,4"
+                Margin="8,0,8,8"
                 Background="White"
                 CornerRadius="12"
                 Padding="4"
-                SnapsToDevicePixels="True">
-            <Border.Effect>
-                <DropShadowEffect Color="#14000000" BlurRadius="8" ShadowDepth="1"/>
-            </Border.Effect>
+                SnapsToDevicePixels="True"
+                Effect="{StaticResource CardShadowEffect}">
             <ListBox x:Name="WarningList"
                      ItemsSource="{Binding Source={StaticResource WarningsByLevel}}"
                      SelectedItem="{Binding SelectedWarning}"
+                     SelectionChanged="WarningList_SelectionChanged"
                      BorderThickness="0"
                      Background="Transparent"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -153,7 +157,7 @@
                         <!-- 卡片本体：选中底色会作用在这里 -->
                         <Border x:Name="Card"
                                 Margin="0,0,0,0"
-                                Padding="12"
+                                Padding="10"
                                 CornerRadius="8"
                                 Background="White"
                                 BorderBrush="#E5E7EB"
@@ -220,7 +224,7 @@
                                 <!-- Summary 行 -->
                                 <TextBlock Grid.Row="1"
                                            Grid.ColumnSpan="2"
-                                           Margin="0,4,0,0"
+                                           Margin="0,2,0,0"
                                            Text="{Binding Summary}"
                                            TextWrapping="Wrap"
                                            TextTrimming="CharacterEllipsis"
@@ -230,7 +234,7 @@
                                 <!-- 底部：时间 + 指标 + 状态 -->
                                 <StackPanel Grid.Row="2"
                                             Grid.ColumnSpan="2"
-                                            Margin="0,8,0,0"
+                                            Margin="0,6,0,0"
                                             Orientation="Horizontal"
                                             VerticalAlignment="Center">
                                     <TextBlock Text="时间："
@@ -317,28 +321,16 @@
             </ListBox>
         </Border>
 
-        <!-- 分隔条（更细一点，并与上下卡片留缝隙） -->
-        <GridSplitter Grid.Row="2"
-                      Height="4"
-                      Margin="12,0,12,0"
-                      HorizontalAlignment="Stretch"
-                      Background="#E5E7EB"
-                      ShowsPreview="True"/>
-
-        <!-- AI 预留卡片 -->
-        <Border Grid.Row="3"
-                Margin="8,4,8,8"
+        <!-- AI 预留卡片（与上方一致的阴影，接缝更自然） -->
+        <Border Grid.Row="2"
+                Margin="8,0,8,8"
                 Padding="12"
                 CornerRadius="8"
                 Background="White"
                 SnapsToDevicePixels="True"
                 MinHeight="200"
-                MaxHeight="500">
-            <!-- 去掉第二层阴影，避免接缝发黑
-            <Border.Effect>
-                <DropShadowEffect Color="#11000000" BlurRadius="8" ShadowDepth="1"/>
-            </Border.Effect>
-            -->
+                MaxHeight="500"
+                Effect="{StaticResource CardShadowEffect}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -348,7 +340,8 @@
                            FontWeight="SemiBold"
                            FontSize="15"
                            Margin="0,0,0,6"/>
-                <md:MarkdownScrollViewer Grid.Row="1"
+                <md:MarkdownScrollViewer x:Name="AiMarkdownViewer"
+                                         Grid.Row="1"
                                          Padding="0,4,0,0"
                                          VerticalScrollBarVisibility="Auto"
                                          Markdown="{Binding AiAnalysisText}"
