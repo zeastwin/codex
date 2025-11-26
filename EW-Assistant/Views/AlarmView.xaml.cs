@@ -123,10 +123,10 @@ namespace EW_Assistant.Views
         private void AutoTimer_Tick(object sender, EventArgs e)
         {
             if (_autoRefreshOnlyToday && _day.Date != DateTime.Today) return; // 仅当天自动刷
-            SafeReloadAll(false);
+            SafeReloadAll(false, reloadWeek: false);
         }
 
-        private void SafeReloadAll(bool animate, bool reloadWeek = true)
+        private void SafeReloadAll(bool animate, bool reloadWeek = false)
         {
             if (_isReloading) return;
             _isReloading = true;
