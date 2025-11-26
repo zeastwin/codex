@@ -14,7 +14,7 @@ namespace EW_Assistant.ViewModels
     /// 预警中心视图模型，负责加载并映射预警数据。
     /// </summary>
     public class WarningCenterViewModel : INotifyPropertyChanged
-    {
+    { 
         private WarningItemViewModel _selected;
         private string _aiAnalysisText = "当前还未接入 AI 分析，下面仅展示预警基本信息。";
         private string _lastUpdatedText = string.Empty;
