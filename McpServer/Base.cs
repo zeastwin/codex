@@ -9,25 +9,33 @@ namespace McpServer
     {
         public class AppConfig
         {
-            // 默认都指向 D:\ 根目录
-            public string ProductionLogPath { get; set; } = @"D:\";
-            public string WarmLogPath { get; set; } = @"D:\";
+            // 产能/报警/IO 路径均与 WPF AppConfig 统一
+            public string AlarmLogPath { get; set; } = string.Empty;
+            public string ProductionLogPath { get; set; } = string.Empty;
             public string IoMapCsvPath { get; set; } = @"D:\";
             public string MCPServerIP { get; set; } = "127.0.0.1:8081";
+
+            // 其余字段保持占位，防止写回时丢失 UI 配置
+            public string URL { get; set; } = string.Empty;
+            public string AutoKey { get; set; } = string.Empty;
+            public string ChatKey { get; set; } = string.Empty;
+            public string DocumentKey { get; set; } = string.Empty;
+            public string EarlyWarningKey { get; set; } = string.Empty;
+            public bool FlatFileLayout { get; set; }
         }
 
         private const string ConfigRoot = @"D:\";
-        private const string ConfigFileName = "MCPAppConfig.json";
+        private const string ConfigFileName = "AppConfig.json";
         private static readonly object _cfgLock = new object();
 
         /// <summary>
-        /// 读取配置；当文件不存在或损坏时，在 D:\ 下生成 MCPAppConfig.json 并返回默认配置。
+        /// 读取配置；当文件不存在或损坏时，在 D:\ 下生成 AppConfig.json 并返回默认配置。
         /// </summary>
         public static AppConfig ReadAppConfig()
         {
             lock (_cfgLock)
             {
-                // 配置固定放在 D:\MCPAppConfig.json
+                // 配置固定放在 D:\AppConfig.json
                 var cfgDir = GetConfigDirectory();
                 var cfgPath = Path.Combine(cfgDir, ConfigFileName);
 
@@ -35,7 +43,7 @@ namespace McpServer
                 {
                     if (!File.Exists(cfgPath))
                     {
-                        var def = new AppConfig();
+                        var def = CreateDefault();
                         EnsureDirs(def);
                         WriteConfig(cfgPath, def);
                         return def;
@@ -46,12 +54,8 @@ namespace McpServer
                         var json = r.ReadToEnd();
                         var cfg = JsonConvert.DeserializeObject<AppConfig>(json) ?? new AppConfig();
 
-                        // 补齐可能缺失的字段
-                        if (string.IsNullOrWhiteSpace(cfg.ProductionLogPath)) cfg.ProductionLogPath = @"D:\";
-                        if (string.IsNullOrWhiteSpace(cfg.WarmLogPath)) cfg.WarmLogPath = @"D:\";
-                        if (string.IsNullOrWhiteSpace(cfg.IoMapCsvPath)) cfg.IoMapCsvPath = @"D:\";
-                        if (string.IsNullOrWhiteSpace(cfg.MCPServerIP)) cfg.MCPServerIP = "127.0.0.1:8081";
-
+                        // 补齐可能缺失的字段，并与 UI 字段对齐
+                        FillMissingFields(cfg);
                         EnsureDirs(cfg);
                         return cfg;
                     }
@@ -69,7 +73,7 @@ namespace McpServer
                     }
                     catch { /* 备份失败不影响主流程 */ }
 
-                    var def = new AppConfig();
+                    var def = CreateDefault();
                     EnsureDirs(def);
                     try { WriteConfig(cfgPath, def); } catch { }
                     return def;
@@ -77,7 +81,7 @@ namespace McpServer
             }
         }
 
-        /// <summary>主动保存修改后的配置到 D:\MCPAppConfig.json。</summary>
+        /// <summary>主动保存修改后的配置到 D:\AppConfig.json。</summary>
         public static void SaveAppConfig(AppConfig cfg)
         {
             if (cfg == null) return;
@@ -85,12 +89,39 @@ namespace McpServer
             {
                 var cfgDir = GetConfigDirectory();
                 var cfgPath = Path.Combine(cfgDir, ConfigFileName);
+                FillMissingFields(cfg);
                 EnsureDirs(cfg);
                 WriteConfig(cfgPath, cfg);
             }
         }
 
         // —— 内部工具 —— //
+
+        private static AppConfig CreateDefault()
+        {
+            return new AppConfig
+            {
+                AlarmLogPath = @"D:\",
+                ProductionLogPath = @"D:\",
+                IoMapCsvPath = @"D:\",
+                MCPServerIP = "127.0.0.1:8081"
+            };
+        }
+
+        private static void FillMissingFields(AppConfig cfg)
+        {
+            if (cfg == null) return;
+
+            if (string.IsNullOrWhiteSpace(cfg.ProductionLogPath))
+                cfg.ProductionLogPath = @"D:\";
+            if (string.IsNullOrWhiteSpace(cfg.AlarmLogPath))
+                cfg.AlarmLogPath = @"D:\";
+
+            if (string.IsNullOrWhiteSpace(cfg.IoMapCsvPath))
+                cfg.IoMapCsvPath = @"D:\";
+            if (string.IsNullOrWhiteSpace(cfg.MCPServerIP))
+                cfg.MCPServerIP = "127.0.0.1:8081";
+        }
 
         private static string GetConfigDirectory()
         {
@@ -128,7 +159,7 @@ namespace McpServer
         private static void EnsureDirs(AppConfig cfg)
         {
             TryCreateDirectory(cfg.ProductionLogPath);
-            TryCreateDirectory(cfg.WarmLogPath);
+            TryCreateDirectory(cfg.AlarmLogPath);
         }
 
         private static void TryCreateDirectory(string path)

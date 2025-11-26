@@ -15,14 +15,14 @@
 - 运行日志：程序信息/AI 对话分别写入 `D:\Data\AiLog\UI` 与 `D:\Data\AiLog\Chat`（UTF-8，无 BOM）；保持 D 盘可写或确保兜底目录可用。
 
 ## 运行与配置
-- WPF 配置文件：`D:\AppConfig.json`，字段 `CsvRootPath`、`AlarmLogPath`、`URL`、`AutoKey`、`ChatKey`、`DocumentKey`。ConfigView 读写此文件，变更通过 `ConfigService.ConfigChanged` 广播。
-- MCP 配置文件：`D:\MCPAppConfig.json`（`Base.ReadAppConfig`/`SaveAppConfig` 维护），字段 `ProductionLogPath`、`WarmLogPath`（报警 CSV 路径）、`IoMapCsvPath`（IO 映射 Excel）、`MCPServerIP`。无法写入 D 盘时自动回落到运行目录。
+- WPF 配置文件：`D:\AppConfig.json`，字段 `ProductionLogPath`、`AlarmLogPath`、`IoMapCsvPath`、`MCPServerIP`、`URL`、`AutoKey`、`ChatKey`、`DocumentKey`、`EarlyWarningKey`、`flatFileLayout`。ConfigView 读写此文件，变更通过 `ConfigService.ConfigChanged` 广播。
+- MCP 配置文件：`D:\AppConfig.json`（`Base.ReadAppConfig`/`SaveAppConfig` 维护），字段 `ProductionLogPath`（产能 CSV 路径）、`AlarmLogPath`（报警 CSV 路径）、`IoMapCsvPath`（IO 映射 Excel）、`MCPServerIP`。无法写入 D 盘时自动回落到运行目录。
 - 构建顺序：先编译 `McpServer`（自带 `CopyMcpToAssistantBin` 目标会复制到 `EW-Assistant/bin/Debug/McpServer/`），再启动 WPF；WPF `McpServerProcessHost` 会复用/拉起同目录的可执行。
 - 本地 HTTP：`WorkHttpServer` 接受 POST（`errorCode/prompt/machineCode/workflowId/onlyMajorNodes`），调用 `DifyWorkflowClient` 后台流式推送至 `AIAssistantView`，忙碌时 429。
 
 ## 数据输入与约定
-- 产能 CSV：默认命名 `小时产量yyyyMMdd.csv`，位于 `AppConfig.CsvRootPath`。解析时自动探测分隔符（`,`/`;`/Tab`），PASS/FAIL 列通过别名（pass/良品/良率pass，fail/不良/报废/抛料/ng）识别；A 列常为小时。`CsvProductionRepository`/`ProdCsvTools` 与 Dashboard/ProductionBoard 共用此格式。
-- 报警 CSV：默认放在 `AppConfig.AlarmLogPath`（WPF）或 `WarmLogPath`（MCP），编码优先 `GB2312`，失败回退 `GB18030`/UTF-8；字段需包含报警代码/内容/类别/开始时间/结束时间/时长（秒）。文件名如含 `yyyyMMdd` 会优先匹配当天，否则取最近修改时间。
+- 产能 CSV：默认命名 `小时产量yyyyMMdd.csv`，位于 `AppConfig.ProductionLogPath`。解析时自动探测分隔符（`,`/`;`/Tab`），PASS/FAIL 列通过别名（pass/良品/良率pass，fail/不良/报废/抛料/ng）识别；A 列常为小时。`CsvProductionRepository`/`ProdCsvTools` 与 Dashboard/ProductionBoard 共用此格式。
+- 报警 CSV：默认放在 `AppConfig.AlarmLogPath`，编码优先 `GB2312`，失败回退 `GB18030`/UTF-8；字段需包含报警代码/内容/类别/开始时间/结束时间/时长（秒）。文件名如含 `yyyyMMdd` 会优先匹配当天，否则取最近修改时间。
 - IO 映射：`IoMapRepository.LoadFromXlsx` 读取 `IoMapCsvPath` 指定的 Excel（默认首个工作表，表头行=1），仅使用第 1 列和第 9 列两组：组1 关=30000/开=30001/读回起始=30100，组2 关=30002/开=30003/读回起始=30140；每 16 个 IO 读回地址递增 1。
 - 日志落盘：`MainWindow.PostProgramInfo` 写 UI 信息流，同时写 `D:\Data\AiLog\UI\yyyy-MM-dd.log`；`DifyChatAdapter` 写聊天日志到 `D:\Data\AiLog\Chat\yyyy-MM-dd.txt`。
 

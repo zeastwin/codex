@@ -26,8 +26,10 @@ namespace EW_Assistant.Views
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(Config.CsvRootPath)
+                if (string.IsNullOrWhiteSpace(Config.ProductionLogPath)
                     || string.IsNullOrWhiteSpace(Config.AlarmLogPath)
+                    || string.IsNullOrWhiteSpace(Config.IoMapCsvPath)
+                    || string.IsNullOrWhiteSpace(Config.MCPServerIP)
                     || string.IsNullOrWhiteSpace(Config.URL)
                     || string.IsNullOrWhiteSpace(Config.AutoKey)
                     || string.IsNullOrWhiteSpace(Config.ChatKey)
@@ -57,8 +59,10 @@ namespace EW_Assistant.Views
 
                 if (this.Config != null)
                 {
-                    this.Config.CsvRootPath = fresh.CsvRootPath;
+                    this.Config.ProductionLogPath = fresh.ProductionLogPath;
                     this.Config.AlarmLogPath = fresh.AlarmLogPath;
+                    this.Config.IoMapCsvPath = fresh.IoMapCsvPath;
+                    this.Config.MCPServerIP = fresh.MCPServerIP;
                     this.Config.URL = fresh.URL;
                     this.Config.AutoKey = fresh.AutoKey;
                     this.Config.ChatKey = fresh.ChatKey;
@@ -98,17 +102,32 @@ namespace EW_Assistant.Settings
 
     public class AppConfig : INotifyPropertyChanged
     {
-        private string _csvRootPath = @"";
-        public string CsvRootPath
+        private string _productionLogPath = @"";
+        public string ProductionLogPath
         {
-            get => _csvRootPath;
-            set { if (_csvRootPath != value) { _csvRootPath = value; OnPropertyChanged(); } }
+            get => _productionLogPath;
+            set { if (_productionLogPath != value) { _productionLogPath = value; OnPropertyChanged(); } }
         }
+
         private string _alarmLogPath = @"";
         public string AlarmLogPath
         {
             get => _alarmLogPath;
             set { if (_alarmLogPath != value) { _alarmLogPath = value; OnPropertyChanged(); } }
+        }
+
+        private string _ioMapCsvPath = @"";
+        public string IoMapCsvPath
+        {
+            get => _ioMapCsvPath;
+            set { if (_ioMapCsvPath != value) { _ioMapCsvPath = value; OnPropertyChanged(); } }
+        }
+
+        private string _mcpServerIP = "127.0.0.1:8081";
+        public string MCPServerIP
+        {
+            get => _mcpServerIP;
+            set { if (_mcpServerIP != value) { _mcpServerIP = value; OnPropertyChanged(); } }
         }
         private string _URL = "";
         public string URL
@@ -186,6 +205,7 @@ namespace EW_Assistant.Services
                     var cfg = JsonConvert.DeserializeObject<AppConfig>(json);
                     if (cfg != null)
                     {
+                        EnsureMcpFields(cfg);
                         _current = cfg;
                         ConfigChanged?.Invoke(null, _current);
                         return _current;
@@ -195,6 +215,7 @@ namespace EW_Assistant.Services
             catch { /* 忽略，走默认 */ }
 
             _current = AppConfig.CreateDefault();
+            EnsureMcpFields(_current);
             Save(_current);                 // 首次落盘
             ConfigChanged?.Invoke(null, _current);
             return _current;
@@ -206,6 +227,8 @@ namespace EW_Assistant.Services
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
 
+            EnsureMcpFields(cfg);
+
             var json = JsonConvert.SerializeObject(cfg, Formatting.Indented);
             File.WriteAllText(FilePath, json, new UTF8Encoding(false));
 
@@ -215,8 +238,10 @@ namespace EW_Assistant.Services
             }
             else
             {
-                _current.CsvRootPath = cfg.CsvRootPath;
+                _current.ProductionLogPath = cfg.ProductionLogPath;
                 _current.AlarmLogPath = cfg.AlarmLogPath;
+                _current.IoMapCsvPath = cfg.IoMapCsvPath;
+                _current.MCPServerIP = cfg.MCPServerIP;
                 _current.URL = cfg.URL;
                 _current.AutoKey = cfg.AutoKey;
                 _current.ChatKey = cfg.ChatKey;
@@ -228,6 +253,22 @@ namespace EW_Assistant.Services
             ConfigChanged?.Invoke(null, _current);
         }
 
+
+        private static void EnsureMcpFields(AppConfig cfg)
+        {
+            if (cfg == null) return;
+
+            if (string.IsNullOrWhiteSpace(cfg.ProductionLogPath))
+                cfg.ProductionLogPath = @"D:\";
+
+            if (string.IsNullOrWhiteSpace(cfg.AlarmLogPath))
+                cfg.AlarmLogPath = @"D:\";
+
+            if (string.IsNullOrWhiteSpace(cfg.IoMapCsvPath))
+                cfg.IoMapCsvPath = @"D:\";
+            if (string.IsNullOrWhiteSpace(cfg.MCPServerIP))
+                cfg.MCPServerIP = "127.0.0.1:8081";
+        }
 
     }
 

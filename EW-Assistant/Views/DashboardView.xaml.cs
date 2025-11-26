@@ -22,7 +22,7 @@ namespace EW_Assistant
         // ===== 依赖属性：CSV 根目录 & 文件前缀 =====
         public static readonly DependencyProperty FilePrefixProperty =
             DependencyProperty.Register(nameof(FilePrefix), typeof(string), typeof(DashboardView),
-                new PropertyMetadata("小时产量", OnCsvRootPathChanged));
+                new PropertyMetadata("小时产量", OnProductionPathChanged));
 
         // ===== 图表尺寸（外部可绑） =====
         public static readonly DependencyProperty WeekChartWidthProperty =
@@ -245,7 +245,7 @@ namespace EW_Assistant
             RefreshTimer_Tick(this, EventArgs.Empty);
         }
 
-        private static void OnCsvRootPathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnProductionPathChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is DashboardView v)
             {
@@ -313,7 +313,7 @@ namespace EW_Assistant
             for (int i = 6; i >= 0; i--)
             {
                 var day = DateTime.Today.AddDays(-i);
-                var file = System.IO.Path.Combine(ConfigService.Current.CsvRootPath ?? "", $"{FilePrefix}{day:yyyyMMdd}.csv");
+                var file = System.IO.Path.Combine(ConfigService.Current.ProductionLogPath ?? "", $"{FilePrefix}{day:yyyyMMdd}.csv");
 
                 var item = new DayData { Date = day, Missing = !File.Exists(file) };
 
@@ -349,7 +349,7 @@ namespace EW_Assistant
             _todayFailSum = 0;
             _todayYield = 0;
 
-            var file = System.IO.Path.Combine(ConfigService.Current.CsvRootPath ?? "", $"{FilePrefix}{DateTime.Today:yyyyMMdd}.csv");
+            var file = System.IO.Path.Combine(ConfigService.Current.ProductionLogPath ?? "", $"{FilePrefix}{DateTime.Today:yyyyMMdd}.csv");
             if (!File.Exists(file))
             {
                 _todayMissing = true;

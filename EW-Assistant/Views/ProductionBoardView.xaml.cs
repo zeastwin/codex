@@ -128,10 +128,10 @@ namespace EW_Assistant.Views
 
         private void BtnOpenFolder_Click(object sender, RoutedEventArgs e)
         {
-            var root = ConfigService.Current.CsvRootPath;
+            var root = ConfigService.Current.ProductionLogPath;
             if (string.IsNullOrWhiteSpace(root))
             {
-                MainWindow.PostProgramInfo("CsvRootPath 未配置，无法打开目录。", "warn");
+                MainWindow.PostProgramInfo("产能路径未配置，无法打开目录。", "warn");
                 return;
             }
             try
@@ -370,10 +370,10 @@ namespace EW_Assistant.Views
 
         private void UpdateWarnings()
         {
-            var root = ConfigService.Current.CsvRootPath;
+            var root = ConfigService.Current.ProductionLogPath;
             if (string.IsNullOrWhiteSpace(root))
             {
-                WarningHint.Text = "Config：未填写 CsvRootPath，无法读取 CSV";
+                WarningHint.Text = "Config：未填写产能路径，无法读取 CSV";
                 WarningHint.Visibility = Visibility.Visible;
                 return;
             }
@@ -690,7 +690,7 @@ namespace EW_Assistant.Views
         private bool TryResolveCsv(DateTime day, out string path)
         {
             path = string.Empty;
-            var root = ConfigService.Current.CsvRootPath;
+            var root = ConfigService.Current.ProductionLogPath;
             if (string.IsNullOrWhiteSpace(root)) return false;
 
             var name = $"{FilePrefix}{day:yyyyMMdd}.csv";

@@ -160,7 +160,7 @@
                 <Grid Grid.Row="4" MaxWidth="980" HorizontalAlignment="Left">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <!-- 0 CsvRootPath -->
+                        <!-- 0 产能日志路径 -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
@@ -168,27 +168,35 @@
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 4 AutoURL -->
+                        <!-- 4 IoMapCsvPath -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 6 AutoKey -->
+                        <!-- 6 MCPServerIP -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 8 ChatKey -->
+                        <!-- 8 AutoURL -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 10 DocumentKey -->
+                        <!-- 10 AutoKey -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 12 EarlyWarningKey -->
+                        <!-- 12 ChatKey -->
                         <RowDefinition Height="12"/>
 
                         <RowDefinition Height="Auto"/>
-                        <!-- 14 报警文件层级模式 -->
+                        <!-- 14 DocumentKey -->
+                        <RowDefinition Height="12"/>
+
+                        <RowDefinition Height="Auto"/>
+                        <!-- 16 EarlyWarningKey -->
+                        <RowDefinition Height="12"/>
+
+                        <RowDefinition Height="Auto"/>
+                        <!-- 18 报警文件层级模式 -->
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="120"/>
@@ -200,7 +208,7 @@
                                Text="产能 CSV 路径：" VerticalAlignment="Center" Foreground="#374151"/>
                     <TextBox   Grid.Row="0" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
-                               Text="{Binding CsvRootPath, UpdateSourceTrigger=PropertyChanged}"/>
+                               Text="{Binding ProductionLogPath, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- 报警 CSV 路径 -->
                     <TextBlock Grid.Row="2" Grid.Column="0"
@@ -209,45 +217,59 @@
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding AlarmLogPath, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <!-- URL -->
+                    <!-- IO 映射 Excel -->
                     <TextBlock Grid.Row="4" Grid.Column="0"
-                               Text="API URL：" VerticalAlignment="Center" Foreground="#374151"/>
+                               Text="IO 映射 Excel：" VerticalAlignment="Center" Foreground="#374151"/>
                     <TextBox   Grid.Row="4" Grid.Column="1"
+                               Height="30" FontSize="13" Padding="8,4"
+                               Text="{Binding IoMapCsvPath, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- MCP Server 地址 -->
+                    <TextBlock Grid.Row="6" Grid.Column="0"
+                               Text="MCP Server 地址：" VerticalAlignment="Center" Foreground="#374151"/>
+                    <TextBox   Grid.Row="6" Grid.Column="1"
+                               Height="30" FontSize="13" Padding="8,4"
+                               Text="{Binding MCPServerIP, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- URL -->
+                    <TextBlock Grid.Row="8" Grid.Column="0"
+                               Text="API URL：" VerticalAlignment="Center" Foreground="#374151"/>
+                    <TextBox   Grid.Row="8" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding URL, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- AutoKey -->
-                    <TextBlock Grid.Row="6" Grid.Column="0"
+                    <TextBlock Grid.Row="10" Grid.Column="0"
                                Text="Auto API Key：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <TextBox   Grid.Row="6" Grid.Column="1"
+                    <TextBox   Grid.Row="10" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding AutoKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- ChatKey -->
-                    <TextBlock Grid.Row="8" Grid.Column="0"
+                    <TextBlock Grid.Row="12" Grid.Column="0"
                                Text="Chat API Key：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <TextBox   Grid.Row="8" Grid.Column="1"
+                    <TextBox   Grid.Row="12" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding ChatKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- DocumentKey -->
-                    <TextBlock Grid.Row="10" Grid.Column="0"
+                    <TextBlock Grid.Row="14" Grid.Column="0"
                                Text="Document API Key：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <TextBox   Grid.Row="10" Grid.Column="1"
+                    <TextBox   Grid.Row="14" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding DocumentKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- EarlyWarningKey -->
-                    <TextBlock Grid.Row="12" Grid.Column="0"
+                    <TextBlock Grid.Row="16" Grid.Column="0"
                                Text="预警 Key：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <TextBox   Grid.Row="12" Grid.Column="1"
+                    <TextBox   Grid.Row="16" Grid.Column="1"
                                Height="30" FontSize="13" Padding="8,4"
                                Text="{Binding EarlyWarningKey, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <!-- 报警文件层级模式 -->
-                    <TextBlock Grid.Row="14" Grid.Column="0"
+                    <TextBlock Grid.Row="18" Grid.Column="0"
                                Text="报警文件层级模式：" VerticalAlignment="Center" Foreground="#374151"/>
-                    <ToggleButton Grid.Row="14" Grid.Column="1"
+                    <ToggleButton Grid.Row="18" Grid.Column="1"
                                   HorizontalAlignment="Left"
                                   Style="{StaticResource SwitchToggleButton}"
                                   IsChecked="{Binding FlatFileLayout, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

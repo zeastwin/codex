@@ -13,8 +13,8 @@ namespace EW_Assistant.Warnings
             get
             {
                 var cfg = ConfigService.Current;
-                if (cfg != null && !string.IsNullOrWhiteSpace(cfg.CsvRootPath))
-                    return cfg.CsvRootPath;
+                if (cfg != null && !string.IsNullOrWhiteSpace(cfg.ProductionLogPath))
+                    return cfg.ProductionLogPath;
                 return @"D:\Data\T66Data";
             }
         }
