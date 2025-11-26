@@ -64,6 +64,7 @@ namespace EW_Assistant.Views
                     this.Config.ChatKey = fresh.ChatKey;
                     this.Config.DocumentKey = fresh.DocumentKey;
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
+                    this.Config.Watch = fresh.Watch;
                 }
                 else
                 {
@@ -142,6 +143,13 @@ namespace EW_Assistant.Settings
             get => _earlyWarningKey;
             set { if (_earlyWarningKey != value) { _earlyWarningKey = value; OnPropertyChanged(); } }
         }
+        private bool _watch;
+        [JsonProperty("watch")]
+        public bool Watch
+        {
+            get => _watch;
+            set { if (_watch != value) { _watch = value; OnPropertyChanged(); } }
+        }
         public static AppConfig CreateDefault() => new AppConfig();
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -214,6 +222,7 @@ namespace EW_Assistant.Services
                 _current.ChatKey = cfg.ChatKey;
                 _current.DocumentKey = cfg.DocumentKey;
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
+                _current.Watch = cfg.Watch;
             }
 
             ConfigChanged?.Invoke(null, _current);

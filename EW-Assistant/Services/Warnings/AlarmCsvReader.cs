@@ -101,12 +101,12 @@ namespace EW_Assistant.Warnings
                     .Select(NormalizeHeader)
                     .ToArray();
 
-                var codeIndex = FindIndex(headers, "code", "报警代码", "alarmcode", "报警编号");
-                var messageIndex = FindIndex(headers, "message", "content", "报警内容", "描述");
-                var categoryIndex = FindIndex(headers, "category", "类别", "type");
-                var startIndex = FindIndex(headers, "starttime", "开始时间", "start");
+                var codeIndex = FindIndex(headers, "code", "报警代码", "alarmcode", "报警编号", "错误编码");
+                var messageIndex = FindIndex(headers, "message", "content", "报警内容", "描述", "错误信息");
+                var categoryIndex = FindIndex(headers, "category", "类别", "type", "错误类型");
+                var startIndex = FindIndex(headers, "starttime", "开始时间", "start", "起始时间");
                 var endIndex = FindIndex(headers, "endtime", "结束时间", "end");
-                var durationIndex = FindIndex(headers, "duration", "时长", "持续", "durationsec", "时长秒", "持续时间");
+                var durationIndex = FindIndex(headers, "duration", "时长", "持续", "durationsec", "时长秒", "持续时间", "维修耗时");
 
                 while (!reader.EndOfStream)
                 {
@@ -180,6 +180,7 @@ namespace EW_Assistant.Warnings
         private static double? ParseNullableDouble(string value)
         {
             if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) return v;
+            if (TimeSpan.TryParse(value, out var ts)) return ts.TotalSeconds;
             return null;
         }
 
@@ -219,14 +220,14 @@ namespace EW_Assistant.Warnings
 
         private static DateTime GuessDateFromFile(string path)
         {
-            var fileName = Path.GetFileNameWithoutExtension(path);
-            var match = Regex.Match(fileName ?? string.Empty, @"(20\d{6})");
-            if (match.Success)
+            var fileName = Path.GetFileNameWithoutExtension(path) ?? string.Empty;
+            var match = Regex.Match(fileName, @"(?<y>20\d{2})[-_/\.]?(?<m>\d{1,2})[-_/\.]?(?<d>\d{1,2})");
+            if (match.Success
+                && int.TryParse(match.Groups["y"].Value, out var y)
+                && int.TryParse(match.Groups["m"].Value, out var m)
+                && int.TryParse(match.Groups["d"].Value, out var d))
             {
-                if (DateTime.TryParseExact(match.Value, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-                {
-                    return date;
-                }
+                try { return new DateTime(y, m, d); } catch { }
             }
 
             return File.GetLastWriteTime(path).Date;

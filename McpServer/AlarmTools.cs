@@ -230,12 +230,12 @@ public static class AlarmCsvRepository
         if (lines.Count == 0) return new List<AlarmRecord>();
 
         var header = SplitCsvLine(lines[0]).Select(s => (s ?? "").Trim().Trim('"')).ToArray();
-        int idxCode = IndexOf(header, "报警代码", "代码", "Code", "报警编号");
-        int idxCont = IndexOf(header, "报警内容", "内容", "Desc", "描述", "Content");
-        int idxCate = IndexOf(header, "报警类别", "类别", "Category");
-        int idxStart = IndexOf(header, "开始时间", "Start", "开始", "StartTime");
+        int idxCode = IndexOf(header, "报警代码", "代码", "Code", "报警编号", "错误编码", "ErrorCode");
+        int idxCont = IndexOf(header, "报警内容", "内容", "Desc", "描述", "Content", "错误信息");
+        int idxCate = IndexOf(header, "报警类别", "类别", "Category", "错误类型");
+        int idxStart = IndexOf(header, "开始时间", "Start", "开始", "StartTime", "起始时间");
         int idxEnd = IndexOf(header, "结束时间", "End", "结束", "EndTime");
-        int idxDur = IndexOf(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds");
+        int idxDur = IndexOf(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "维修耗时");
 
         var recs = new List<AlarmRecord>();
         for (int i = 1; i < lines.Count; i++)
@@ -250,33 +250,34 @@ public static class AlarmCsvRepository
             var cont = get(idxCont);
             var cate = get(idxCate);
 
-            TimeSpan tsS;
-            if (!TryParseTime(get(idxStart), out tsS)) continue;
-            var start = fileDate + tsS;
+            var start = ParseDateTimeCell(get(idxStart), fileDate);
+            var end = ParseDateTimeCell(get(idxEnd), fileDate);
+            var durSec = ParseDurationSeconds(get(idxDur));
 
-            DateTime end;
-            int useSec = 0;
+            if (!start.HasValue && end.HasValue && durSec.HasValue)
+                start = end.Value.AddSeconds(-durSec.Value);
+            if (!start.HasValue) continue;
 
-            TimeSpan tsE;
-            bool hasEnd = TryParseTime(get(idxEnd), out tsE);
-            int durSec;
-            bool hasDur = int.TryParse(get(idxDur), out durSec) && durSec >= 0;
+            if (!end.HasValue && durSec.HasValue)
+                end = start.Value.AddSeconds(durSec.Value);
 
-            if (hasEnd && (!hasDur || durSec == 0))
+            if (end.HasValue && end.Value < start.Value)
             {
-                end = fileDate + tsE;
-                if (end < start) end = start;
-                useSec = (int)Math.Max(0, (end - start).TotalSeconds);
+                if (durSec.HasValue && durSec.Value > 0)
+                    end = start.Value.AddSeconds(durSec.Value);
+                else
+                    end = start.Value;
             }
-            else if (hasDur)
-            {
-                useSec = durSec;
-                end = start.AddSeconds(useSec);
-            }
+
+            int useSec;
+            if (durSec.HasValue)
+                useSec = Math.Max(0, durSec.Value);
+            else if (end.HasValue)
+                useSec = (int)Math.Max(0, (end.Value - start.Value).TotalSeconds);
             else
-            {
                 continue;
-            }
+
+            if (!end.HasValue) end = start.Value.AddSeconds(useSec);
 
             var ar = new AlarmRecord
             {
@@ -366,6 +367,44 @@ public static class AlarmCsvRepository
         DateTime dt;
         if (DateTime.TryParse(s, out dt)) { ts = dt.TimeOfDay; return true; }
         return false;
+    }
+
+    private static DateTime? ParseDateTimeCell(string s, DateTime fileDate)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        s = s.Trim();
+
+        DateTime dt;
+        if (ContainsDateToken(s) && DateTime.TryParse(s, out dt)) return dt;
+
+        TimeSpan ts;
+        if (TryParseTime(s, out ts)) return fileDate + ts;
+
+        if (DateTime.TryParse(s, out dt)) return dt;
+        return null;
+    }
+
+    private static int? ParseDurationSeconds(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        s = s.Trim();
+
+        int iv;
+        if (int.TryParse(s, out iv) && iv >= 0) return iv;
+
+        double dv;
+        if (double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out dv) && dv >= 0)
+            return (int)Math.Round(dv);
+
+        TimeSpan ts;
+        if (TimeSpan.TryParse(s, out ts)) return (int)Math.Max(0, ts.TotalSeconds);
+
+        return null;
+    }
+
+    private static bool ContainsDateToken(string s)
+    {
+        return Regex.IsMatch(s, @"\d{4}[-/\.年]?\d{1,2}[-/\.月]?\d{1,2}");
     }
 
     private static DateTime? ExtractDateFromFileName(string path)
