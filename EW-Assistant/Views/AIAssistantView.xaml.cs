@@ -1,4 +1,4 @@
-﻿using EW_Assistant.Services;
+using EW_Assistant.Services;
 using EW_Assistant.Settings;
 using MdXaml;
 using Newtonsoft.Json.Linq;
