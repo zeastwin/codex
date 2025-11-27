@@ -41,5 +41,14 @@ namespace EW_Assistant.Warnings
                 return cfg != null && cfg.FlatFileLayout;
             }
         }
+
+        public static bool UseOkNgSplitTables
+        {
+            get
+            {
+                var cfg = ConfigService.Current;
+                return cfg != null && cfg.UseOkNgSplitTables;
+            }
+        }
     }
 }

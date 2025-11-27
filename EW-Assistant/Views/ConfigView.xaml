@@ -197,6 +197,10 @@
 
                         <RowDefinition Height="Auto"/>
                         <!-- 18 报警文件层级模式 -->
+                        <RowDefinition Height="12"/>
+
+                        <RowDefinition Height="Auto"/>
+                        <!-- 20 产能 OK/NG 分表模式 -->
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="120"/>
@@ -273,6 +277,14 @@
                                   HorizontalAlignment="Left"
                                   Style="{StaticResource SwitchToggleButton}"
                                   IsChecked="{Binding FlatFileLayout, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <!-- 产能 OK/NG 分表模式 -->
+                    <TextBlock Grid.Row="20" Grid.Column="0"
+                               Text="OK/NG 分表模式：" VerticalAlignment="Center" Foreground="#374151"/>
+                    <ToggleButton Grid.Row="20" Grid.Column="1"
+                                  HorizontalAlignment="Left"
+                                  Style="{StaticResource SwitchToggleButton}"
+                                  IsChecked="{Binding UseOkNgSplitTables, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>
             </Grid>
         </Border>

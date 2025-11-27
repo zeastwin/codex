@@ -18,6 +18,8 @@ namespace EW_Assistant.Services
             public DateTime Date { get; set; }
             public bool Missing { get; set; }
             public string? FilePath { get; set; }
+            public string? OkFilePath { get; set; }
+            public string? NgFilePath { get; set; }
             public int[] HourPass { get; } = new int[24];
             public int[] HourFail { get; } = new int[24];
             public int SumPass => HourPass.Sum();
@@ -31,6 +33,9 @@ namespace EW_Assistant.Services
         private static string _cachePrefix = string.Empty;
         private static int _cacheDays = 7;
         private static DateTime _lastLoad = DateTime.MinValue;
+        private static bool _cacheUseSplitTables;
+        private static readonly string[] _splitOkHeaders = new[] { "产出时间", "產出時間" };
+        private static readonly string[] _splitNgHeaders = new[] { "抛料开始时间", "抛料时间", "抛料開始時間" };
 
         /// <summary>
         /// 加载并缓存最近 N 天的产能 CSV；短时间内重复调用会复用缓存，force=true 时强制重读。
@@ -40,6 +45,7 @@ namespace EW_Assistant.Services
             if (days <= 0) days = 7;
             var dir = string.IsNullOrWhiteSpace(root) ? LocalDataConfig.ProductionCsvRoot : root;
             var prefix = string.IsNullOrWhiteSpace(filePrefix) ? "小时产量" : filePrefix;
+            var useSplit = LocalDataConfig.UseOkNgSplitTables;
             var now = DateTime.Now;
 
             lock (_lock)
@@ -48,6 +54,7 @@ namespace EW_Assistant.Services
                     string.Equals(_cacheRoot, dir, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(_cachePrefix, prefix, StringComparison.OrdinalIgnoreCase) &&
                     _cacheDays == days &&
+                    _cacheUseSplitTables == useSplit &&
                     (now - _lastLoad) < TimeSpan.FromSeconds(3))
                 {
                     return;
@@ -62,7 +69,27 @@ namespace EW_Assistant.Services
                 var day = DateTime.Today.AddDays(-i).Date;
                 var data = new DayData { Date = day, Missing = true };
 
-                if (TrySeekCsv(dir, prefix, day, watchMode, out var file))
+                if (useSplit)
+                {
+                    if (TrySeekSplitCsv(dir, day, watchMode, out var okFile, out var ngFile))
+                    {
+                        try
+                        {
+                            if (TryLoadDayFromSplit(okFile, ngFile, day, data))
+                            {
+                                data.Missing = false;
+                                data.OkFilePath = okFile;
+                                data.NgFilePath = ngFile;
+                                data.FilePath = okFile ?? ngFile;
+                            }
+                        }
+                        catch
+                        {
+                            data.Missing = true;
+                        }
+                    }
+                }
+                else if (TrySeekCsv(dir, prefix, day, watchMode, out var file))
                 {
                     try
                     {
@@ -88,6 +115,7 @@ namespace EW_Assistant.Services
                 _cachePrefix = prefix;
                 _cacheDays = days;
                 _lastLoad = now;
+                _cacheUseSplitTables = useSplit;
             }
         }
 
@@ -150,6 +178,50 @@ namespace EW_Assistant.Services
             }
         }
 
+        private static bool TrySeekSplitCsv(string dir, DateTime day, bool watchMode, out string? okFile, out string? ngFile)
+        {
+            okFile = null; ngFile = null;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dir)) return false;
+
+                if (watchMode)
+                {
+                    var dayDir = Path.Combine(dir, day.ToString("yyyy-MM-dd"));
+                    okFile = FindSplitFile(dayDir, day, true);
+                    ngFile = FindSplitFile(dayDir, day, false);
+                }
+
+                if (string.IsNullOrWhiteSpace(okFile))
+                    okFile = FindSplitFile(dir, day, true);
+                if (string.IsNullOrWhiteSpace(ngFile))
+                    ngFile = FindSplitFile(dir, day, false);
+
+                return !string.IsNullOrWhiteSpace(okFile) || !string.IsNullOrWhiteSpace(ngFile);
+            }
+            catch
+            {
+                okFile = null; ngFile = null;
+                return false;
+            }
+        }
+
+        private static string? FindSplitFile(string dir, DateTime day, bool isOk)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir)) return null;
+
+                var expect = Path.Combine(dir, $"{day:yyyy-MM-dd}-{(isOk ? "产品记录表" : "抛料记录表")}.csv");
+                if (File.Exists(expect)) return expect;
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static bool TryLoadDay(string file, DayData target)
         {
             Array.Clear(target.HourPass, 0, target.HourPass.Length);
@@ -193,6 +265,94 @@ namespace EW_Assistant.Services
             }
 
             return true;
+        }
+
+        private static bool TryLoadDayFromSplit(string? okFile, string? ngFile, DateTime day, DayData target)
+        {
+            Array.Clear(target.HourPass, 0, target.HourPass.Length);
+            Array.Clear(target.HourFail, 0, target.HourFail.Length);
+
+            bool loaded = false;
+
+            if (!string.IsNullOrWhiteSpace(okFile) && File.Exists(okFile))
+            {
+                AggregateRecordFile(okFile, _splitOkHeaders, day, target.HourPass);
+                loaded = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(ngFile) && File.Exists(ngFile))
+            {
+                AggregateRecordFile(ngFile, _splitNgHeaders, day, target.HourFail);
+                loaded = true;
+            }
+
+            return loaded;
+        }
+
+        private static void AggregateRecordFile(string file, string[] timeHeaders, DateTime day, int[] bucket)
+        {
+            Encoding enc;
+            try { enc = Encoding.GetEncoding("GB2312"); }
+            catch { enc = new UTF8Encoding(false); }
+
+            var lines = ReadAllLinesShared(file, enc);
+            if (lines.Count == 0) return;
+
+            var header = SmartSplit(lines[0]);
+            int idxTime = FindIndexContains(header, timeHeaders);
+            if (idxTime < 0) return;
+
+            for (int i = 1; i < lines.Count; i++)
+            {
+                var row = SmartSplit(lines[i]);
+                if (row.Length == 0) continue;
+                if (idxTime >= row.Length) continue;
+
+                if (!TryParseHourWithOptionalDate(row[idxTime], day, out var hour)) continue;
+                if (hour < 0 || hour > 23) continue;
+
+                bucket[hour] += 1;
+            }
+        }
+
+        private static int FindIndexContains(string[] arr, params string[] keys)
+        {
+            for (int i = 0; i < arr.Length; i++)
+            {
+                var t = arr[i].Trim().Trim('"');
+                foreach (var k in keys)
+                {
+                    if (t.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0)
+                        return i;
+                }
+            }
+            return -1;
+        }
+
+        private static bool TryParseHourWithOptionalDate(string? text, DateTime day, out int hour)
+        {
+            hour = -1;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+
+            var raw = text.Trim().Trim('"');
+            bool hasDate = HasDatePart(raw);
+
+            if (DateTime.TryParse(raw, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out var dt) ||
+                DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dt))
+            {
+                if (hasDate && dt.Date != day.Date) return false;
+                hour = dt.Hour;
+                return hour >= 0 && hour <= 23;
+            }
+
+            hour = ExtractHour(raw);
+            return hour >= 0 && hour <= 23;
+        }
+
+        private static bool HasDatePart(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            return s.Contains("-") || s.Contains("/") || s.IndexOf('T') >= 0 || s.IndexOf('t') >= 0;
         }
 
         private static List<string> ReadAllLinesShared(string path, Encoding enc)

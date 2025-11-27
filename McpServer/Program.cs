@@ -23,6 +23,7 @@ namespace McpServer
 
             var appCfg = ReadAppConfig();
             CsvProductionRepository.ProductionLogPath = appCfg.ProductionLogPath;
+            CsvProductionRepository.UseOkNgSplitTables = appCfg.UseOkNgSplitTables;
             AlarmCsvTools.WarmLogPath = appCfg.AlarmLogPath;
             AlarmCsvRepository.FlatFileLayout = appCfg.FlatFileLayout;
             AlarmCsvTools.FlatFileLayout = appCfg.FlatFileLayout;

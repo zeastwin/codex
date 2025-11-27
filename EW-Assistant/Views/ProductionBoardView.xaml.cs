@@ -43,6 +43,8 @@ namespace EW_Assistant.Views
         private DateTime _day = DateTime.Today;
         private DateTime _weekAnchor = DateTime.MinValue;
         private string? _dayFile;
+        private bool _hasOkFile;
+        private bool _hasNgFile;
         private bool _dayMissing;
         private bool _suppressDateChange;
 
@@ -291,10 +293,14 @@ namespace EW_Assistant.Views
             _sumPass = _sumFail = 0;
             _dayMissing = false;
             _dayFile = null;
+            _hasOkFile = false;
+            _hasNgFile = false;
 
             var dayData = ProductionLogCache.GetDay(_day);
             _dayMissing = dayData == null || dayData.Missing;
             _dayFile = dayData?.FilePath;
+            _hasOkFile = !string.IsNullOrWhiteSpace(dayData?.OkFilePath);
+            _hasNgFile = !string.IsNullOrWhiteSpace(dayData?.NgFilePath);
             if (_dayMissing || dayData == null)
                 return;
 
@@ -402,15 +408,49 @@ namespace EW_Assistant.Views
                 return;
             }
 
-            if (_dayFile == null || _dayMissing)
+            var useSplit = ConfigService.Current.UseOkNgSplitTables;
+
+            if (_dayMissing)
             {
-                var expected = Path.Combine(root, $"{FilePrefix}{_day:yyyyMMdd}.csv");
-                WarningHint.Text = $"未找到 {_day:yyyy-MM-dd} · {Path.GetFileName(expected)}";
+                if (useSplit)
+                    WarningHint.Text = $"{_day:yyyy-MM-dd} 缺少 OK/NG 分表，未能读取当日产能。";
+                else
+                {
+                    var expected = Path.Combine(root, $"{FilePrefix}{_day:yyyyMMdd}.csv");
+                    WarningHint.Text = $"未找到 {_day:yyyy-MM-dd} · {Path.GetFileName(expected)}";
+                }
                 WarningHint.Visibility = Visibility.Visible;
+                return;
+            }
+
+            if (useSplit)
+            {
+                var missing = new List<string>();
+                if (!_hasOkFile) missing.Add("OK 表");
+                if (!_hasNgFile) missing.Add("NG 表");
+
+                if (missing.Count > 0)
+                {
+                    WarningHint.Text = $"{_day:yyyy-MM-dd} 缺少 {string.Join(" / ", missing)}，统计为缺失部分按 0 处理。";
+                    WarningHint.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    WarningHint.Visibility = Visibility.Collapsed;
+                }
             }
             else
             {
-                WarningHint.Visibility = Visibility.Collapsed;
+                if (_dayFile == null)
+                {
+                    var expected = Path.Combine(root, $"{FilePrefix}{_day:yyyyMMdd}.csv");
+                    WarningHint.Text = $"未找到 {_day:yyyy-MM-dd} · {Path.GetFileName(expected)}";
+                    WarningHint.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    WarningHint.Visibility = Visibility.Collapsed;
+                }
             }
         }
 

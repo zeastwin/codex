@@ -27,7 +27,7 @@ public class DayStats
     public int Fail { get; set; }
     public int Total => Pass + Fail;
     public double Yield => Total == 0 ? 0 : Pass * 100.0 / Total;
-public List<HourStat> Hours { get; set; } = new List<HourStat>();
+    public List<HourStat> Hours { get; set; } = new List<HourStat>();
 }
 
 // ======== 读取与缓存 ========
@@ -36,13 +36,23 @@ static class CsvProductionRepository
 {
     public static string ProductionLogPath { get; set; } = ".";
     public static string DailyFilePattern { get; set; } = "小时产量yyyyMMdd'.csv'";
+    public static bool UseOkNgSplitTables { get; set; }
     // 允许逗号/分号/Tab
     public static string[] PossibleDelimiters { get; set; } = new[] { ",", ";", "\t" };
 
-private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats stats)> _cache =
-    new ConcurrentDictionary<string, (DateTime mtime, DayStats stats)>();
+private static readonly ConcurrentDictionary<string, ProdCacheEntry> _cache =
+    new ConcurrentDictionary<string, ProdCacheEntry>();
     private static readonly string[] _passAliases = new[] { "pass", "良品", "良率pass" };
     private static readonly string[] _failAliases = new[] { "fail", "不良", "报废", "抛料", "ng" };
+    private static readonly string[] _splitOkHeaders = new[] { "产出时间", "產出時間" };
+    private static readonly string[] _splitNgHeaders = new[] { "抛料开始时间", "抛料时间", "抛料開始時間" };
+
+    private class ProdCacheEntry
+    {
+        public DateTime OkMtimeUtc { get; set; }
+        public DateTime NgMtimeUtc { get; set; }
+        public DayStats Stats { get; set; }
+    }
 
 
     public static string ResolveDailyCsvPath(DateTime date)
@@ -51,7 +61,7 @@ private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats s
         return Path.Combine(ProductionLogPath, fileName);
     }
 
-    public static DayStats LoadDay(DateTime date)
+    private static DayStats LoadDayFromSingleFile(DateTime date)
     {
         var csvPath = ResolveDailyCsvPath(date);
         if (!File.Exists(csvPath))
@@ -60,18 +70,99 @@ private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats s
         var fi = new FileInfo(csvPath);
         var key = csvPath.ToLowerInvariant();
 
-        if (_cache.TryGetValue(key, out var c) && c.mtime == fi.LastWriteTimeUtc)
-            return c.stats;
+        ProdCacheEntry c;
+        if (_cache.TryGetValue(key, out c) &&
+            c.OkMtimeUtc == fi.LastWriteTimeUtc &&
+            c.NgMtimeUtc == DateTime.MinValue)
+            return c.Stats;
 
         var ds = ParseCsv(csvPath, date);
-        _cache[key] = (fi.LastWriteTimeUtc, ds);
+        _cache[key] = new ProdCacheEntry
+        {
+            OkMtimeUtc = fi.LastWriteTimeUtc,
+            NgMtimeUtc = DateTime.MinValue,
+            Stats = ds
+        };
         return ds;
+    }
+
+    private static DayStats LoadDayFromSplitTables(DateTime date)
+    {
+        var okFile = ResolveSplitFile(date, true);
+        var ngFile = ResolveSplitFile(date, false);
+
+        if (string.IsNullOrWhiteSpace(okFile) && string.IsNullOrWhiteSpace(ngFile))
+            throw new FileNotFoundException($"未找到当天 OK/NG CSV：{ProductionLogPath}");
+
+        var key = $"split:{date:yyyy-MM-dd}";
+        var okMtime = SafeGetLastWriteUtc(okFile);
+        var ngMtime = SafeGetLastWriteUtc(ngFile);
+
+        ProdCacheEntry c;
+        if (_cache.TryGetValue(key, out c) &&
+            c.OkMtimeUtc == okMtime &&
+            c.NgMtimeUtc == ngMtime)
+        {
+            return c.Stats;
+        }
+
+        var ds = ParseSplitCsv(okFile, ngFile, date);
+        _cache[key] = new ProdCacheEntry
+        {
+            OkMtimeUtc = okMtime,
+            NgMtimeUtc = ngMtime,
+            Stats = ds
+        };
+        return ds;
+    }
+
+    private static string? ResolveSplitFile(DateTime day, bool isOk)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(ProductionLogPath)) return null;
+
+            var expectName = $"{day:yyyy-MM-dd}-{(isOk ? "产品记录表" : "抛料记录表")}.csv";
+
+            var dayDir = Path.Combine(ProductionLogPath, day.ToString("yyyy-MM-dd"));
+            var exact = FindExactFile(dayDir, expectName);
+            if (!string.IsNullOrWhiteSpace(exact)) return exact;
+
+            exact = FindExactFile(ProductionLogPath, expectName);
+            return exact;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? FindExactFile(string dir, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(dir) || string.IsNullOrWhiteSpace(fileName)) return null;
+        try
+        {
+            var path = Path.Combine(dir, fileName);
+            return File.Exists(path) ? path : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static DayStats LoadDay(DateTime date)
+    {
+        if (UseOkNgSplitTables)
+            return LoadDayFromSplitTables(date);
+
+        return LoadDayFromSingleFile(date);
     }
 
     private static DayStats ParseCsv(string path, DateTime date)
     {
-        var lines = File.ReadAllLines(path);
-        if (lines.Length == 0) throw new InvalidDataException("CSV 为空");
+        var lines = ReadAllLinesShared(path);
+        if (lines.Count == 0) throw new InvalidDataException("CSV 为空");
 
         // 自动识别分隔符
         string delim = DetectDelimiter(lines[0]);
@@ -79,7 +170,6 @@ private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats s
         // 拿表头
         var header = SplitLine(lines[0], delim).Select(s => (s ?? "").Trim().Trim('"')).ToArray();
 
-        int colTime = 0; // A 列通常为时间
         int colPass = FindCol(header, _passAliases);
         int colFail = FindCol(header, _failAliases);
 
@@ -89,7 +179,7 @@ private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats s
         var day = new DayStats { Date = date };
 
         // 逐行解析
-        for (int i = 1; i < lines.Length; i++)
+        for (int i = 1; i < lines.Count; i++)
         {
             if (string.IsNullOrWhiteSpace(lines[i])) continue;
             var cells = SplitLine(lines[i], delim);
@@ -111,6 +201,53 @@ private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats s
         day.Fail = day.Hours.Sum(h => h.Fail);
         return day;
     }
+
+    private static DayStats ParseSplitCsv(string okFile, string ngFile, DateTime date)
+    {
+        var pass = new int[24];
+        var fail = new int[24];
+
+        if (!string.IsNullOrWhiteSpace(okFile) && File.Exists(okFile))
+            AggregateRecordFile(okFile, _splitOkHeaders, date, pass);
+
+        if (!string.IsNullOrWhiteSpace(ngFile) && File.Exists(ngFile))
+            AggregateRecordFile(ngFile, _splitNgHeaders, date, fail);
+
+        var day = new DayStats { Date = date };
+        for (int h = 0; h < 24; h++)
+        {
+            if (pass[h] > 0 || fail[h] > 0)
+                day.Hours.Add(new HourStat { Hour = h, Pass = pass[h], Fail = fail[h] });
+        }
+
+        day.Pass = pass.Sum();
+        day.Fail = fail.Sum();
+        return day;
+    }
+
+    private static void AggregateRecordFile(string path, string[] timeHeaders, DateTime day, int[] bucket)
+    {
+        var lines = ReadAllLinesShared(path);
+        if (lines.Count == 0) return;
+
+        var delim = DetectDelimiter(lines[0]);
+        var header = SplitLine(lines[0], delim).Select(s => (s ?? "").Trim().Trim('"')).ToArray();
+        int idxTime = FindColContains(header, timeHeaders);
+        if (idxTime < 0) return;
+
+        for (int i = 1; i < lines.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i])) continue;
+            var cells = SplitLine(lines[i], delim);
+            if (idxTime >= cells.Length) continue;
+
+            if (!TryParseHourWithOptionalDate(cells[idxTime], day, out int hour)) continue;
+            if (hour < 0 || hour > 23) continue;
+
+            bucket[hour] += 1;
+        }
+    }
+
     public static bool TryLoadDay(DateTime date, out DayStats stats, out string error)
     {
         stats = null; error = null;
@@ -166,6 +303,76 @@ private static readonly ConcurrentDictionary<string, (DateTime mtime, DayStats s
         var s = (cells[idx] ?? "").Trim().Trim('"');
         return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
     }
+
+    private static int FindColContains(string[] header, string[] aliases)
+    {
+        for (int i = 0; i < header.Length; i++)
+        {
+            var h = (header[i] ?? "").Trim().Trim('"');
+            foreach (var a in aliases)
+            {
+                if (h.IndexOf(a, StringComparison.OrdinalIgnoreCase) >= 0)
+                    return i;
+            }
+        }
+        return -1;
+    }
+
+    private static bool TryParseHourWithOptionalDate(string text, DateTime day, out int hour)
+    {
+        hour = -1;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        var raw = text.Trim().Trim('"');
+        bool hasDate = HasDatePart(raw);
+
+        if (DateTime.TryParse(raw, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out var dt) ||
+            DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dt))
+        {
+            if (hasDate && dt.Date != day.Date) return false;
+            hour = dt.Hour;
+            return hour >= 0 && hour <= 23;
+        }
+
+        return TryParseHour(raw, out hour) && hour >= 0 && hour <= 23;
+    }
+
+    private static bool HasDatePart(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        return s.Contains("-") || s.Contains("/") || s.IndexOf('T') >= 0 || s.IndexOf('t') >= 0;
+    }
+
+    private static List<string> ReadAllLinesShared(string path)
+    {
+        var list = new List<string>();
+        Encoding enc;
+        try { enc = Encoding.GetEncoding("GB2312"); }
+        catch { enc = new UTF8Encoding(false); }
+
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using (var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: true))
+        {
+            string line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                    list.Add(line);
+            }
+        }
+        return list;
+    }
+
+    private static DateTime SafeGetLastWriteUtc(string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path)) return DateTime.MinValue;
+            return File.GetLastWriteTimeUtc(path);
+        }
+        catch { return DateTime.MinValue; }
+    }
+
 }
 
 //1.查询某天的产出汇总（PASS/FAIL/总数/良率）（查询昨天产能）

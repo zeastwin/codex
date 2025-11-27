@@ -69,6 +69,7 @@ namespace EW_Assistant.Views
                     this.Config.DocumentKey = fresh.DocumentKey;
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
                     this.Config.FlatFileLayout = fresh.FlatFileLayout;
+                    this.Config.UseOkNgSplitTables = fresh.UseOkNgSplitTables;
                 }
                 else
                 {
@@ -169,6 +170,13 @@ namespace EW_Assistant.Settings
             get => _flatFileLayout;
             set { if (_flatFileLayout != value) { _flatFileLayout = value; OnPropertyChanged(); } }
         }
+
+        private bool _useOkNgSplitTables;
+        public bool UseOkNgSplitTables
+        {
+            get => _useOkNgSplitTables;
+            set { if (_useOkNgSplitTables != value) { _useOkNgSplitTables = value; OnPropertyChanged(); } }
+        }
         public static AppConfig CreateDefault() => new AppConfig();
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -248,6 +256,7 @@ namespace EW_Assistant.Services
                 _current.DocumentKey = cfg.DocumentKey;
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
                 _current.FlatFileLayout = cfg.FlatFileLayout;
+                _current.UseOkNgSplitTables = cfg.UseOkNgSplitTables;
             }
 
             ConfigChanged?.Invoke(null, _current);
