@@ -65,6 +65,7 @@ namespace EW_Assistant.Views
 
         private readonly Dictionary<MessageItem, StreamState> _streamStates = new Dictionary<MessageItem, StreamState>();
         private UiCoalescer _scrollCoalescer;
+        private ScrollViewer _chatScrollViewer;
 
         public class ProgressItem : INotifyPropertyChanged
         {
@@ -141,6 +142,38 @@ namespace EW_Assistant.Views
             this.StreamRequested += OnStreamRequested_Dify;
             Loaded += (_, __) => ScrollToEnd(); // 首次显示时把视图滚到末尾
 
+        }
+
+        private void ChatList_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var sv = EnsureChatScrollViewer();
+            if (sv == null) return;
+
+            double factor = 1.5;
+            double delta = -e.Delta * factor; // Delta>0 表示向上滚
+            sv.ScrollToVerticalOffset(sv.VerticalOffset + delta);
+            e.Handled = true;
+        }
+
+        private ScrollViewer EnsureChatScrollViewer()
+        {
+            if (_chatScrollViewer != null) return _chatScrollViewer;
+            _chatScrollViewer = FindChild<ScrollViewer>(ChatList);
+            return _chatScrollViewer;
+        }
+
+        private static T FindChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) return t;
+                var sub = FindChild<T>(child);
+                if (sub != null) return sub;
+            }
+            return null;
         }
 
         private async void OnStreamRequested_Dify(object sender, StreamRequestEventArgs e)
@@ -796,11 +829,11 @@ namespace EW_Assistant.Views
             sb.AppendLine("   - `byCategory`：各类别的次数 / 时长及占比；");
             sb.AppendLine("   - `top`：Top 报警代码列表（含 `code / content / count / duration`）。");
             sb.AppendLine();
-            sb.AppendLine("3) 如需引用具体样本，可按需调用：");
-            sb.AppendLine("   `AlarmCsvTools.QueryAlarms(startDate, endDate, code=某个 top.code, keyword=\"\", window=\"\", take=3)`，");
-            sb.AppendLine("   并从返回的 `items` 中抽取典型案例，写明开始时间 / 代码 / 描述 / 持续时间 / 来源文件。");
+            //sb.AppendLine("3) 如需引用具体样本，可按需调用：");
+            //sb.AppendLine("   `AlarmCsvTools.QueryAlarms(startDate, endDate, code=某个 top.code, keyword=\"\", window=\"\", take=3)`，");
+            //sb.AppendLine("   并从返回的 `items` 中抽取典型案例，写明开始时间 / 代码 / 描述 / 持续时间 / 来源文件。");
             sb.AppendLine();
-            sb.AppendLine("4) 所有数值和结论必须基于上述工具返回的数据进行计算和归纳，不得凭空猜测。");
+            sb.AppendLine("3) 所有数值和结论必须基于上述工具返回的数据进行计算和归纳，不得凭空猜测。");
             sb.AppendLine();
             sb.AppendLine("输出模板：");
             sb.AppendLine($"# 报警周报（{range}）");
