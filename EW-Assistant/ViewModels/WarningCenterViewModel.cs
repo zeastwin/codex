@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -19,9 +20,15 @@ namespace EW_Assistant.ViewModels
         private string _aiAnalysisText = "当前还未接入 AI 分析，下面仅展示预警基本信息。";
         private string _lastUpdatedText = string.Empty;
         private readonly Dictionary<string, WarningItem> _warningMap = new Dictionary<string, WarningItem>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, WarningTicketRecord> _ticketMap = new Dictionary<string, WarningTicketRecord>(StringComparer.OrdinalIgnoreCase);
         private readonly WarningAnalysisCache _analysisCache;
         private readonly AiWarningAnalysisService _aiService;
+        private readonly IWarningTicketStore _ticketStore;
         private bool _isAnalyzingWarnings;
+        private readonly List<WarningTicketRecord> _allTickets = new List<WarningTicketRecord>();
+        private const int ResolveGraceMinutes = 120;
+        private const int DefaultIgnoreMinutes = 60;
+        private string _filterStatus = "Pending";
 
         public ObservableCollection<WarningItemViewModel> Warnings { get; } = new ObservableCollection<WarningItemViewModel>();
         public WarningItemViewModel SelectedWarning
@@ -64,11 +71,26 @@ namespace EW_Assistant.ViewModels
             }
         }
 
+        public string FilterStatus
+        {
+            get { return _filterStatus; }
+            set
+            {
+                if (_filterStatus != value)
+                {
+                    _filterStatus = value;
+                    OnPropertyChanged();
+                    ApplyFilterAndRender();
+                }
+            }
+        }
+
         public WarningCenterViewModel()
         {
             _analysisCache = new WarningAnalysisCache(null);
             _analysisCache.Load();
             _aiService = new AiWarningAnalysisService();
+            _ticketStore = new JsonWarningTicketStore(null);
 
             LoadWarningsFromCsv();
             ApplyCachedAnalysis();
@@ -82,6 +104,7 @@ namespace EW_Assistant.ViewModels
         {
             Warnings.Clear();
             _warningMap.Clear();
+            _ticketMap.Clear();
             try
             {
                 var prodReader = new ProductionCsvReader(LocalDataConfig.ProductionCsvRoot);
@@ -94,38 +117,12 @@ namespace EW_Assistant.ViewModels
                 foreach (var item in items)
                 {
                     if (string.IsNullOrWhiteSpace(item.Key)) continue;
-                    if (!_warningMap.ContainsKey(item.Key))
-                    {
-                        _warningMap[item.Key] = item;
-                    }
-
-                    var vm = ConvertToViewModel(item);
-                    if (vm != null)
-                    {
-                        Warnings.Add(vm);
-                    }
+                    var fp = BuildFingerprint(item);
+                    _warningMap[fp] = item;
                 }
 
-                if (Warnings.Count > 1)
-                {
-                    var ordered = Warnings
-                        .OrderByDescending(w => LevelRank(w.Level))
-                        .ThenByDescending(w => w.SortTime)
-                        .ToList();
-
-                    Warnings.Clear();
-                    foreach (var w in ordered)
-                        Warnings.Add(w);
-                }
-
-                if (Warnings.Count > 0)
-                {
-                    SelectedWarning = Warnings[0];
-                }
-                else
-                {
-                    SelectedWarning = null;
-                }
+                MergeTickets(items, now);
+                ApplyFilterAndRender();
             }
             catch (Exception ex)
             {
@@ -153,7 +150,15 @@ namespace EW_Assistant.ViewModels
                 {
                     if (w == null || w.HasAiMarkdown) continue;
                     WarningItem item;
-                    if (!_warningMap.TryGetValue(w.Key ?? string.Empty, out item) || item == null) continue;
+                    if (!_warningMap.TryGetValue(w.Key ?? string.Empty, out item) || item == null)
+                    {
+                        var fallback = GetTicketByFingerprint(w.Key ?? string.Empty);
+                        if (fallback != null)
+                        {
+                            item = BuildWarningFromTicket(fallback);
+                        }
+                    }
+                    if (item == null) continue;
 
                     var md = await _aiService.AnalyzeAsync(item);
                     if (!string.IsNullOrWhiteSpace(md))
@@ -190,6 +195,54 @@ namespace EW_Assistant.ViewModels
             {
                 _isAnalyzingWarnings = false;
             }
+        }
+
+        public void ConfirmSelected()
+        {
+            if (SelectedWarning == null) return;
+            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
+            if (ticket == null) return;
+            ticket.Status = "Acknowledged";
+            ticket.AcknowledgedAt = DateTime.Now;
+            ticket.UpdatedAt = DateTime.Now;
+            SaveTickets();
+            ApplyFilterAndRender();
+        }
+
+        public void IgnoreSelected()
+        {
+            if (SelectedWarning == null) return;
+            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
+            if (ticket == null) return;
+            ticket.Status = "Ignored";
+            ticket.IgnoredUntil = DateTime.Now.AddMinutes(DefaultIgnoreMinutes);
+            ticket.UpdatedAt = DateTime.Now;
+            SaveTickets();
+            ApplyFilterAndRender();
+        }
+
+        public void MarkProcessedSelected()
+        {
+            if (SelectedWarning == null) return;
+            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
+            if (ticket == null) return;
+            ticket.Status = "Processed";
+            ticket.ProcessedAt = DateTime.Now;
+            ticket.UpdatedAt = DateTime.Now;
+            SaveTickets();
+            ApplyFilterAndRender();
+        }
+
+        public void ReopenSelected()
+        {
+            if (SelectedWarning == null) return;
+            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
+            if (ticket == null) return;
+            ticket.Status = "Active";
+            ticket.IgnoredUntil = null;
+            ticket.UpdatedAt = DateTime.Now;
+            SaveTickets();
+            ApplyFilterAndRender();
         }
 
         private void ApplyCachedAnalysis()
@@ -233,65 +286,6 @@ namespace EW_Assistant.ViewModels
             }
         }
 
-        private WarningItemViewModel ConvertToViewModel(WarningItem item)
-        {
-            if (item == null) return null;
-            var timeRange = item.StartTime.ToString("HH:mm") + " - " + item.EndTime.ToString("HH:mm");
-
-            string title = item.RuleName;
-            if (!string.IsNullOrEmpty(item.MetricName) && item.CurrentValue > 0)
-            {
-                if (item.Type == "Yield")
-                    title = string.Format("良率异常（{0:P1}）", item.CurrentValue);
-                else if (item.Type == "Throughput")
-                    title = "产能不足预警";
-                else if (item.Type == "Alarm")
-                    title = "报警频率异常";
-            }
-
-            string metricText = string.Empty;
-            var isYieldMetric = string.Equals(item.Type ?? string.Empty, "yield", StringComparison.OrdinalIgnoreCase)
-                || (!string.IsNullOrEmpty(item.MetricName) && item.MetricName.Contains("良率"));
-            Func<double, string> formatMetric = v => isYieldMetric ? (v * 100).ToString("F1") : v.ToString("F1");
-
-            if (item.ThresholdValue.HasValue)
-            {
-                metricText = string.Format("{0} 当前 {1}，阈值 {2}",
-                    string.IsNullOrEmpty(item.MetricName) ? "指标" : item.MetricName,
-                    formatMetric(item.CurrentValue),
-                    formatMetric(item.ThresholdValue.Value));
-            }
-            else if (item.CurrentValue > 0)
-            {
-                metricText = (string.IsNullOrEmpty(item.MetricName) ? "指标" : item.MetricName)
-                    + " 当前 " + formatMetric(item.CurrentValue);
-            }
-
-            return new WarningItemViewModel
-            {
-                Key = item.Key,
-                Level = item.Level ?? "Info",
-                Type = item.Type ?? "Yield",
-                LevelDisplay = MapLevelDisplay(item.Level),
-                TypeDisplay = MapTypeDisplay(item.Type),
-                TimeRange = timeRange,
-                Title = title,
-                Summary = item.Summary ?? string.Empty,
-                RuleName = item.RuleName ?? string.Empty,
-                RuleId = item.RuleId ?? string.Empty,
-                MetricName = item.MetricName ?? string.Empty,
-                MetricText = metricText,
-                CurrentValue = formatMetric(item.CurrentValue),
-                BaselineValue = item.BaselineValue.HasValue ? formatMetric(item.BaselineValue.Value) : string.Empty,
-                ThresholdValue = item.ThresholdValue.HasValue ? formatMetric(item.ThresholdValue.Value) : string.Empty,
-                Status = string.IsNullOrEmpty(item.Status) ? "未处理" : item.Status,
-                AiMarkdown = string.Empty,
-                HasAiMarkdown = false,
-                SortTime = item.LastDetected,
-                LastDetected = item.LastDetected
-            };
-        }
-
         private static int LevelRank(string level)
         {
             switch ((level ?? string.Empty).Trim().ToLowerInvariant())
@@ -328,6 +322,299 @@ namespace EW_Assistant.ViewModels
             }
         }
 
+        private string BuildFingerprint(WarningItem item)
+        {
+            var dimension = string.IsNullOrWhiteSpace(item.MetricName) ? "default" : item.MetricName.Trim();
+            return string.Format(CultureInfo.InvariantCulture, "{0}|{1}|{2:yyyyMMddHH}|{3}",
+                item.RuleId ?? "UNKNOWN",
+                item.Type ?? "Other",
+                item.StartTime,
+                dimension);
+        }
+
+        private void MergeTickets(IList<WarningItem> items, DateTime now)
+        {
+            var existing = _ticketStore.LoadAll() ?? new List<WarningTicketRecord>();
+            _ticketMap.Clear();
+            foreach (var t in existing)
+            {
+                if (t == null || string.IsNullOrWhiteSpace(t.Fingerprint)) continue;
+                if (t.LastSeen == default(DateTime))
+                {
+                    t.LastSeen = t.CreatedAt == default(DateTime) ? DateTime.Now : t.CreatedAt;
+                }
+                if (t.LastSeen != default(DateTime))
+                {
+                    if ((now - t.LastSeen).TotalMinutes > ResolveGraceMinutes && !string.Equals(t.Status ?? string.Empty, "Resolved", StringComparison.OrdinalIgnoreCase))
+                    {
+                        t.Status = "Resolved";
+                        t.UpdatedAt = now;
+                    }
+                }
+                _ticketMap[t.Fingerprint] = t;
+            }
+
+            foreach (var item in items ?? new List<WarningItem>())
+            {
+                var fp = BuildFingerprint(item);
+                WarningTicketRecord ticket;
+                if (!_ticketMap.TryGetValue(fp, out ticket))
+                {
+                    ticket = new WarningTicketRecord
+                    {
+                        Fingerprint = fp,
+                        RuleId = item.RuleId,
+                        RuleName = item.RuleName,
+                        Level = item.Level,
+                        Type = item.Type,
+                        StartTime = item.StartTime,
+                        EndTime = item.EndTime,
+                        Summary = item.Summary,
+                        MetricName = item.MetricName,
+                        CurrentValue = item.CurrentValue,
+                        BaselineValue = item.BaselineValue,
+                        ThresholdValue = item.ThresholdValue,
+                        Status = "Active",
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                        FirstSeen = item.StartTime,
+                        LastSeen = now,
+                        OccurrenceCount = 1
+                    };
+                    _ticketMap[fp] = ticket;
+                }
+                else
+                {
+                    ticket.RuleId = item.RuleId;
+                    ticket.RuleName = item.RuleName;
+                    ticket.Level = item.Level;
+                    ticket.Type = item.Type;
+                    ticket.StartTime = item.StartTime;
+                    ticket.EndTime = item.EndTime;
+                    ticket.Summary = item.Summary;
+                    ticket.MetricName = item.MetricName;
+                    ticket.CurrentValue = item.CurrentValue;
+                    ticket.BaselineValue = item.BaselineValue;
+                    ticket.ThresholdValue = item.ThresholdValue;
+                    ticket.LastSeen = now;
+                    ticket.UpdatedAt = now;
+                    ticket.OccurrenceCount = ticket.OccurrenceCount <= 0 ? 1 : ticket.OccurrenceCount + 1;
+
+                    var status = (ticket.Status ?? string.Empty).Trim();
+                    if (string.Equals(status, "Resolved", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(status, "Processed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ticket.Status = "Active";
+                    }
+                    else if (string.Equals(status, "Ignored", StringComparison.OrdinalIgnoreCase)
+                        && ticket.IgnoredUntil.HasValue && ticket.IgnoredUntil.Value < now)
+                    {
+                        ticket.Status = "Active";
+                        ticket.IgnoredUntil = null;
+                    }
+                }
+            }
+
+            _allTickets.Clear();
+            foreach (var kv in _ticketMap)
+            {
+                _allTickets.Add(kv.Value);
+            }
+
+            SaveTickets();
+        }
+
+        private void ApplyFilterAndRender()
+        {
+            Warnings.Clear();
+            var filtered = FilterTickets(_allTickets, _filterStatus)
+                .OrderByDescending(t => LevelRank(t.Level))
+                .ThenByDescending(t => t.LastSeen)
+                .ToList();
+
+            foreach (var t in filtered)
+            {
+                var item = ConvertToViewModel(t);
+                if (item != null)
+                {
+                    Warnings.Add(item);
+                }
+            }
+
+            if (Warnings.Count > 0)
+            {
+                SelectedWarning = Warnings[0];
+            }
+            else
+            {
+                SelectedWarning = null;
+            }
+
+            ApplyCachedAnalysis();
+            UpdateAnalysisText();
+        }
+
+        private static IEnumerable<WarningTicketRecord> FilterTickets(IEnumerable<WarningTicketRecord> tickets, string filter)
+        {
+            var list = new List<WarningTicketRecord>();
+            if (tickets == null) return list;
+
+            var f = (filter ?? string.Empty).Trim().ToLowerInvariant();
+            foreach (var t in tickets)
+            {
+                if (t == null) continue;
+                var status = (t.Status ?? string.Empty).Trim().ToLowerInvariant();
+                if (status == "ignored" && t.IgnoredUntil.HasValue && t.IgnoredUntil.Value > DateTime.Now)
+                {
+                    // 忽略窗口未到期，直接跳过展示
+                    continue;
+                }
+                if (f == "all")
+                {
+                    list.Add(t);
+                    continue;
+                }
+                if (f == "pending")
+                {
+                    if (status == "active" || status == "acknowledged")
+                        list.Add(t);
+                    continue;
+                }
+                if (f == "active" && status == "active")
+                {
+                    list.Add(t);
+                    continue;
+                }
+                if (f == "acknowledged" && status == "acknowledged")
+                {
+                    list.Add(t);
+                    continue;
+                }
+                if (f == "ignored" && status == "ignored")
+                {
+                    list.Add(t);
+                    continue;
+                }
+                if (f == "processed" && status == "processed")
+                {
+                    list.Add(t);
+                    continue;
+                }
+                if (f == "resolved" && status == "resolved")
+                {
+                    list.Add(t);
+                    continue;
+                }
+            }
+
+            return list;
+        }
+
+        private WarningItemViewModel ConvertToViewModel(WarningTicketRecord ticket)
+        {
+            if (ticket == null) return null;
+            var timeRange = ticket.StartTime.ToString("HH:mm") + " - " + ticket.EndTime.ToString("HH:mm");
+
+            string title = ticket.RuleName;
+            var isYieldMetric = string.Equals(ticket.Type ?? string.Empty, "yield", StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrEmpty(ticket.MetricName) && ticket.MetricName.Contains("良率"));
+            Func<double, string> formatMetric = v => isYieldMetric ? (v * 100).ToString("F1") : v.ToString("F1");
+
+            string metricText = string.Empty;
+            if (ticket.ThresholdValue.HasValue)
+            {
+                metricText = string.Format("{0} 当前 {1}，阈值 {2}",
+                    string.IsNullOrEmpty(ticket.MetricName) ? "指标" : ticket.MetricName,
+                    formatMetric(ticket.CurrentValue),
+                    formatMetric(ticket.ThresholdValue.Value));
+            }
+            else if (ticket.CurrentValue > 0)
+            {
+                metricText = (string.IsNullOrEmpty(ticket.MetricName) ? "指标" : ticket.MetricName)
+                    + " 当前 " + formatMetric(ticket.CurrentValue);
+            }
+
+            var displayStatus = MapTicketStatusDisplay(ticket.Status);
+
+            return new WarningItemViewModel
+            {
+                Key = ticket.Fingerprint,
+                Level = ticket.Level ?? "Info",
+                Type = ticket.Type ?? "Yield",
+                LevelDisplay = MapLevelDisplay(ticket.Level),
+                TypeDisplay = MapTypeDisplay(ticket.Type),
+                TimeRange = timeRange,
+                Title = string.IsNullOrEmpty(title) ? "预警" : title,
+                Summary = ticket.Summary ?? string.Empty,
+                RuleName = ticket.RuleName ?? string.Empty,
+                RuleId = ticket.RuleId ?? string.Empty,
+                MetricName = ticket.MetricName ?? string.Empty,
+                MetricText = metricText,
+                CurrentValue = formatMetric(ticket.CurrentValue),
+                BaselineValue = ticket.BaselineValue.HasValue ? formatMetric(ticket.BaselineValue.Value) : string.Empty,
+                ThresholdValue = ticket.ThresholdValue.HasValue ? formatMetric(ticket.ThresholdValue.Value) : string.Empty,
+                Status = displayStatus,
+                AiMarkdown = string.Empty,
+                HasAiMarkdown = false,
+                SortTime = ticket.LastSeen,
+                LastDetected = ticket.LastSeen,
+                OccurrenceCount = ticket.OccurrenceCount
+            };
+        }
+
+        private static string MapTicketStatusDisplay(string status)
+        {
+            var st = (status ?? string.Empty).Trim().ToLowerInvariant();
+            switch (st)
+            {
+                case "active": return "待处理";
+                case "acknowledged": return "已确认";
+                case "ignored": return "已忽略";
+                case "processed": return "已处理";
+                case "resolved": return "已恢复";
+                default: return string.IsNullOrEmpty(status) ? "待处理" : status;
+            }
+        }
+
+        private WarningTicketRecord GetTicketByFingerprint(string fingerprint)
+        {
+            if (string.IsNullOrWhiteSpace(fingerprint)) return null;
+            WarningTicketRecord ticket;
+            if (_ticketMap.TryGetValue(fingerprint, out ticket))
+            {
+                return ticket;
+            }
+            return null;
+        }
+
+        private void SaveTickets()
+        {
+            _ticketStore.SaveAll(_allTickets);
+        }
+
+        private WarningItem BuildWarningFromTicket(WarningTicketRecord t)
+        {
+            if (t == null) return null;
+            return new WarningItem
+            {
+                Key = t.Fingerprint,
+                RuleId = t.RuleId,
+                RuleName = t.RuleName,
+                Level = t.Level,
+                Type = t.Type,
+                StartTime = t.StartTime,
+                EndTime = t.EndTime,
+                FirstDetected = t.FirstSeen,
+                LastDetected = t.LastSeen,
+                MetricName = t.MetricName,
+                CurrentValue = t.CurrentValue,
+                BaselineValue = t.BaselineValue,
+                ThresholdValue = t.ThresholdValue,
+                Status = t.Status,
+                Summary = t.Summary
+            };
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -344,6 +631,7 @@ namespace EW_Assistant.ViewModels
         private string _status;
         private string _aiMarkdown;
         private bool _hasAiMarkdown;
+        private int _occurrenceCount;
 
         public string Key { get; set; }
         public string Level { get; set; }
@@ -405,6 +693,18 @@ namespace EW_Assistant.ViewModels
 
         public DateTime SortTime { get; set; }
         public DateTime LastDetected { get; set; }
+        public int OccurrenceCount
+        {
+            get => _occurrenceCount;
+            set
+            {
+                if (_occurrenceCount != value)
+                {
+                    _occurrenceCount = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
 

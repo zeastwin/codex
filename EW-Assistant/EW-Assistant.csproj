@@ -188,6 +188,9 @@
     <Compile Include="Services\Warnings\LocalDataConfig.cs" />
     <Compile Include="Services\Warnings\ProductionCsvReader.cs" />
     <Compile Include="Services\Warnings\WarningItem.cs" />
+    <Compile Include="Services\Warnings\WarningTicketRecord.cs" />
+    <Compile Include="Services\Warnings\IWarningTicketStore.cs" />
+    <Compile Include="Services\Warnings\JsonWarningTicketStore.cs" />
     <Compile Include="Services\Warnings\WarningRuleOptions.cs" />
     <Compile Include="Services\Warnings\WarningRuleEngine.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">

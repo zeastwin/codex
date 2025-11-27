@@ -26,6 +26,66 @@
                 <PropertyGroupDescription PropertyName="LevelDisplay"/>
             </CollectionViewSource.GroupDescriptions>
         </CollectionViewSource>
+
+        <!-- 圆角按钮样式 -->
+        <Style x:Key="RoundPrimaryButton" TargetType="Button">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="#3B82F6"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="10"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2563EB"/>
+                                <Setter TargetName="Bd" Property="BorderBrush"  Value="#2563EB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RoundOutlineButton" TargetType="Button">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#3B82F6"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="10"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#EFF6FF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="#F5F7FB">
@@ -35,63 +95,89 @@
             <RowDefinition Height="2*"/>
         </Grid.RowDefinitions>
 
-        <!-- 标题区域 -->
-        <Grid Grid.Row="0" Margin="8,0,8,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Vertical">
-                <TextBlock Text="预警中心" FontSize="26" FontWeight="SemiBold" Foreground="#0B1220"/>
-                <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
-                    <TextBlock FontSize="13" Foreground="Gray"
-                               Text="{Binding Warnings.Count, StringFormat=已显示 {0} 条预警（最近 24 小时）}"/>
+        <!-- 标题 + 操作卡片 -->
+        <Border Grid.Row="0" Margin="8,8,8,10" Padding="12" Background="White" CornerRadius="12">
+            <Border.Effect>
+                <DropShadowEffect Color="#14000000" BlurRadius="12" ShadowDepth="1" Opacity="0.25"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="预警中心" FontSize="22" FontWeight="SemiBold" Foreground="#0B1220"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
+                        <TextBlock FontSize="13" Foreground="Gray"
+                                   Text="{Binding Warnings.Count, StringFormat=已显示 {0} 条预警（最近 24 小时）}"/>
+                    </StackPanel>
+                    <!-- 概览：严重/警告/提示 -->
+                    <ItemsControl Margin="0,4,0,0"
+                                  ItemsSource="{Binding Source={StaticResource WarningsByLevel}, Path=View.Groups}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="6,2" Margin="0,0,8,0" CornerRadius="8" Background="#EEF2F7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="#CBD5E1"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Name}" Value="严重">
+                                                            <Setter Property="Fill" Value="{StaticResource CriticalBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Name}" Value="警告">
+                                                            <Setter Property="Fill" Value="{StaticResource WarningBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Name}" Value="提示">
+                                                            <Setter Property="Fill" Value="{StaticResource InfoBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#0B1220" FontSize="13"/>
+                                        <TextBlock Text="{Binding ItemCount, StringFormat= 共 {0} 条}" Margin="4,0,0,0" Foreground="#6B7280" FontSize="13"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
-                <!-- 概览：严重/警告/提示 -->
-                <ItemsControl Margin="0,4,0,0"
-                              ItemsSource="{Binding Source={StaticResource WarningsByLevel}, Path=View.Groups}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Padding="6,2" Margin="0,0,8,0" CornerRadius="8" Background="#EEF2F7">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="#CBD5E1"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Name}" Value="严重">
-                                                        <Setter Property="Fill" Value="{StaticResource CriticalBrush}"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Name}" Value="警告">
-                                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Name}" Value="提示">
-                                                        <Setter Property="Fill" Value="{StaticResource InfoBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#0B1220" FontSize="13"/>
-                                    <TextBlock Text="{Binding ItemCount, StringFormat= 共 {0} 条}" Margin="4,0,0,0" Foreground="#6B7280" FontSize="13"/>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-            <TextBlock Grid.Column="1"
-                       VerticalAlignment="Bottom"
-                       FontSize="12"
-                       Foreground="#94A3B8"
-                       Text="{Binding LastUpdatedText}"
-                       Margin="12,0,0,4"/>
-        </Grid>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,12,0">
+                    <TextBlock Text="筛选：" VerticalAlignment="Center" FontSize="13" Foreground="#4B5563" Margin="0,0,6,0"/>
+                    <ComboBox Width="160"
+                              Height="32"
+                              Padding="10,4"
+                              BorderBrush="#CBD5E1"
+                              BorderThickness="1"
+                              SelectedValuePath="Tag"
+                              SelectedValue="{Binding FilterStatus, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBoxItem Content="待处理/已确认" Tag="Pending" IsSelected="True"/>
+                        <ComboBoxItem Content="仅待处理" Tag="Active"/>
+                        <ComboBoxItem Content="仅已确认" Tag="Acknowledged"/>
+                        <ComboBoxItem Content="已处理" Tag="Processed"/>
+                        <ComboBoxItem Content="已忽略" Tag="Ignored"/>
+                        <ComboBoxItem Content="已恢复" Tag="Resolved"/>
+                        <ComboBoxItem Content="全部" Tag="All"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="确认" Style="{StaticResource RoundOutlineButton}" Padding="14,6" Margin="0,0,6,0" Click="BtnAck_Click"/>
+                    <Button Content="忽略1小时" Style="{StaticResource RoundOutlineButton}" Padding="14,6" Margin="0,0,6,0" Click="BtnIgnore_Click"/>
+                    <Button Content="标记已处理" Style="{StaticResource RoundOutlineButton}" Padding="14,6" Margin="0,0,6,0" Click="BtnProcessed_Click"/>
+                    <Button Content="重开" Style="{StaticResource RoundPrimaryButton}" Padding="14,6" Click="BtnReopen_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <!-- 预警列表 -->
         <Border Grid.Row="1"
