@@ -372,7 +372,7 @@ namespace EW_Assistant.Views
                 .ThenByDescending(x => x.Count)
                 .ToList();
 
-            for (int i = 0; i < sorted.Count && i < 6; i++)
+            for (int i = 0; i < sorted.Count && i < 5; i++)
             {
                 var s = sorted[i];
                 _top.Add(new TopCat { Name = s.Category, Count = s.Count, Seconds = s.Seconds });
