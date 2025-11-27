@@ -143,6 +143,10 @@
                                 Margin="0,0,8,0"
                                 Style="{StaticResource RoundOutlineButton}"
                                 Click="BtnTest_Click"/>
+                        <Button Content="打开日志文件夹"
+                                Margin="0,0,8,0"
+                                Style="{StaticResource RoundOutlineButton}"
+                                Click="BtnOpenLog_Click"/>
                         <Button Content="重新读取"
                                 Margin="0,0,8,0"
                                 Style="{StaticResource RoundOutlineButton}"

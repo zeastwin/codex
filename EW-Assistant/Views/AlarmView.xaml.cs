@@ -12,6 +12,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.IO;
+using System.Diagnostics;
 
 namespace EW_Assistant.Views
 {
@@ -120,6 +122,32 @@ namespace EW_Assistant.Views
             SkTop.MouseLeftButtonDown += SkTop_MouseLeftButtonDown;
 
         }
+
+        private void BtnOpenAlarmFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var root = ConfigService.Current.AlarmLogPath;
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                MainWindow.PostProgramInfo("报警路径未配置，无法打开目录。", "warn");
+                return;
+            }
+
+            try
+            {
+                if (!Directory.Exists(root))
+                    Directory.CreateDirectory(root);
+
+                using var proc = Process.Start(new ProcessStartInfo("explorer.exe", root)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MainWindow.PostProgramInfo($"打开目录失败：{ex.Message}", "error");
+            }
+        }
+
         private void AutoTimer_Tick(object sender, EventArgs e)
         {
             if (_autoRefreshOnlyToday && _day.Date != DateTime.Today) return; // 仅当天自动刷

@@ -1,3 +1,4 @@
+using McpServer;
 using ModelContextProtocol.Server;
 using Newtonsoft.Json;
 using System;
@@ -394,7 +395,9 @@ public static class ProdCsvTools
         try { ds = CsvProductionRepository.LoadDay(theDay); }
         catch (Exception ex)
         {
-            return Task.FromResult(JsonErr("GetProductionSummary", ex.Message));
+            var err = JsonErr("GetProductionSummary", ex.Message);
+            ToolCallLogger.Log(nameof(GetProductionSummary), new { date }, null, ex.ToString());
+            return Task.FromResult(err);
         }
 
         var payload = new
@@ -407,7 +410,9 @@ public static class ProdCsvTools
             yield = Math.Round(ds.Yield, 2)
            // md = $"**{theDay:yyyy-MM-dd} 产出汇总**\n- PASS: {ds.Pass}\n- FAIL: {ds.Fail}\n- 总数: {ds.Total}\n- 良率: {ds.Yield:F2}%"
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetProductionSummary), new { date }, res);
+        return Task.FromResult(res);
     }
 
     [McpServerTool, Description("获取最近 7 天的产能汇总，提供周度 KPI、日度明细与告警提示，方便一次性生成周报")]
@@ -417,7 +422,11 @@ public static class ProdCsvTools
         var now = DateTime.Now;
         var endInput = string.IsNullOrWhiteSpace(endDate) ? now.ToString("yyyy-MM-dd") : endDate;
         if (!TryParseSmartDate(endInput, now, out var endDay))
-            return Task.FromResult(JsonConvert.SerializeObject(new { type = "error", where = "GetWeeklyProductionSummary", message = "endDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" }));
+        {
+            var err = JsonConvert.SerializeObject(new { type = "error", where = "GetWeeklyProductionSummary", message = "endDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" });
+            ToolCallLogger.Log(nameof(GetWeeklyProductionSummary), new { endDate }, null, "invalid endDate");
+            return Task.FromResult(err);
+        }
 
         endDay = endDay.Date;
         var startDay = endDay.AddDays(-6);
@@ -515,7 +524,9 @@ public static class ProdCsvTools
             warnings
         };
 
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetWeeklyProductionSummary), new { endDate, startDate = startDay.ToString("yyyy-MM-dd") }, res, warnings.Any() ? string.Join(" | ", warnings) : null);
+        return Task.FromResult(res);
     }
 
     // 2) 查询某天按小时明细（可选起止小时）
@@ -530,7 +541,9 @@ public static class ProdCsvTools
         try { ds = CsvProductionRepository.LoadDay(theDay); }
         catch (Exception ex)
         {
-            return Task.FromResult(JsonErr("GetHourlyStats", ex.Message));
+            var err = JsonErr("GetHourlyStats", ex.Message);
+            ToolCallLogger.Log(nameof(GetHourlyStats), new { date, startHour, endHour }, null, ex.ToString());
+            return Task.FromResult(err);
         }
 
         int sh = Math.Clamp(startHour ?? 0, 0, 23);
@@ -566,7 +579,9 @@ public static class ProdCsvTools
             hours = hours.Select(h => new { h.Hour, h.Pass, h.Fail, h.Total, yield = Math.Round(h.Yield, 2) })
           //  md = sb.ToString()
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var json = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetHourlyStats), new { date, startHour = sh, endHour = eh }, json);
+        return Task.FromResult(json);
     }
 
     // 3) 快速查询：某天某个时段的产出与良率（自然语言最常问）
@@ -577,7 +592,11 @@ public static class ProdCsvTools
     {
         var theDay = ParseDateOrToday(date);
         if (!TryParseWindow(window, out var sh, out var eh))
-            return Task.FromResult(JsonErr("QuickQueryWindow", "时间段格式错误，示例：'10-14' 或 '10:00-14:00'"));
+        {
+            var err = JsonErr("QuickQueryWindow", "时间段格式错误，示例：'10-14' 或 '10:00-14:00'");
+            ToolCallLogger.Log(nameof(QuickQueryWindow), new { date, window }, null, "window parse error");
+            return Task.FromResult(err);
+        }
 
         // 复用明细逻辑
         return GetHourlyStats(theDay.ToString("yyyy-MM-dd"), sh, eh);
@@ -594,7 +613,11 @@ public static class ProdCsvTools
         if (string.IsNullOrWhiteSpace(until))
             endLocal = DateTime.Now;
         else if (!DateTime.TryParse(until, out endLocal))
-            return Task.FromResult(JsonConvert.SerializeObject(new { type = "error", where = "GetSummaryLastHours", message = "until 格式应为 yyyy-MM-dd HH:mm" }));
+        {
+            var err = JsonConvert.SerializeObject(new { type = "error", where = "GetSummaryLastHours", message = "until 格式应为 yyyy-MM-dd HH:mm" });
+            ToolCallLogger.Log(nameof(GetSummaryLastHours), new { lastHours, until }, null, "until parse error");
+            return Task.FromResult(err);
+        }
 
         // 对齐到整点：统计区间为 [startHour, endHour) ，不包含 endHour
         var endHour = new DateTime(endLocal.Year, endLocal.Month, endLocal.Day, endLocal.Hour, 0, 0);
@@ -659,7 +682,9 @@ public static class ProdCsvTools
             warnings = warns
           //  md
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetSummaryLastHours), new { lastHours, until = endLocal.ToString("yyyy-MM-dd HH:mm") }, res, warns.Any() ? string.Join(" | ", warns) : null);
+        return Task.FromResult(res);
     }
 
     [McpServerTool, Description("跨多天的产能/良率汇总。起止日期包含端点；返回每日报表与整体汇总。")]
@@ -670,10 +695,18 @@ public static class ProdCsvTools
         var now = DateTime.Now;
 
         if (!TryParseSmartDate(startDate, now, out var d0))
-            return Task.FromResult(JsonConvert.SerializeObject(new { type = "error", where = "GetProductionRangeSummary", message = "startDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" }));
+        {
+            var err = JsonConvert.SerializeObject(new { type = "error", where = "GetProductionRangeSummary", message = "startDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" });
+            ToolCallLogger.Log(nameof(GetProductionRangeSummary), new { startDate, endDate }, null, "startDate parse error");
+            return Task.FromResult(err);
+        }
 
         if (!TryParseSmartDate(endDate, now, out var d1))
-            return Task.FromResult(JsonConvert.SerializeObject(new { type = "error", where = "GetProductionRangeSummary", message = "endDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" }));
+        {
+            var err = JsonConvert.SerializeObject(new { type = "error", where = "GetProductionRangeSummary", message = "endDate 格式应为 yyyy-MM-dd 或 MM-dd/本月dd" });
+            ToolCallLogger.Log(nameof(GetProductionRangeSummary), new { startDate, endDate }, null, "endDate parse error");
+            return Task.FromResult(err);
+        }
         if (d1 < d0) { var tmp = d0; d0 = d1; d1 = tmp; }
         d0 = d0.Date; d1 = d1.Date;
 
@@ -720,7 +753,9 @@ public static class ProdCsvTools
             warnings = warns,
             md = sb.ToString()
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetProductionRangeSummary), new { startDate = d0.ToString("yyyy-MM-dd"), endDate = d1.ToString("yyyy-MM-dd") }, res, warns.Any() ? string.Join(" | ", warns) : null);
+        return Task.FromResult(res);
     }
     private static bool TryParseSmartDate(string text, DateTime now, out DateTime day)
     {

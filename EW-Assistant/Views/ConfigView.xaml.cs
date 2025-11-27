@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Diagnostics;
+using System.IO;
 
 namespace EW_Assistant.Views
 {
@@ -90,6 +92,25 @@ namespace EW_Assistant.Views
         private async void BtnTest_Click(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private void BtnOpenLog_Click(object sender, RoutedEventArgs e)
+        {
+            var logRoot = Path.Combine("D:\\", "Data", "AiLog");
+            try
+            {
+                if (!Directory.Exists(logRoot))
+                    Directory.CreateDirectory(logRoot);
+
+                using var proc = Process.Start(new ProcessStartInfo("explorer.exe", logRoot)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MainWindow.PostProgramInfo($"打开日志目录失败：{ex.Message}", "error");
+            }
         }
     }
 }

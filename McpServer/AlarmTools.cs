@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using McpServer;
 
 /* ===================== 公共模型（net48-friendly，避免 record） ===================== */
 
@@ -511,7 +512,12 @@ public static class ProdAlarmTools
     {
         DateTime theDay;
         try { theDay = ParseSmartDateOrToday(date); }
-        catch (Exception ex) { return Task.FromResult(JsonErr("GetHourlyProdWithAlarms", ex.Message)); }
+        catch (Exception ex)
+        {
+            var err = JsonErr("GetHourlyProdWithAlarms", ex.Message);
+            ToolCallLogger.Log(nameof(GetHourlyProdWithAlarms), new { date, startHour, endHour }, null, ex.ToString());
+            return Task.FromResult(err);
+        }
 
         List<AlarmRecord> alarms;
         string err2;
@@ -522,7 +528,11 @@ public static class ProdAlarmTools
         DayStats ds;
         string err1;
         if (!CsvProductionRepository.TryLoadDay(theDay, out ds, out err1))
-            return Task.FromResult(JsonErr("GetHourlyProdWithAlarms", err1));
+        {
+            var err = JsonErr("GetHourlyProdWithAlarms", err1);
+            ToolCallLogger.Log(nameof(GetHourlyProdWithAlarms), new { date, startHour, endHour }, null, err1);
+            return Task.FromResult(err);
+        }
 
         var agg = AlarmCsvRepository.GetHourlyAggregation(theDay) ?? new HourAlarm[24];
 
@@ -561,7 +571,9 @@ public static class ProdAlarmTools
             endHour = eh,
             items = items
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetHourlyProdWithAlarms), new { date = theDay.ToString("yyyy-MM-dd"), startHour = sh, endHour = eh }, res);
+        return Task.FromResult(res);
     }
 
     // ---------- 2) 跨天影响分析（含逐小时明细 rows） ----------
@@ -580,7 +592,12 @@ public static class ProdAlarmTools
             var range = ParseSmartRange(startDate, endDate);
             d0 = range.Item1; d1 = range.Item2;
         }
-        catch (Exception ex) { return Task.FromResult(JsonErr("GetAlarmImpactSummary", ex.Message)); }
+        catch (Exception ex)
+        {
+            var err = JsonErr("GetAlarmImpactSummary", ex.Message);
+            ToolCallLogger.Log(nameof(GetAlarmImpactSummary), new { startDate, endDate, window, lowYieldThreshold }, null, ex.ToString());
+            return Task.FromResult(err);
+        }
 
         if (!TryParseWindow(window, out sh, out eh)) { sh = 0; eh = 24; }
 
@@ -731,7 +748,9 @@ public static class ProdAlarmTools
             warnings = warnings // 仅保留缺数据等必要信息
         };
 
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetAlarmImpactSummary), new { startDate = d0.ToString("yyyy-MM-dd"), endDate = d1.ToString("yyyy-MM-dd"), window, lowYieldThreshold }, res, warnings.Any() ? string.Join(" | ", warnings) : null);
+        return Task.FromResult(res);
     }
 
 
@@ -744,8 +763,18 @@ public static class ProdAlarmTools
         [Description("良率阈值%，默认95")] double threshold = 95,
         [Description("时段窗口，如 '10-14'；留空=全天")] string window = null)
     {
-        var range = ParseSmartRange(startDate, endDate);
-        var d0 = range.Item1; var d1 = range.Item2;
+        DateTime d0, d1;
+        try
+        {
+            var range = ParseSmartRange(startDate, endDate);
+            d0 = range.Item1; d1 = range.Item2;
+        }
+        catch (Exception ex)
+        {
+            var err = JsonErr("GetTopAlarmsDuringLowYield", ex.Message);
+            ToolCallLogger.Log(nameof(GetTopAlarmsDuringLowYield), new { startDate, endDate, threshold, window }, null, ex.ToString());
+            return Task.FromResult(err);
+        }
 
         int sh, eh;
         if (!TryParseWindow(window, out sh, out eh)) { sh = 0; eh = 24; }
@@ -822,7 +851,9 @@ public static class ProdAlarmTools
             top = top,
             warnings = warns
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload));
+        var res = JsonConvert.SerializeObject(payload);
+        ToolCallLogger.Log(nameof(GetTopAlarmsDuringLowYield), new { startDate = d0.ToString("yyyy-MM-dd"), endDate = d1.ToString("yyyy-MM-dd"), threshold, window }, res, warns.Any() ? string.Join(" | ", warns) : null);
+        return Task.FromResult(res);
     }
 
     // ---------- 4) 自然语言入口 ----------
@@ -834,7 +865,11 @@ public static class ProdAlarmTools
         var now = DateTime.Now;
         DateTime d0, d1; int? sh, eh;
         if (!TryParseThisMonthRange(text, now, out d0, out d1, out sh, out eh))
-            return Task.FromResult(JsonErr("AnalyzeProdAndAlarmsNL", "无法从文本解析日期/时段"));
+        {
+            var err = JsonErr("AnalyzeProdAndAlarmsNL", "无法从文本解析日期/时段");
+            ToolCallLogger.Log(nameof(AnalyzeProdAndAlarmsNL), new { text, lowYieldThreshold }, null, "parse text range failed");
+            return Task.FromResult(err);
+        }
 
         var win = (sh.HasValue && eh.HasValue) ? string.Format("{0:00}-{1:00}", sh.Value, eh.Value) : null;
         return GetAlarmImpactSummary(d0.ToString("yyyy-MM-dd"), d1.ToString("yyyy-MM-dd"), win, lowYieldThreshold);
@@ -1098,9 +1133,17 @@ public static class AlarmCsvTools
     {
         DateTime d0, d1;
         if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d0))
-            return Task.FromResult(Error("GetAlarmRangeWindowSummary", "startDate 格式应为 yyyy-MM-dd"));
+        {
+            var err = Error("GetAlarmRangeWindowSummary", "startDate 格式应为 yyyy-MM-dd");
+            ToolCallLogger.Log(nameof(GetAlarmRangeWindowSummary), new { startDate, endDate, window, topN, sortBy }, null, "startDate parse error");
+            return Task.FromResult(err);
+        }
         if (!DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d1))
-            return Task.FromResult(Error("GetAlarmRangeWindowSummary", "endDate 格式应为 yyyy-MM-dd"));
+        {
+            var err = Error("GetAlarmRangeWindowSummary", "endDate 格式应为 yyyy-MM-dd");
+            ToolCallLogger.Log(nameof(GetAlarmRangeWindowSummary), new { startDate, endDate, window, topN, sortBy }, null, "endDate parse error");
+            return Task.FromResult(err);
+        }
         if (d1 < d0) { var t = d0; d0 = d1; d1 = t; }
 
         TimeWindow tw;
@@ -1108,7 +1151,11 @@ public static class AlarmCsvTools
         if (!string.IsNullOrWhiteSpace(window))
         {
             if (!TimeWindow.TryParse(window, out tw))
-                return Task.FromResult(Error("GetAlarmRangeWindowSummary", "window 格式应为 'HH-mm' 或 'HH:mm-HH:mm'"));
+            {
+                var err = Error("GetAlarmRangeWindowSummary", "window 格式应为 'HH-mm' 或 'HH:mm-HH:mm'");
+                ToolCallLogger.Log(nameof(GetAlarmRangeWindowSummary), new { startDate, endDate, window, topN, sortBy }, null, "window parse error");
+                return Task.FromResult(err);
+            }
             opt = tw;
         }
 
@@ -1148,7 +1195,9 @@ public static class AlarmCsvTools
             byCategory = byCategory,
             top = top
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload, Formatting.Indented));
+        var res = JsonConvert.SerializeObject(payload, Formatting.Indented);
+        ToolCallLogger.Log(nameof(GetAlarmRangeWindowSummary), new { startDate = d0.ToString("yyyy-MM-dd"), endDate = d1.ToString("yyyy-MM-dd"), window, topN, sortBy }, res);
+        return Task.FromResult(res);
     }
 
     [McpServerTool, Description("按关键字/代码检索报警明细（跨天 + 可选时段），用于AI回答时展示引用样本")]
@@ -1162,9 +1211,17 @@ public static class AlarmCsvTools
     {
         DateTime d0, d1;
         if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d0))
-            return Task.FromResult(Error("QueryAlarms", "startDate 格式应为 yyyy-MM-dd"));
+        {
+            var err = Error("QueryAlarms", "startDate 格式应为 yyyy-MM-dd");
+            ToolCallLogger.Log(nameof(QueryAlarms), new { startDate, endDate, code, keyword, window, take }, null, "startDate parse error");
+            return Task.FromResult(err);
+        }
         if (!DateTime.TryParseExact(endDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d1))
-            return Task.FromResult(Error("QueryAlarms", "endDate 格式应为 yyyy-MM-dd"));
+        {
+            var err = Error("QueryAlarms", "endDate 格式应为 yyyy-MM-dd");
+            ToolCallLogger.Log(nameof(QueryAlarms), new { startDate, endDate, code, keyword, window, take }, null, "endDate parse error");
+            return Task.FromResult(err);
+        }
         if (d1 < d0) { var t = d0; d0 = d1; d1 = t; }
 
         TimeWindow tw;
@@ -1172,7 +1229,11 @@ public static class AlarmCsvTools
         if (!string.IsNullOrWhiteSpace(window))
         {
             if (!TimeWindow.TryParse(window, out tw))
-                return Task.FromResult(Error("QueryAlarms", "window 格式应为 'HH-mm' 或 'HH:mm-HH:mm'"));
+            {
+                var err = Error("QueryAlarms", "window 格式应为 'HH-mm' 或 'HH:mm-HH:mm'");
+                ToolCallLogger.Log(nameof(QueryAlarms), new { startDate, endDate, code, keyword, window, take }, null, "window parse error");
+                return Task.FromResult(err);
+            }
             opt = tw;
         }
 
@@ -1217,7 +1278,9 @@ public static class AlarmCsvTools
             count = items.Count,
             items = items
         };
-        return Task.FromResult(JsonConvert.SerializeObject(payload, Formatting.Indented));
+        var res = JsonConvert.SerializeObject(payload, Formatting.Indented);
+        ToolCallLogger.Log(nameof(QueryAlarms), new { startDate = d0.ToString("yyyy-MM-dd"), endDate = d1.ToString("yyyy-MM-dd"), code, keyword, window, take }, res);
+        return Task.FromResult(res);
     }
 
     // ---------- 工具 & 解析 ----------

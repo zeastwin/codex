@@ -111,6 +111,7 @@
                 <Button x:Name="BtnNext" Style="{StaticResource GhostBtn}" Content="后一天 ▶" Click="BtnNext_Click"/>
                 <ComboBox x:Name="CboRecent" Style="{StaticResource CompactCbo}" SelectionChanged="CboRecent_SelectionChanged"/>
                 <Button x:Name="BtnRefresh" Style="{StaticResource SolidBtn}" Content="刷新" Click="BtnRefresh_Click"/>
+                <Button x:Name="BtnOpenAlarmFolder" Style="{StaticResource GhostBtn}" Content="打开报警CSV" Click="BtnOpenAlarmFolder_Click"/>
             </StackPanel>
         </Grid>
 
