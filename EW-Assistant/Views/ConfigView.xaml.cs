@@ -1,5 +1,6 @@
 ﻿// ConfigView.xaml.cs  —— 合并版（包含 ConfigView + AppConfig + ConfigService）
 using EW_Assistant.Services;
+using EW_Assistant.Warnings;
 using Newtonsoft.Json;   // 需安装包：Install-Package Newtonsoft.Json
 using System;
 using System.IO;
@@ -72,6 +73,7 @@ namespace EW_Assistant.Views
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
                     this.Config.FlatFileLayout = fresh.FlatFileLayout;
                     this.Config.UseOkNgSplitTables = fresh.UseOkNgSplitTables;
+                    this.Config.WarningOptions = fresh.WarningOptions;
                 }
                 else
                 {
@@ -198,6 +200,26 @@ namespace EW_Assistant.Settings
             get => _useOkNgSplitTables;
             set { if (_useOkNgSplitTables != value) { _useOkNgSplitTables = value; OnPropertyChanged(); } }
         }
+
+        private WarningRuleOptions _warningOptions = WarningRuleOptions.CreateDefault();
+        [JsonProperty("warningOptions")]
+        public WarningRuleOptions WarningOptions
+        {
+            get => _warningOptions;
+            set
+            {
+                var normalized = WarningRuleOptions.Normalize(value);
+                if (!ReferenceEquals(_warningOptions, normalized))
+                {
+                    _warningOptions = normalized;
+                    OnPropertyChanged();
+                }
+                else
+                {
+                    _warningOptions = normalized;
+                }
+            }
+        }
         public static AppConfig CreateDefault() => new AppConfig();
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -278,6 +300,7 @@ namespace EW_Assistant.Services
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
                 _current.FlatFileLayout = cfg.FlatFileLayout;
                 _current.UseOkNgSplitTables = cfg.UseOkNgSplitTables;
+                _current.WarningOptions = cfg.WarningOptions ?? WarningRuleOptions.CreateDefault();
             }
 
             ConfigChanged?.Invoke(null, _current);
@@ -298,6 +321,7 @@ namespace EW_Assistant.Services
                 cfg.IoMapCsvPath = @"D:\";
             if (string.IsNullOrWhiteSpace(cfg.MCPServerIP))
                 cfg.MCPServerIP = "127.0.0.1:8081";
+            cfg.WarningOptions = WarningRuleOptions.Normalize(cfg.WarningOptions);
         }
 
     }

@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 namespace EW_Assistant.Warnings
 {
     /// <summary>
-    /// 读取最近 24 小时的产能 / 良率数据并按小时聚合。
+    /// 读取产能 / 良率数据并按小时聚合。
     /// </summary>
     public class ProductionCsvReader
     {
@@ -22,10 +22,19 @@ namespace EW_Assistant.Warnings
 
         public IList<ProductionHourRecord> GetLast24HoursProduction(DateTime now)
         {
-            var windowStart = now.AddHours(-24);
+            return GetProductionRange(now.AddHours(-24), now);
+        }
+
+        /// <summary>
+        /// 指定时间窗内的小时聚合。
+        /// </summary>
+        public IList<ProductionHourRecord> GetProductionRange(DateTime start, DateTime end)
+        {
+            if (end <= start) return new List<ProductionHourRecord>();
+
             var result = new Dictionary<DateTime, ProductionHourRecord>();
 
-            foreach (var file in EnumerateRecentFiles(windowStart))
+            foreach (var file in EnumerateFiles(start, end))
             {
                 var dateFromFile = GuessDateFromFile(file);
                 foreach (var row in ReadRows(file))
@@ -38,7 +47,7 @@ namespace EW_Assistant.Warnings
                         hour = new DateTime(dateFromFile.Year, dateFromFile.Month, dateFromFile.Day, hour.Hour, 0, 0, hour.Kind);
                     }
 
-                    if (hour < windowStart || hour >= now) continue;
+                    if (hour < start || hour >= end) continue;
 
                     if (!result.TryGetValue(hour, out var agg))
                     {
@@ -62,7 +71,9 @@ namespace EW_Assistant.Warnings
             return result.Values.OrderBy(x => x.Hour).ToList();
         }
 
-        private IEnumerable<string> EnumerateRecentFiles(DateTime windowStart)
+        public string Root => _root;
+
+        private IEnumerable<string> EnumerateFiles(DateTime start, DateTime end)
         {
             if (!Directory.Exists(_root)) yield break;
 
@@ -70,7 +81,8 @@ namespace EW_Assistant.Warnings
             foreach (var file in dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
                                     .OrderByDescending(f => f.LastWriteTime))
             {
-                if (file.LastWriteTime < windowStart.AddDays(-1)) continue;
+                if (file.LastWriteTime < start.AddDays(-1)) continue;
+                if (file.LastWriteTime > end.AddDays(1)) continue;
                 yield return file.FullName;
             }
         }

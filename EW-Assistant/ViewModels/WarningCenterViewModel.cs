@@ -250,17 +250,21 @@ namespace EW_Assistant.ViewModels
             }
 
             string metricText = string.Empty;
+            var isYieldMetric = string.Equals(item.Type ?? string.Empty, "yield", StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrEmpty(item.MetricName) && item.MetricName.Contains("良率"));
+            Func<double, string> formatMetric = v => isYieldMetric ? (v * 100).ToString("F1") : v.ToString("F1");
+
             if (item.ThresholdValue.HasValue)
             {
-                metricText = string.Format("{0} 当前 {1:F1}，阈值 {2:F1}",
+                metricText = string.Format("{0} 当前 {1}，阈值 {2}",
                     string.IsNullOrEmpty(item.MetricName) ? "指标" : item.MetricName,
-                    item.CurrentValue,
-                    item.ThresholdValue.Value);
+                    formatMetric(item.CurrentValue),
+                    formatMetric(item.ThresholdValue.Value));
             }
             else if (item.CurrentValue > 0)
             {
                 metricText = (string.IsNullOrEmpty(item.MetricName) ? "指标" : item.MetricName)
-                    + " 当前 " + item.CurrentValue.ToString("F1");
+                    + " 当前 " + formatMetric(item.CurrentValue);
             }
 
             return new WarningItemViewModel
@@ -277,9 +281,9 @@ namespace EW_Assistant.ViewModels
                 RuleId = item.RuleId ?? string.Empty,
                 MetricName = item.MetricName ?? string.Empty,
                 MetricText = metricText,
-                CurrentValue = item.CurrentValue.ToString("F1"),
-                BaselineValue = item.BaselineValue.HasValue ? item.BaselineValue.Value.ToString("F1") : string.Empty,
-                ThresholdValue = item.ThresholdValue.HasValue ? item.ThresholdValue.Value.ToString("F1") : string.Empty,
+                CurrentValue = formatMetric(item.CurrentValue),
+                BaselineValue = item.BaselineValue.HasValue ? formatMetric(item.BaselineValue.Value) : string.Empty,
+                ThresholdValue = item.ThresholdValue.HasValue ? formatMetric(item.ThresholdValue.Value) : string.Empty,
                 Status = string.IsNullOrEmpty(item.Status) ? "未处理" : item.Status,
                 AiMarkdown = string.Empty,
                 HasAiMarkdown = false,

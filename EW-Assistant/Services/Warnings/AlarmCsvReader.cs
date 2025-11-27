@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 namespace EW_Assistant.Warnings
 {
     /// <summary>
-    /// 读取最近 24 小时的报警记录，并按小时 / 报警码聚合。
+    /// 读取报警记录，并按小时 / 报警码聚合。
     /// </summary>
     public class AlarmCsvReader
     {
@@ -22,11 +22,18 @@ namespace EW_Assistant.Warnings
 
         public IList<AlarmHourStat> GetLast24HoursAlarms(DateTime now)
         {
-            var windowStart = now.AddHours(-24);
+            return GetAlarms(now.AddHours(-24), now);
+        }
+
+        /// <summary>
+        /// 指定时间范围内的报警按小时聚合。
+        /// </summary>
+        public IList<AlarmHourStat> GetAlarms(DateTime start, DateTime end)
+        {
             var result = new Dictionary<string, AlarmHourStat>(StringComparer.OrdinalIgnoreCase);
             var watchMode = LocalDataConfig.WatchMode;
 
-            foreach (var file in EnumerateRecentFiles(windowStart, now, watchMode))
+            foreach (var file in EnumerateFiles(start, end, watchMode))
             {
                 var fileDate = GuessDateFromFile(file);
                 foreach (var row in ReadRows(file, fileDate))
@@ -35,7 +42,7 @@ namespace EW_Assistant.Warnings
                     if (!occur.HasValue) continue;
                     var at = occur.Value;
 
-                    if (at < windowStart || at >= now) continue;
+                    if (at < start || at >= end) continue;
 
                     var hour = new DateTime(at.Year, at.Month, at.Day, at.Hour, 0, 0, at.Kind);
                     var ruleKey = $"{(string.IsNullOrWhiteSpace(row.Code) ? "UNKNOWN" : row.Code)}|{hour:yyyyMMddHH}";
@@ -68,13 +75,15 @@ namespace EW_Assistant.Warnings
             return result.Values.OrderBy(x => x.Hour).ToList();
         }
 
-        private IEnumerable<string> EnumerateRecentFiles(DateTime windowStart, DateTime now, bool watchMode)
+        public string Root => _root;
+
+        private IEnumerable<string> EnumerateFiles(DateTime start, DateTime end, bool watchMode)
         {
             if (!Directory.Exists(_root)) yield break;
 
             if (watchMode)
             {
-                foreach (var path in EnumerateWatchModeFiles(windowStart, now))
+                foreach (var path in EnumerateWatchModeFiles(start, end))
                 {
                     yield return path;
                 }
@@ -87,16 +96,16 @@ namespace EW_Assistant.Warnings
             {
                 if (!IsAlarmLogFileName(file.Name)) continue;
                 if (!TryParseDayFromFileName(file.Name, out var day)) continue;
-                if (day < windowStart.Date.AddDays(-1) || day > now.Date) continue;
-                if (file.LastWriteTime < windowStart.AddDays(-1)) continue;
+                if (day < start.Date.AddDays(-1) || day > end.Date) continue;
+                if (file.LastWriteTime < start.AddDays(-1)) continue;
                 yield return file.FullName;
             }
         }
 
-        private IEnumerable<string> EnumerateWatchModeFiles(DateTime windowStart, DateTime now)
+        private IEnumerable<string> EnumerateWatchModeFiles(DateTime start, DateTime end)
         {
-            var startDay = windowStart.Date.AddDays(-1);
-            var endDay = now.Date;
+            var startDay = start.Date.AddDays(-1);
+            var endDay = end.Date;
             var dir = new DirectoryInfo(_root);
 
             var dayDirs = dir.EnumerateDirectories()
