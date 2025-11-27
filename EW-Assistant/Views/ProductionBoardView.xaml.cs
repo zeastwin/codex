@@ -649,7 +649,7 @@ namespace EW_Assistant.Views
             var info = e.Info;
             canvas.Clear(SKColors.White);
 
-            float L = 56, R = 24, T = 8, B = 46;
+            float L = 56, R = 32, T = 10, B = 50;
             var chart = new SKRect(L, T, info.Width - R, info.Height - B);
 
             using var gridPaint = new SKPaint { Color = new SKColor(240, 243, 248), StrokeWidth = 1, IsStroke = true };
@@ -657,14 +657,6 @@ namespace EW_Assistant.Views
             using var textPaint = new SKPaint { Color = new SKColor(107, 114, 128), TextSize = 12, IsAntialias = true, Typeface = FONT_CJK };
             using var valuePaint = new SKPaint { IsAntialias = true, Color = new SKColor(55, 65, 81), TextSize = 11, Typeface = FONT_CJK };
             using var barPaint = new SKPaint { IsAntialias = true };
-
-            for (int i = 0; i <= 4; i++)
-            {
-                float y = chart.Top + chart.Height * i / 4f;
-                canvas.DrawLine(chart.Left, y, chart.Right, y, gridPaint);
-            }
-            canvas.DrawLine(chart.Left, chart.Bottom, chart.Right, chart.Bottom, axisPaint);
-            canvas.DrawLine(chart.Left, chart.Top, chart.Left, chart.Bottom, axisPaint);
 
             if (_dayMissing)
             {
@@ -677,28 +669,34 @@ namespace EW_Assistant.Views
 
             int max = 1;
             for (int i = 0; i < 24; i++)
-                max = Math.Max(max, _hourPass[i] + _hourFail[i]);
+                max = Math.Max(max, Math.Max(_hourPass[i], _hourFail[i]));
             int yMax = (int)Math.Ceiling(max * 1.10);
             if (yMax <= 0) yMax = 10;
 
             for (int i = 0; i <= 4; i++)
             {
-                int val = yMax * (4 - i) / 4;
-                float y = chart.Top + chart.Height * i / 4f;
+                float y = chart.Bottom - chart.Height * i / 4f;
+                canvas.DrawLine(chart.Left, y, chart.Right, y, gridPaint);
+
+                int val = yMax * i / 4;
                 var label = val.ToString(CultureInfo.InvariantCulture);
                 var bounds = new SKRect();
                 textPaint.MeasureText(label, ref bounds);
                 canvas.DrawText(label, chart.Left - 8 - bounds.Width, y + bounds.Height / 2, textPaint);
             }
+            canvas.DrawLine(chart.Left, chart.Bottom, chart.Right, chart.Bottom, axisPaint);
+            canvas.DrawLine(chart.Left, chart.Top, chart.Left, chart.Bottom, axisPaint);
 
             float slot = chart.Width / 24f;
-            float barWidth = slot * 0.62f;
-            float radius = 5f;
+            float barWidth = slot * 0.34f;
+            float gap = slot * 0.08f;
+            float radius = 4f;
 
             var passDark = new SKColor(59, 130, 246);
             var passLight = new SKColor(147, 197, 253);
-            var failDark = new SKColor(239, 68, 68);
-            var failLight = new SKColor(254, 202, 202);
+            var failDark = new SKColor(249, 115, 22);
+            var failLight = new SKColor(253, 186, 116);
+            using var failValuePaint = new SKPaint { IsAntialias = true, Color = failDark, TextSize = 10, Typeface = FONT_CJK, FakeBoldText = true };
 
             for (int i = 0; i < 24; i++)
             {
@@ -711,17 +709,16 @@ namespace EW_Assistant.Views
 
                 float pH = chart.Height * (float)(p / Math.Max(1.0, yMax)) * (float)eased;
                 float fH = chart.Height * (float)(f / Math.Max(1.0, yMax)) * (float)eased;
-                float totalH = pH + fH;
 
                 float cx = chart.Left + slot * i + slot / 2f;
-                float left = cx - barWidth / 2f;
-                float right = cx + barWidth / 2f;
+                float passLeft = cx - gap - barWidth;
+                float failLeft = cx + gap;
                 float bottom = chart.Bottom;
 
-                if (pH > 0.1f)
+                if (pH > 0.5f)
                 {
-                    var rect = new SKRect(left, bottom - pH, right, bottom);
-                    using var rr = MakeRRect(rect, 0, 0, radius, radius);
+                    var rect = new SKRect(passLeft, bottom - pH, passLeft + barWidth, bottom);
+                    using var rr = MakeRRect(rect, radius, radius, radius, radius);
                     using var shader = SKShader.CreateLinearGradient(new SKPoint(0, rect.Top), new SKPoint(0, rect.Bottom),
                         new[] { passLight, passDark }, null, SKShaderTileMode.Clamp);
                     barPaint.Shader = shader;
@@ -729,23 +726,36 @@ namespace EW_Assistant.Views
                     barPaint.Shader = null;
                 }
 
-                if (fH > 0.1f)
+                if (fH > 0.5f)
                 {
-                    var rect = new SKRect(left, bottom - pH - fH, right, bottom - pH);
-                    using var rr = MakeRRect(rect, radius, radius, 0, 0);
+                    var rect = new SKRect(failLeft, bottom - fH, failLeft + barWidth, bottom);
+                    using var rr = MakeRRect(rect, radius, radius, radius, radius);
                     using var shader = SKShader.CreateLinearGradient(new SKPoint(0, rect.Top), new SKPoint(0, rect.Bottom),
                         new[] { failLight, failDark }, null, SKShaderTileMode.Clamp);
                     barPaint.Shader = shader;
                     canvas.DrawRoundRect(rr, barPaint);
                     barPaint.Shader = null;
+
+                    var failTag = f.ToString(CultureInfo.InvariantCulture);
+                    var fb = new SKRect();
+                    failValuePaint.MeasureText(failTag, ref fb);
+                    float fx = rect.MidX - fb.MidX;
+                    float fy = rect.Top - 6 - fb.MidY;
+                    if (fy < chart.Top + 4 - fb.Top) fy = chart.Top + 4 - fb.Top;
+                    canvas.DrawText(failTag, fx, fy, failValuePaint);
                 }
+
+                var labelHour = $"{i:00}";
+                var hb = new SKRect();
+                textPaint.MeasureText(labelHour, ref hb);
+                canvas.DrawText(labelHour, cx - hb.MidX, chart.Bottom + hb.Height + 10, textPaint);
 
                 if (t <= 0) continue;
 
                 var tag = t.ToString(CultureInfo.InvariantCulture);
                 var bounds = new SKRect();
                 valuePaint.MeasureText(tag, ref bounds);
-                float desired = chart.Bottom - totalH - 6;
+                float desired = chart.Bottom - Math.Max(pH, fH) - 6;
                 float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
                 canvas.DrawText(tag, cx - bounds.MidX, baseline, valuePaint);
             }

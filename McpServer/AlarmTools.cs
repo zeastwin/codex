@@ -326,8 +326,8 @@ public static class AlarmCsvRepository
                 Code = code,
                 Content = cont,
                 Category = cate,
-                Start = start,
-                End = end,
+                Start = start.Value,
+                End = end.HasValue ? end.Value : start.Value,
                 DurationSec = useSec,
                 SourceFile = Path.GetFileName(path)
             };
