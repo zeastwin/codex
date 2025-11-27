@@ -18,7 +18,7 @@ namespace EW_Assistant.Warnings
         {
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EW-Assistant");
+                var dir = Path.Combine("D:\\", "DataAI");
                 _filePath = Path.Combine(dir, "warning_tickets.json");
             }
             else
@@ -60,7 +60,15 @@ namespace EW_Assistant.Warnings
                 {
                     EnsureDirectory();
                     var json = JsonConvert.SerializeObject(tickets ?? new List<WarningTicketRecord>(), Formatting.Indented);
-                    File.WriteAllText(_filePath, json, new UTF8Encoding(false));
+                    var temp = _filePath + ".tmp";
+                    var bytes = new UTF8Encoding(false).GetBytes(json);
+                    using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        fs.Write(bytes, 0, bytes.Length);
+                        fs.Flush(true);
+                    }
+                    File.Copy(temp, _filePath, true);
+                    File.Delete(temp);
                 }
                 catch
                 {

@@ -1,3 +1,4 @@
+using EW_Assistant.Services;
 using EW_Assistant.Services.Warnings;
 using EW_Assistant.Warnings;
 using System;
@@ -27,8 +28,9 @@ namespace EW_Assistant.ViewModels
         private bool _isAnalyzingWarnings;
         private readonly List<WarningTicketRecord> _allTickets = new List<WarningTicketRecord>();
         private const int ResolveGraceMinutes = 120;
-        private const int DefaultIgnoreMinutes = 60;
+        private readonly int _ignoreMinutes;
         private string _filterStatus = "Pending";
+        private readonly WarningRuleOptions _options;
 
         public ObservableCollection<WarningItemViewModel> Warnings { get; } = new ObservableCollection<WarningItemViewModel>();
         public WarningItemViewModel SelectedWarning
@@ -91,6 +93,8 @@ namespace EW_Assistant.ViewModels
             _analysisCache.Load();
             _aiService = new AiWarningAnalysisService();
             _ticketStore = new JsonWarningTicketStore(null);
+            _options = WarningRuleOptions.Normalize(ConfigService.Current?.WarningOptions);
+            _ignoreMinutes = _options.IgnoreMinutes > 0 ? _options.IgnoreMinutes : WarningRuleOptions.DefaultIgnoreMinutes;
 
             LoadWarningsFromCsv();
             ApplyCachedAnalysis();
@@ -215,7 +219,7 @@ namespace EW_Assistant.ViewModels
             var ticket = GetTicketByFingerprint(SelectedWarning.Key);
             if (ticket == null) return;
             ticket.Status = "Ignored";
-            ticket.IgnoredUntil = DateTime.Now.AddMinutes(DefaultIgnoreMinutes);
+            ticket.IgnoredUntil = DateTime.Now.AddMinutes(_ignoreMinutes);
             ticket.UpdatedAt = DateTime.Now;
             SaveTickets();
             ApplyFilterAndRender();

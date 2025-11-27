@@ -355,6 +355,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="10"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="10"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- 行 0：历史基线 -->
@@ -473,6 +475,13 @@
                         <ComboBoxItem Content="IQR"/>
                         <ComboBoxItem Content="None"/>
                     </ComboBox>
+
+                    <!-- 行 18：忽略时长 -->
+                    <TextBlock Grid.Row="18" Grid.Column="0"
+                               Text="忽略时长（分钟）：" VerticalAlignment="Center" Foreground="#374151"/>
+                    <TextBox Grid.Row="18" Grid.Column="1"
+                             Height="30" FontSize="13" Padding="8,4"
+                             Text="{Binding WarningOptions.IgnoreMinutes, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>
             </Grid>
         </Border>

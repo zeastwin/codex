@@ -49,9 +49,9 @@ namespace EW_Assistant.Warnings
             {
                 if (rec.Hour < windowStart || rec.Hour >= now) continue;
 
-                ApplyYieldRule(bucket, rec);
-                ApplyThroughputRule(bucket, rec, baseline);
-                ApplyCombinedRules(bucket, rec, alarmTotals, alarmsByHour, baseline);
+                ApplyYieldRule(bucket, rec, productions);
+                ApplyThroughputRule(bucket, rec, baseline, productions);
+                ApplyCombinedRules(bucket, rec, alarmTotals, alarmsByHour, baseline, productions);
             }
 
             foreach (var stat in alarms)
@@ -71,7 +71,7 @@ namespace EW_Assistant.Warnings
 
         #region 规则实现
 
-        private void ApplyYieldRule(IDictionary<string, WarningItem> bucket, ProductionHourRecord rec)
+        private void ApplyYieldRule(IDictionary<string, WarningItem> bucket, ProductionHourRecord rec, IList<ProductionHourRecord> allProductions)
         {
             if (rec == null || rec.Total < _options.MinYieldSamples) return;
 
@@ -95,9 +95,10 @@ namespace EW_Assistant.Warnings
 
             var start = rec.Hour;
             var end = start.AddHours(1);
+            var yieldSeries = BuildYieldSeries(allProductions, start, 6);
             var summary = string.Format(CultureInfo.InvariantCulture,
-                "{0:HH}:00-{1:HH}:00 良率 {2}，低于阈值 {3}（样本 {4}）。",
-                start, end, ToPercent(yield), ToPercent(threshold), rec.Total);
+                "{0:HH}:00-{1:HH}:00 良率 {2}，低于阈值 {3}（样本 {4}，Pass={5}，Fail={6}，近6小时良率序列 {7}）。",
+                start, end, ToPercent(yield), ToPercent(threshold), rec.Total, rec.Pass, rec.Fail, yieldSeries);
 
             var item = new WarningItem
             {
@@ -120,14 +121,15 @@ namespace EW_Assistant.Warnings
             TryAddWarning(bucket, item, (oldVal, newVal) => Math.Min(oldVal, newVal));
         }
 
-        private void ApplyThroughputRule(IDictionary<string, WarningItem> bucket, ProductionHourRecord rec, BaselineCacheEntry baseline)
+        private void ApplyThroughputRule(IDictionary<string, WarningItem> bucket, ProductionHourRecord rec, BaselineCacheEntry baseline, IList<ProductionHourRecord> allProductions)
         {
             if (rec == null) return;
+            if (rec.Total <= 0) return; // 计划性停机或无产出不计入预警
 
             var plan = ResolvePlan(rec, baseline);
             if (plan.Plan <= 0)
             {
-                MaybeAddThroughputInfo(bucket, rec, plan);
+                // 零产出场景不提示样本不足，直接跳过
                 return;
             }
 
@@ -154,9 +156,12 @@ namespace EW_Assistant.Warnings
             var end = start.AddHours(1);
             var ratioText = ToPercent(ratio);
             var planSource = plan.Source == "Planned" ? "工单计划" : plan.Source == "Baseline" ? "历史基线" : "默认产能";
+            var throughputSeries = BuildThroughputSeries(allProductions, start, 6);
             var summary = string.Format(CultureInfo.InvariantCulture,
-                "{0:HH}:00-{1:HH}:00 产量 {2}，低于{3} {4:F0} 的 {5}（阈值 {6:F0}，基线样本 {7}）。",
-                start, end, actual, planSource, plan.Plan, ratioText, threshold, plan.BaselineSamples);
+                "{0:HH}:00-{1:HH}:00 产量 {2}，低于{3} {4:F0} 的 {5}（阈值 {6:F0}，基线样本 {7}，基线值 {8}，近6小时产量 {9}）。",
+                start, end, actual, planSource, plan.Plan, ratioText, threshold, plan.BaselineSamples,
+                plan.BaselineValue.HasValue ? plan.BaselineValue.Value.ToString("F1", CultureInfo.InvariantCulture) : "N/A",
+                throughputSeries);
 
             var item = new WarningItem
             {
@@ -194,6 +199,7 @@ namespace EW_Assistant.Warnings
             var lowThroughputHours = 0;
             foreach (var rec in windowProd)
             {
+                if (rec.Total <= 0) continue;
                 var plan = ResolvePlan(rec, baseline);
                 if (plan.Plan <= 0) continue;
                 var threshold = plan.Plan * _options.ThroughputWarningRatio;
@@ -206,8 +212,8 @@ namespace EW_Assistant.Warnings
             if (lowThroughputHours >= _options.TrendMinTriggers)
             {
                 var summary = string.Format(CultureInfo.InvariantCulture,
-                    "过去 {0} 小时中有 {1} 小时产能低于基线×{2}（{3:HH}:00-{4:HH}:00）。",
-                    _options.TrendWindowHours, lowThroughputHours, ToPercent(_options.ThroughputWarningRatio), windowStart, windowEnd);
+                    "过去 {0} 小时中有 {1} 小时产能低于基线×{2}（{3:HH}:00-{4:HH}:00，窗口样本 {5}）。",
+                    _options.TrendWindowHours, lowThroughputHours, ToPercent(_options.ThroughputWarningRatio), windowStart, windowEnd, windowProd.Count);
 
                 var item = new WarningItem
                 {
@@ -243,8 +249,8 @@ namespace EW_Assistant.Warnings
             if (lowYieldHours >= _options.TrendMinTriggers)
             {
                 var summary = string.Format(CultureInfo.InvariantCulture,
-                    "过去 {0} 小时中有 {1} 小时良率低于 {2}（{3:HH}:00-{4:HH}:00）。",
-                    _options.TrendWindowHours, lowYieldHours, ToPercent(_options.TrendYieldThreshold), windowStart, windowEnd);
+                    "过去 {0} 小时中有 {1} 小时良率低于 {2}（{3:HH}:00-{4:HH}:00，窗口样本 {5}）。",
+                    _options.TrendWindowHours, lowYieldHours, ToPercent(_options.TrendYieldThreshold), windowStart, windowEnd, windowProd.Count);
 
                 var item = new WarningItem
                 {
@@ -273,7 +279,8 @@ namespace EW_Assistant.Warnings
             ProductionHourRecord rec,
             Dictionary<DateTime, AlarmAggregate> alarmTotals,
             Dictionary<DateTime, List<AlarmHourStat>> alarmsByHour,
-            BaselineCacheEntry baseline)
+            BaselineCacheEntry baseline,
+            IList<ProductionHourRecord> allProductions)
         {
             if (rec == null) return;
 
@@ -287,8 +294,9 @@ namespace EW_Assistant.Warnings
                 var end = start.AddHours(1);
                 var topText = BuildTopAlarmSummary(rec.Hour, alarmsByHour);
                 var summary = string.Format(CultureInfo.InvariantCulture,
-                    "{0:HH}:00-{1:HH}:00 良率 {2} 且报警 {3} 次/停机 {4:F1} 分钟，关联报警 {5}。",
-                    start, end, ToPercent(rec.Yield), agg == null ? 0 : agg.Count, agg == null ? 0d : agg.DowntimeMinutes, topText);
+                    "{0:HH}:00-{1:HH}:00 良率 {2}（样本 {6}）且报警 {3} 次/停机 {4:F1} 分钟，关联报警 {5}，近6小时良率 {7}。",
+                    start, end, ToPercent(rec.Yield), agg == null ? 0 : agg.Count, agg == null ? 0d : agg.DowntimeMinutes, topText, rec.Total,
+                    BuildYieldSeries(allProductions, start, 6));
 
                 var item = new WarningItem
                 {
@@ -312,6 +320,7 @@ namespace EW_Assistant.Warnings
             }
 
             var plan = ResolvePlan(rec, baseline);
+            if (rec.Total <= 0) return; // 停机不计入组合
             if (plan.Plan <= 0 || alarmSeverity == null) return;
 
             var critThreshold = plan.Plan * _options.ThroughputCriticalRatio;
@@ -321,8 +330,11 @@ namespace EW_Assistant.Warnings
                 var end = start.AddHours(1);
                 var topText = BuildTopAlarmSummary(rec.Hour, alarmsByHour);
                 var summary = string.Format(CultureInfo.InvariantCulture,
-                    "{0:HH}:00-{1:HH}:00 产量 {2} 低于基线阈值 {3:F0}，且报警 {4} 次/停机 {5:F1} 分钟。Top：{6}",
-                    start, end, rec.Total, critThreshold, agg == null ? 0 : agg.Count, agg == null ? 0d : agg.DowntimeMinutes, topText);
+                    "{0:HH}:00-{1:HH}:00 产量 {2} 低于基线阈值 {3:F0}（基线 {7}，样本 {8}），且报警 {4} 次/停机 {5:F1} 分钟。Top：{6}，近6小时产量 {9}",
+                    start, end, rec.Total, critThreshold, agg == null ? 0 : agg.Count, agg == null ? 0d : agg.DowntimeMinutes, topText,
+                    plan.BaselineValue.HasValue ? plan.BaselineValue.Value.ToString("F1", CultureInfo.InvariantCulture) : "N/A",
+                    plan.BaselineSamples,
+                    BuildThroughputSeries(allProductions, start, 6));
 
                 var item = new WarningItem
                 {
@@ -407,8 +419,8 @@ namespace EW_Assistant.Warnings
             var samples = plan.BaselineSamples;
             var ruleId = "THROUGHPUT_BASELINE_MISSING";
             var summary = string.Format(CultureInfo.InvariantCulture,
-                "{0:HH}:00-{1:HH}:00 缺少计划产能，历史基线样本 {2}（需 ≥ {3}），跳过产能预警。",
-                start, end, samples, _options.MinHistorySamples);
+                "{0:HH}:00-{1:HH}:00 缺少计划产能，历史基线样本 {2}（需 ≥ {3}，基线值 {4}），跳过产能预警。",
+                start, end, samples, _options.MinHistorySamples, plan.BaselineValue.HasValue ? plan.BaselineValue.Value.ToString("F1", CultureInfo.InvariantCulture) : "N/A");
 
             var item = new WarningItem
             {
@@ -703,6 +715,30 @@ namespace EW_Assistant.Warnings
         #endregion
 
         #region 辅助方法
+
+        private static string BuildThroughputSeries(IList<ProductionHourRecord> productions, DateTime anchor, int hours)
+        {
+            if (productions == null || productions.Count == 0) return "[]";
+            var start = anchor.AddHours(-hours + 1);
+            var seq = productions
+                .Where(p => p.Hour >= start && p.Hour <= anchor)
+                .OrderBy(p => p.Hour)
+                .Select(p => p.Total.ToString("F0", CultureInfo.InvariantCulture))
+                .ToList();
+            return seq.Count == 0 ? "[]" : "[" + string.Join(",", seq) + "]";
+        }
+
+        private static string BuildYieldSeries(IList<ProductionHourRecord> productions, DateTime anchor, int hours)
+        {
+            if (productions == null || productions.Count == 0) return "[]";
+            var start = anchor.AddHours(-hours + 1);
+            var seq = productions
+                .Where(p => p.Hour >= start && p.Hour <= anchor && p.Total > 0)
+                .OrderBy(p => p.Hour)
+                .Select(p => (p.Yield * 100d).ToString("F1", CultureInfo.InvariantCulture))
+                .ToList();
+            return seq.Count == 0 ? "[]" : "[" + string.Join(",", seq) + "]";
+        }
 
         private static Dictionary<DateTime, AlarmAggregate> BuildAlarmAggregates(IList<AlarmHourStat> alarms)
         {

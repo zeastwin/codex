@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -79,11 +80,13 @@ namespace EW_Assistant.Services.Warnings
                     req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
                     req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     var json = JsonConvert.SerializeObject(payload);
+                    AppendLog("Request", url, json);
                     req.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
                     using (var resp = await _http.SendAsync(req).ConfigureAwait(false))
                     {
                         var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        AppendLog("Response", url, string.Format("Status={0}, Body={1}", resp.StatusCode, body));
                         if (!resp.IsSuccessStatusCode)
                         {
                             return "调用 AI 接口失败：" + resp.StatusCode;
@@ -97,6 +100,7 @@ namespace EW_Assistant.Services.Warnings
             }
             catch (Exception ex)
             {
+                AppendLog("Exception", _baseUrl + "/workflows/run", ex.Message);
                 return "调用 AI 分析出错：" + ex.Message;
             }
         }
@@ -153,6 +157,33 @@ namespace EW_Assistant.Services.Warnings
             }
 
             return sb.ToString();
+        }
+
+        private static void AppendLog(string stage, string url, string content)
+        {
+            try
+            {
+                var dir = Path.Combine("D:\\", "Data", "AiLog");
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                var path = Path.Combine(dir, "WarningAiCall.log");
+                var line = string.Format("{0:yyyy-MM-dd HH:mm:ss} [{1}] {2}{3}{4}{5}",
+                    DateTime.Now,
+                    stage,
+                    url ?? string.Empty,
+                    Environment.NewLine,
+                    content ?? string.Empty,
+                    Environment.NewLine);
+
+                File.AppendAllText(path, line, new UTF8Encoding(false));
+            }
+            catch
+            {
+                // 记录失败不影响主流程
+            }
         }
     }
 }
