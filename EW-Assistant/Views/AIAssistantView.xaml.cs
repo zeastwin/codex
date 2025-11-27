@@ -635,43 +635,47 @@ namespace EW_Assistant.Views
             var date = DateTime.Today.ToString("yyyy-MM-dd"); // 建议用采集地时区
             var sb = new StringBuilder();
 
-            sb.AppendLine($"生成 **今天（{{DATE}}）0–24 点** 的客户版 **报警日报**。只输出 **Markdown**；禁止输出代码块、JSON、工具调用日志或多余说明。");
+            sb.AppendLine($"生成 **今天（{{DATE}}）0–24 点** 的 **报警日报**。只输出 **Markdown**；禁止输出代码块、JSON、工具调用日志或多余说明。");
             sb.AppendLine();
             sb.AppendLine("【这是单独一台设备数据】");
             sb.AppendLine("【必须按此取数】");
-            sb.AppendLine("1) 仅调用 MCP 工具：");
-            sb.AppendLine("   - GetHourlyProdWithAlarms(date=\"{DATE}\", startHour=0, endHour=24)  // 获取逐小时：pass/fail/total/yield + alarmCount/alarmDurationSec/topAlarmCode");
-            sb.AppendLine("   - （可选增强）GetAlarmImpactSummary(startDate=\"{DATE}\", endDate=\"{DATE}\", window=\"\")  // 获取报警秒数↔产量/良率相关性与低良率小时集合");
-            sb.AppendLine("   - （可选增强）GetTopAlarmsDuringLowYield(startDate=\"{DATE}\", endDate=\"{DATE}\", threshold=95, window=\"\")");
-            sb.AppendLine("2) 在工具返回的基础上自行计算并用于报告：");
-            sb.AppendLine("   - 逐小时（0..23）：count=alarmCount，seconds=alarmDurationSec，avg_s=seconds/max(1,count)；");
-            sb.AppendLine("   - day_count=Σcount，day_seconds=Σseconds，avg_per_alarm=day_seconds/max(1,day_count)；");
-            sb.AppendLine("   - active_hours = 统计 seconds>0 的小时数；");
-            sb.AppendLine("   - 峰值/低谷：在 seconds>0 的小时中取 Top1~3 和 Bottom1~3（“HH:00–HH+1:00（xhym/条）”）；");
-            sb.AppendLine("   - 最长连续无报警窗口：把 seconds=0 的相邻小时合并，输出最长区间（如“03:00–07:00，4小时”）；");
-            sb.AppendLine("   - 波动指数 CV = std(seconds of nonzero hours) / mean(nonzero hours)，均值=0 记 0%。");
+            sb.AppendLine("1) 仅允许调用 1 次 MCP 工具（禁止调用其他任何工具）：");
+            sb.AppendLine("   - GetHourlyProdWithAlarms(date=\"{DATE}\", startHour=0, endHour=24)");
+            sb.AppendLine();
+            sb.AppendLine("2) 你只能使用该工具返回的 items 字段：");
+            sb.AppendLine("   - hour, pass, fail, total, yield, alarmCount, alarmDurationSec, topAlarmCode, topAlarmSeconds, topAlarmContent");
+            sb.AppendLine();
+            sb.AppendLine("3) 你需要自行计算：");
+            sb.AppendLine("   - avg_s = alarmDurationSec / max(1, alarmCount)；");
+            sb.AppendLine("   - day_count = Σ alarmCount；day_seconds = Σ alarmDurationSec；avg_per_alarm = day_seconds / max(1, day_count)；");
+            sb.AppendLine("   - active_hours = alarmDurationSec > 0 的小时数；");
+            sb.AppendLine("   - 峰值小时：alarmDurationSec 最大的小时（若全为0写“无”）；");
+            sb.AppendLine();
+            sb.AppendLine("【空值/缺省规则（必须遵守）】");
+            sb.AppendLine("- 若 alarmCount=0 或 alarmDurationSec=0：Top代码=“无”，Top内容=“无”。");
+            sb.AppendLine("- 若 topAlarmCode 为空：Top代码=“无”。");
+            sb.AppendLine("- 若 topAlarmContent 为空：Top内容=“无”。（不要写“内容缺失”）");
             sb.AppendLine();
             sb.AppendLine("【排版模板（顺序固定、全部必须出现）】");
             sb.AppendLine("# 今日报警日报（{DATE}）");
             sb.AppendLine();
             sb.AppendLine("## 概览指标");
             sb.AppendLine("| 指标 | 数值 |");
-            sb.AppendLine("|---|---:|");
+            sb.AppendLine("|:---|---:|");
             sb.AppendLine("| 报警条数 | {day_count 千分位} |");
             sb.AppendLine("| 报警总时长 | {day_seconds 转 xhym 或 ms} |");
             sb.AppendLine("| 平均单次(秒) | {avg_per_alarm 一位} |");
             sb.AppendLine("| 活跃小时 | {active_hours}/24 |");
-            sb.AppendLine("| 峰值小时 | {非零秒 Top1~3，例：“10:00–11:00（2h07m/10次）”} |");
-            sb.AppendLine("| 最长连续无报警窗口 | {如无则写“无”} |");
-            sb.AppendLine("| 波动指数（CV） | {两位百分比} |");
+            sb.AppendLine("| 峰值小时 | {若存在：HH:00–HH+1:00（xhym/条数）；否则“无”} |");
             sb.AppendLine();
+
             sb.AppendLine("## 逐小时明细");
             sb.AppendLine("> 0–23 点必须全覆盖；缺数据的小时按 count=0, seconds=0, avg_s=0 填充。");
             sb.AppendLine();
-            sb.AppendLine("| 时段 | 报警条数 | 报警总时长 | 平均单次(s) | Top报警代码 | 备注 |");
-            sb.AppendLine("|---|---:|---:|---:|---|---|");
-            sb.AppendLine("（严格渲染 24 行；不得跳过 0 值小时，不得合并区间）");
-            sb.AppendLine("| {HH}:00–{HH+1}:00 | {count 千分位} | {seconds 时分秒} | {avg_s 一位} | {topAlarmCode} | {标签} |");
+            sb.AppendLine("| 时段 | 条数 | 时长 | 平均(s) | Top代码 | Top内容 | 备注 |");
+            sb.AppendLine("|:---|---:|---:|---:|:---|:---|:---|");
+            sb.AppendLine("（严格渲染 24 行；不得跳过 0 值小时，不得合并区间；必须 7 列，不得增减列）");
+            sb.AppendLine("| {HH}:00–{HH+1}:00 | {count 千分位} | {seconds 时分秒} | {avg_s 一位} | {topCode} | {topContent} | {标签} |");
             sb.AppendLine();
             sb.AppendLine("**标签判定（从强到弱，可叠加）：**");
             sb.AppendLine("- count=0 或 seconds=0 → `—无报警`");
@@ -681,52 +685,33 @@ namespace EW_Assistant.Views
             sb.AppendLine("- avg_s ≤ 30 → `✓短报警`");
             sb.AppendLine();
             sb.AppendLine("**合计行（表末尾追加）：**");
-            sb.AppendLine("| **合计** | **Σcount** | **Σseconds** | **{avg_per_alarm 一位}** |  | **活跃 {active_hours}/24** |");
+            sb.AppendLine("| **合计** | **Σcount** | **Σseconds** | **{avg_per_alarm 一位}** |  |  | **活跃 {active_hours}/24** |");
             sb.AppendLine();
-            sb.AppendLine("## 分类与低良率聚焦");
-            sb.AppendLine("- 若已调用 GetTopAlarmsDuringLowYield：列出低良率小时聚合的 Top 代码（按总时长降序）。");
-            sb.AppendLine("- 否则：基于逐小时结果按 topAlarmCode 聚合，输出 Top5（代码 — 总时长/条数）。");
+
+            sb.AppendLine("## 今日 Top 报警（近似统计：按各小时 Top1 聚合）");
+            sb.AppendLine("- 仅基于每小时 topAlarmCode/topAlarmSeconds 做近似聚合，输出 Top5（按 ΣtopAlarmSeconds 降序）：");
+            sb.AppendLine("  - 代码 | 内容 | ΣtopAlarmSeconds(转时分秒) | 出现小时数");
             sb.AppendLine();
-            sb.AppendLine("## 关键报警内容分析（机理→诊断→建议）");
-            sb.AppendLine("如可获取 Content 字段则进行规范化与近似聚合（去时间戳/流水号，大小写与空白规范化；编辑距离或包含聚类，Top10）。若无法获取 Content，则以代码级别给出代表含义。");
+
+            sb.AppendLine("## 处理措施建议（5–8 条，务实可执行）");
+            sb.AppendLine("- 每条按：**关联代码/内容** → **动作** → **验证指标**（例如报警总时长下降、某工位成功率提升）。");
             sb.AppendLine();
-            sb.AppendLine("| 关联代码/代表内容 | 条数 | 总时长 | 典型机理 | 快速排查 |");
-            sb.AppendLine("|---|---:|---:|---|---|");
-            sb.AppendLine("（逐行填充；机理/排查需结合数据特征与文本线索，不可空泛）");
-            sb.AppendLine();
-            sb.AppendLine("**判别与推断要点（用于产出上表“机理/排查”）：**");
-            sb.AppendLine("- 换线/首件/交接集中 → 机理：参数/标定漂移；排查：治具零点复核、模板/阈值校对。");
-            sb.AppendLine("- 同一工位/同一代码占比高 → 机理：单点瓶颈/部件老化；排查：真空/气压/电机/传感器自检与日志。");
-            sb.AppendLine("- 短频高发、时长短 → 机理：误报/阈值过严/抖动；排查：去抖/重试策略与告警分级。");
-            sb.AppendLine("- 低频但超长 → 机理：卡滞/对位失败/上游断料；排查：机械间隙/润滑、相机/光源、物料监控与补料。");
-            sb.AppendLine("- 与温度/时段相关 → 机理：热漂/环境干扰；排查：预热、屏蔽与稳压、环境阈值联动。");
-            sb.AppendLine("- 通讯类（握手/ACK/心跳） → 机理：重试不足或阻塞；排查：超时/重发策略与错误码上报路径。");
-            sb.AppendLine();
-            sb.AppendLine("## 处理措施建议（可执行的行动清单）");
-            sb.AppendLine("请输出 **5–10 条**，按“性价比优先级”排序，用表格给出可落地闭环：");
-            sb.AppendLine();
-            sb.AppendLine("| 关联内容/类别 | 具体措施  | 预计完成 | 风险 | 验证指标 | 预期收益 |");
-            sb.AppendLine("|---|---|---|---|---|---|"); // ← 修复：6列对应6个分隔符
-            sb.AppendLine("- L1 示例：清洁/紧固/复位、传感器与接插件检查、阈值复核、快速旁路策略；");
-            sb.AppendLine("- L2 示例：去抖与阈值优化、模板/参数重训、冗余/稳压/屏蔽、异常分级与重试、日志与监测点新增；");
-            sb.AppendLine("- 验证指标示例：真空建立时间、取放成功率、对位置信度、通讯重试率、回零成功率、报警总时长/条数。");
-            sb.AppendLine();
-            sb.AppendLine("## 复盘与预防");
-            sb.AppendLine("- 5 Whys（简要）、点检与保养项、阈值/告警升级规则、次日复核点（需量化）。");
-            sb.AppendLine();
+
             sb.AppendLine("## 异常与注意事项");
-            sb.AppendLine("- 如存在工具报错、CSV 缺失或跨天空洞，请逐条列出；若无则写“无”。");
-            sb.AppendLine("- 若调用了 GetAlarmImpactSummary，请简述相关性 r（alarmSeconds_vs_total / alarmSeconds_vs_yield）及业务含义。");
+            sb.AppendLine("- 若日报出现大量 Top内容=无：说明“报警文件无内容或内容为空，当前仅能展示代码”；否则写“无”。");
             sb.AppendLine();
-            sb.AppendLine("【格式与防呆】");
-            sb.AppendLine("- 数值 **千分位**；百分比 **两位**；时长用 `xhym` 或 `ms`；时间统一 `HH:00`。");
-            sb.AppendLine("- **严禁编造**：所有数值必须来自工具返回；**24 行小时表不可缺**；无数据也要完整输出各章节并在“异常与注意事项”说明原因。");
+            sb.AppendLine("【格式要求】");
+            sb.AppendLine("- 数值千分位；百分比两位；时长用 `xhym` 或 `ms`；时间统一 `HH:00`。");
+            sb.AppendLine("- 严禁编造：所有数值必须来自工具返回或由其严格计算；逐小时表 24 行不可缺。");
 
             var prompt = sb.ToString().Replace("{DATE}", date);
 
             try { MainWindow.PostProgramInfo("AI生成报警报表中，请稍候", "info"); } catch { }
             SendCurrentAsyncByInfo(prompt);
         }
+
+
+
 
         private void QuickWeeklyReportBtn_Click(object sender, RoutedEventArgs e)
         {

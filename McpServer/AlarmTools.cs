@@ -1,4 +1,4 @@
-﻿// === merged: AlarmCsvRepository + ProdAlarmTools + AlarmCsvTools (net48-friendly) ===
+// === merged: AlarmCsvRepository + ProdAlarmTools + AlarmCsvTools (net48-friendly) ===
 using ModelContextProtocol.Server;
 using Newtonsoft.Json;
 using System;
@@ -504,11 +504,11 @@ public static class ProdAlarmTools
     private static int ClampInt(int v, int lo, int hi) { if (v < lo) return lo; if (v > hi) return hi; return v; }
 
     // ---------- 1) 单日联表 ----------
-    [McpServerTool, Description("单日联表：按小时输出 PASS/FAIL/良率 + 报警条数/报警秒数 + Top1报警代码。")]
+    [McpServerTool, Description("单日联表：按小时输出 PASS/FAIL/良率 + 报警条数/报警秒数 + Top1报警代码（附内容）。")]
     public static Task<string> GetHourlyProdWithAlarms(
-        [Description("日期，yyyy-MM-dd；也支持 MM-dd / dd（默认本月）；留空=今天")] string date = null,
-        [Description("起始小时（0-23，可空）")] int? startHour = null,
-        [Description("结束小时（1-24，可空，含头不含尾）")] int? endHour = null)
+     [Description("日期，yyyy-MM-dd；也支持 MM-dd / dd（默认本月）；留空=今天")] string date = null,
+     [Description("起始小时（0-23，可空）")] int? startHour = null,
+     [Description("结束小时（1-24，可空，含头不含尾）")] int? endHour = null)
     {
         DateTime theDay;
         try { theDay = ParseSmartDateOrToday(date); }
@@ -524,7 +524,6 @@ public static class ProdAlarmTools
         if (!AlarmCsvRepository.TryLoadDay(theDay, out alarms, out err2))
             alarms = new List<AlarmRecord>(); // 没报警文件也能返回产能
 
-        // 产能数据依赖你的 CsvProductionRepository / HourStat
         DayStats ds;
         string err1;
         if (!CsvProductionRepository.TryLoadDay(theDay, out ds, out err1))
@@ -539,6 +538,21 @@ public static class ProdAlarmTools
         int sh = ClampInt(startHour.HasValue ? startHour.Value : 0, 0, 23);
         int eh = ClampInt(endHour.HasValue ? endHour.Value : 24, sh + 1, 24);
 
+        // 仅做一个轻量映射：code -> 第一条非空 content（够用、快、输出小）
+        var code2content = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < alarms.Count; i++)
+        {
+            var a = alarms[i];
+            if (a == null) continue;
+
+            var c = (a.Code ?? "").Trim();
+            var t = (a.Content ?? "").Trim();
+            if (c.Length == 0 || t.Length == 0) continue;
+
+            if (!code2content.ContainsKey(c))
+                code2content[c] = t;
+        }
+
         var items = new List<object>();
         for (int h = sh; h < eh; h++)
         {
@@ -549,6 +563,16 @@ public static class ProdAlarmTools
                 ? ah.CodeDuration.OrderByDescending(kv => kv.Value).First()
                 : new KeyValuePair<string, int>("", 0);
 
+            var topCode = (top1.Key ?? "").Trim();
+
+            string topContent = "";
+            if (topCode.Length > 0)
+            {
+                string hit;
+                if (code2content.TryGetValue(topCode, out hit))
+                    topContent = hit ?? "";
+            }
+
             items.Add(new
             {
                 hour = h,
@@ -556,10 +580,13 @@ public static class ProdAlarmTools
                 fail = ph.Fail,
                 total = ph.Total,
                 yield = Math.Round(ph.Yield, 2),
+
                 alarmCount = ah.Count,
                 alarmDurationSec = ah.DurationSec,
-                topAlarmCode = top1.Key ?? "",
-                topAlarmSeconds = top1.Value
+
+                topAlarmCode = topCode,
+                topAlarmSeconds = top1.Value,
+                topAlarmContent = string.IsNullOrEmpty(topContent) ? "" : topContent
             });
         }
 
@@ -571,10 +598,14 @@ public static class ProdAlarmTools
             endHour = eh,
             items = items
         };
+
         var res = JsonConvert.SerializeObject(payload);
         ToolCallLogger.Log(nameof(GetHourlyProdWithAlarms), new { date = theDay.ToString("yyyy-MM-dd"), startHour = sh, endHour = eh }, res);
         return Task.FromResult(res);
     }
+
+
+
 
     // ---------- 2) 跨天影响分析（含逐小时明细 rows） ----------
     [McpServerTool, Description("跨天影响分析：计算报警秒数与产量/良率的相关性，并输出低良率小时的Top报警（已去重并集，绝不钳位）。可加时段窗口，如 10-14。")]
