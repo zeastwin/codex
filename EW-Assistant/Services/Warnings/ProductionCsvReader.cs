@@ -32,6 +32,12 @@ namespace EW_Assistant.Warnings
         {
             if (end <= start) return new List<ProductionHourRecord>();
 
+            var useSplit = LocalDataConfig.UseOkNgSplitTables;
+            if (useSplit)
+            {
+                return GetProductionRangeFromSplitTables(start, end);
+            }
+
             var result = new Dictionary<DateTime, ProductionHourRecord>();
 
             foreach (var file in EnumerateFiles(start, end))
@@ -73,6 +79,47 @@ namespace EW_Assistant.Warnings
 
         public string Root => _root;
 
+        private IList<ProductionHourRecord> GetProductionRangeFromSplitTables(DateTime start, DateTime end)
+        {
+            var result = new Dictionary<DateTime, ProductionHourRecord>();
+            var day = start.Date;
+            while (day <= end.Date)
+            {
+                var okFile = FindSplitFile(day, true);
+                var ngFile = FindSplitFile(day, false);
+
+                var passArr = new int[24];
+                var failArr = new int[24];
+
+                if (!string.IsNullOrWhiteSpace(okFile) && File.Exists(okFile))
+                {
+                    AggregateSplitFile(okFile, _splitOkHeaders, day, passArr);
+                }
+                if (!string.IsNullOrWhiteSpace(ngFile) && File.Exists(ngFile))
+                {
+                    AggregateSplitFile(ngFile, _splitNgHeaders, day, failArr);
+                }
+
+                for (int h = 0; h < 24; h++)
+                {
+                    var at = new DateTime(day.Year, day.Month, day.Day, h, 0, 0);
+                    if (at < start || at >= end) continue;
+                    if (passArr[h] <= 0 && failArr[h] <= 0) continue;
+
+                    result[at] = new ProductionHourRecord
+                    {
+                        Hour = at,
+                        Pass = passArr[h],
+                        Fail = failArr[h]
+                    };
+                }
+
+                day = day.AddDays(1);
+            }
+
+            return result.Values.OrderBy(x => x.Hour).ToList();
+        }
+
         private IEnumerable<string> EnumerateFiles(DateTime start, DateTime end)
         {
             if (!Directory.Exists(_root)) yield break;
@@ -91,8 +138,7 @@ namespace EW_Assistant.Warnings
         {
             if (!File.Exists(path)) yield break;
 
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var reader = new StreamReader(fs, new UTF8Encoding(false)))
+            using (var reader = CsvEncoding.OpenReader(path))
             {
                 string headerLine = null;
                 while (headerLine == null && !reader.EndOfStream)
@@ -225,6 +271,113 @@ namespace EW_Assistant.Warnings
                 .FirstOrDefault();
 
             return best == null || best.count == 0 ? ',' : best.c;
+        }
+
+        private static readonly string[] _splitOkHeaders = new[] { "产出时间", "產出時間" };
+        private static readonly string[] _splitNgHeaders = new[] { "抛料开始时间", "抛料时间", "抛料開始時間" };
+
+        private string FindSplitFile(DateTime day, bool isOk)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_root)) return null;
+                var watchMode = LocalDataConfig.WatchMode;
+                var name = $"{day:yyyy-MM-dd}-{(isOk ? "产品记录表" : "抛料记录表")}.csv";
+
+                if (watchMode)
+                {
+                    var dayDir = Path.Combine(_root, day.ToString("yyyy-MM-dd"));
+                    var path = Path.Combine(dayDir, name);
+                    if (File.Exists(path)) return path;
+                }
+
+                var direct = Path.Combine(_root, name);
+                if (File.Exists(direct)) return direct;
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        private void AggregateSplitFile(string path, string[] timeAliases, DateTime day, int[] bucket)
+        {
+            try
+            {
+                if (!File.Exists(path)) return;
+                var lines = File.ReadAllLines(path, new UTF8Encoding(false)).ToList();
+                if (lines.Count == 0) return;
+
+                var delim = DetectDelimiter(lines[0]);
+                var header = lines[0].Split(new[] { delim }, StringSplitOptions.None)
+                    .Select(s => (s ?? string.Empty).Trim().Trim('"'))
+                    .ToArray();
+
+                var idxTime = FindIndexContains(header, timeAliases);
+                if (idxTime < 0) return;
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(lines[i])) continue;
+                    var cells = lines[i].Split(new[] { delim }, StringSplitOptions.None);
+                    if (idxTime >= cells.Length) continue;
+
+                    if (!TryParseHourWithOptionalDate(cells[idxTime], day, out var hour)) continue;
+                    if (hour < 0 || hour > 23) continue;
+                    bucket[hour] += 1;
+                }
+            }
+            catch
+            {
+                // ignore single file errors
+            }
+        }
+
+        private static bool TryParseHourWithOptionalDate(string text, DateTime day, out int hour)
+        {
+            hour = -1;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+
+            var raw = text.Trim().Trim('"');
+            var hasDate = raw.Contains("-") || raw.Contains("/") || raw.IndexOf('T') >= 0 || raw.IndexOf('t') >= 0;
+
+            if (DateTime.TryParse(raw, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out var dt)
+                || DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out dt))
+            {
+                if (hasDate && dt.Date != day.Date) return false;
+                hour = dt.Hour;
+                return hour >= 0 && hour <= 23;
+            }
+
+            if (int.TryParse(raw, out var h) && h >= 0 && h <= 23)
+            {
+                hour = h;
+                return true;
+            }
+
+            if (raw.Length >= 2 && int.TryParse(raw.Substring(0, 2), out h) && h >= 0 && h <= 23)
+            {
+                hour = h;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static int FindIndexContains(string[] headers, params string[] names)
+        {
+            for (var i = 0; i < headers.Length; i++)
+            {
+                var h = (headers[i] ?? string.Empty).Trim().Trim('"');
+                foreach (var n in names)
+                {
+                    if (h.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0)
+                        return i;
+                }
+            }
+            return -1;
         }
 
         private static DateTime TruncateToHour(DateTime dt)

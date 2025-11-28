@@ -8,14 +8,12 @@
 
 ### 状态定义
 - `Active`：待处理，默认状态。
-- `Acknowledged`：已确认/已响应，仍会展示。
-- `Ignored`：已忽略/静默，`IgnoredUntil` 未到期时不展示。
 - `Processed`：已处理完毕，后续新命中会自动转回 `Active`。
-- `Resolved`：在 `ResolveGraceMinutes` 内未再次命中的自动恢复状态，可按需重开。
+- `Resolved`：超过 `ResolveGraceMinutes` 未再次命中的自动恢复状态。
 
 ### 命令与自动流转
-- 命令：确认（Active→Acknowledged）、忽略（→Ignored，带静默截止时间）、标记已处理（→Processed）、重开（→Active）。
-- 自动恢复：若工单超过宽限期未再命中，状态置为 `Resolved`；若已恢复/已处理但再次命中，将转为 `Active` 并累加 OccurrenceCount。
+- 命令：标记已处理（Active→Processed）。当前 UI 仅保留此操作，确认/忽略/重开入口已移除。
+- 自动恢复：若工单超过宽限期未再命中，状态置为 `Resolved`；若 `Processed/Resolved` 后再次命中，将转为 `Active` 并累加 OccurrenceCount。
 
 ### 存储
-- 工单存储于 `%AppData%\EW-Assistant\warning_tickets.json`，读写容错、UTF-8，无需手工创建目录。*** End Patch```github.com/copilot" uṣiṣẹ manually."* ***!
+- 工单存储于 `D:\DataAI\warning_tickets.json`，读写容错、UTF-8，无需手工创建目录。

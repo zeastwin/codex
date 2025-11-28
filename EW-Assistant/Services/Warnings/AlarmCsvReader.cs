@@ -148,8 +148,7 @@ namespace EW_Assistant.Warnings
         {
             if (!File.Exists(path)) yield break;
 
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var reader = new StreamReader(fs, new UTF8Encoding(false)))
+            using (var reader = CsvEncoding.OpenReader(path))
             {
                 string headerLine = null;
                 while (headerLine == null && !reader.EndOfStream)

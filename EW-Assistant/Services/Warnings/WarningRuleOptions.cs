@@ -27,6 +27,7 @@ namespace EW_Assistant.Warnings
         public const string DefaultBaselineOutlierMode = "P10P90";
         public const double DefaultSuppressionHours = 2d;
         public const int DefaultIgnoreMinutes = 60;
+        public const int DefaultResolveGraceMinutes = 120;
 
         private int _lookbackDays = DefaultLookbackDays;
         private int _minHistorySamples = DefaultMinHistorySamples;
@@ -46,6 +47,7 @@ namespace EW_Assistant.Warnings
         private string _baselineOutlierMode = DefaultBaselineOutlierMode;
         private double _suppressionHours = DefaultSuppressionHours;
         private int _ignoreMinutes = DefaultIgnoreMinutes;
+        private int _resolveGraceMinutes = DefaultResolveGraceMinutes;
 
         [JsonProperty("lookbackDays")]
         public int LookbackDays
@@ -181,6 +183,13 @@ namespace EW_Assistant.Warnings
             set { if (_ignoreMinutes != value) { _ignoreMinutes = value; OnPropertyChanged(); } }
         }
 
+        [JsonProperty("resolveGraceMinutes")]
+        public int ResolveGraceMinutes
+        {
+            get => _resolveGraceMinutes;
+            set { if (_resolveGraceMinutes != value) { _resolveGraceMinutes = value; OnPropertyChanged(); } }
+        }
+
         public static WarningRuleOptions CreateDefault()
         {
             return new WarningRuleOptions
@@ -202,7 +211,8 @@ namespace EW_Assistant.Warnings
                 BaselineExcludeDowntime = false,
                 BaselineOutlierMode = DefaultBaselineOutlierMode,
                 SuppressionHours = DefaultSuppressionHours,
-                IgnoreMinutes = DefaultIgnoreMinutes
+                IgnoreMinutes = DefaultIgnoreMinutes,
+                ResolveGraceMinutes = DefaultResolveGraceMinutes
             };
         }
 
@@ -226,6 +236,7 @@ namespace EW_Assistant.Warnings
             if (opt.TrendMinTriggers <= 0) opt.TrendMinTriggers = DefaultTrendMinTriggers;
             if (opt.SuppressionHours < 0) opt.SuppressionHours = DefaultSuppressionHours;
             if (opt.IgnoreMinutes <= 0) opt.IgnoreMinutes = DefaultIgnoreMinutes;
+            if (opt.ResolveGraceMinutes <= 0) opt.ResolveGraceMinutes = DefaultResolveGraceMinutes;
             opt.BaselineOutlierMode = NormalizeOutlierMode(opt.BaselineOutlierMode);
 
             return opt;
@@ -252,7 +263,8 @@ namespace EW_Assistant.Warnings
                 BaselineExcludeDowntime = BaselineExcludeDowntime,
                 BaselineOutlierMode = BaselineOutlierMode,
                 SuppressionHours = SuppressionHours,
-                IgnoreMinutes = IgnoreMinutes
+                IgnoreMinutes = IgnoreMinutes,
+                ResolveGraceMinutes = ResolveGraceMinutes
             };
         }
 

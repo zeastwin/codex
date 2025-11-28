@@ -182,6 +182,7 @@
     <Compile Include="Services\FileWorkflowClient.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Services\Warnings\AiWarningAnalysisService.cs" />
+    <Compile Include="Services\Warnings\CsvEncoding.cs" />
     <Compile Include="Services\Warnings\WarningAnalysisCache.cs" />
     <Compile Include="ViewModels\WarningCenterViewModel.cs" />
     <Compile Include="Services\Warnings\AlarmCsvReader.cs" />

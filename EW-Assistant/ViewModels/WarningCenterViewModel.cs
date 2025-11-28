@@ -27,7 +27,6 @@ namespace EW_Assistant.ViewModels
         private readonly IWarningTicketStore _ticketStore;
         private bool _isAnalyzingWarnings;
         private readonly List<WarningTicketRecord> _allTickets = new List<WarningTicketRecord>();
-        private const int ResolveGraceMinutes = 120;
         private readonly int _ignoreMinutes;
         private string _filterStatus = "Pending";
         private readonly WarningRuleOptions _options;
@@ -318,7 +317,7 @@ namespace EW_Assistant.ViewModels
                 }
                 if (t.LastSeen != default(DateTime))
                 {
-                    if ((now - t.LastSeen).TotalMinutes > ResolveGraceMinutes && !string.Equals(t.Status ?? string.Empty, "Resolved", StringComparison.OrdinalIgnoreCase))
+                    if ((now - t.LastSeen).TotalMinutes > _options.ResolveGraceMinutes && !string.Equals(t.Status ?? string.Empty, "Resolved", StringComparison.OrdinalIgnoreCase))
                     {
                         t.Status = "Resolved";
                         t.UpdatedAt = now;

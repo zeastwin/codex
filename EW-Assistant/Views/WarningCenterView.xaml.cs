@@ -34,6 +34,7 @@ namespace EW_Assistant.Views
         private void StartAlarmMonitor()
         {
             _lastAlarmWriteTime = GetLatestAlarmWriteTime();
+            _lastProdWriteTime = GetLatestProductionWriteTime();
             _refreshTimer = new DispatcherTimer();
             _refreshTimer.Interval = TimeSpan.FromSeconds(10);
             _refreshTimer.Tick += RefreshTimer_Tick;
@@ -86,10 +87,13 @@ namespace EW_Assistant.Views
         {
             try
             {
-                var latest = GetLatestAlarmWriteTime();
-                if (latest > _lastAlarmWriteTime)
+                var latestAlarm = GetLatestAlarmWriteTime();
+                var latestProd = GetLatestProductionWriteTime();
+
+                if (latestAlarm > _lastAlarmWriteTime || latestProd > _lastProdWriteTime)
                 {
-                    _lastAlarmWriteTime = latest;
+                    _lastAlarmWriteTime = latestAlarm > _lastAlarmWriteTime ? latestAlarm : _lastAlarmWriteTime;
+                    _lastProdWriteTime = latestProd > _lastProdWriteTime ? latestProd : _lastProdWriteTime;
                     ViewModel.LoadWarningsFromCsv();
                     var _ = ViewModel.AnalyzeMissingWarningsAsync();
                 }
@@ -156,7 +160,59 @@ namespace EW_Assistant.Views
             return max == DateTime.MinValue ? _lastAlarmWriteTime : max;
         }
 
+        private DateTime GetLatestProductionWriteTime()
+        {
+            try
+            {
+                var root = LocalDataConfig.ProductionCsvRoot;
+                var watchMode = LocalDataConfig.WatchMode;
+                if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+                    return _lastProdWriteTime;
+
+                return watchMode
+                    ? GetLatestWatchModeProdWriteTime(root)
+                    : GetLatestFlatProdWriteTime(root);
+            }
+            catch
+            {
+                return _lastProdWriteTime;
+            }
+        }
+
+        private DateTime GetLatestFlatProdWriteTime(string root)
+        {
+            var max = DateTime.MinValue;
+            var files = Directory.GetFiles(root, "*.csv", SearchOption.TopDirectoryOnly);
+            foreach (var path in files)
+            {
+                var t = File.GetLastWriteTime(path);
+                if (t > max) max = t;
+            }
+            return max == DateTime.MinValue ? _lastProdWriteTime : max;
+        }
+
+        private DateTime GetLatestWatchModeProdWriteTime(string root)
+        {
+            var max = DateTime.MinValue;
+            var dirs = Directory.GetDirectories(root, "*", SearchOption.TopDirectoryOnly);
+            foreach (var dir in dirs)
+            {
+                var name = Path.GetFileName(dir);
+                if (!DateTime.TryParseExact(name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                    continue;
+
+                var files = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly);
+                foreach (var path in files)
+                {
+                    var t = File.GetLastWriteTime(path);
+                    if (t > max) max = t;
+                }
+            }
+            return max == DateTime.MinValue ? _lastProdWriteTime : max;
+        }
+
         private DispatcherTimer _refreshTimer;
         private DateTime _lastAlarmWriteTime = DateTime.MinValue;
+        private DateTime _lastProdWriteTime = DateTime.MinValue;
     }
 }
