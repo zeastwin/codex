@@ -558,7 +558,7 @@ namespace EW_Assistant.Views
             if (_week.Count == 0)
                 return;
 
-            int max = Math.Max(1, _week.Where(w => !w.Missing).Select(w => w.Total).DefaultIfEmpty(1).Max());
+            int max = Math.Max(1, _week.Where(w => !w.Missing).Select(w => Math.Max(w.Pass, w.Fail)).DefaultIfEmpty(1).Max());
             int yMax = (int)Math.Ceiling(max * 1.1);
             if (yMax <= 0) yMax = 10;
 
@@ -573,13 +573,15 @@ namespace EW_Assistant.Views
             }
 
             float slot = chart.Width / _week.Count;
-            float barWidth = slot * 0.52f;
+            float barWidth = slot * 0.28f;
+            float gap = 0f;
             float radius = 6f;
 
             var passDark = new SKColor(59, 130, 246);
             var passLight = new SKColor(147, 197, 253);
-            var failDark = new SKColor(239, 68, 68);
-            var failLight = new SKColor(254, 202, 202);
+            var failDark = new SKColor(249, 115, 22);
+            var failLight = new SKColor(253, 186, 116);
+            using var failValuePaint = new SKPaint { IsAntialias = true, Color = failDark, TextSize = 10, Typeface = FONT_CJK, FakeBoldText = true };
 
             for (int i = 0; i < _week.Count; i++)
             {
@@ -605,16 +607,15 @@ namespace EW_Assistant.Views
 
                 float pH = chart.Height * (float)(d.Pass / Math.Max(1.0, yMax)) * (float)eased;
                 float fH = chart.Height * (float)(d.Fail / Math.Max(1.0, yMax)) * (float)eased;
-                float totalH = pH + fH;
 
-                float left = cx - barWidth / 2f;
-                float right = cx + barWidth / 2f;
+                float passLeft = cx - gap - barWidth;
+                float failLeft = cx + gap;
                 float bottom = chart.Bottom;
 
                 if (pH > 0.1f)
                 {
-                    var rect = new SKRect(left, bottom - pH, right, bottom);
-                    using var rr = MakeRRect(rect, 0, 0, radius, radius);
+                    var rect = new SKRect(passLeft, bottom - pH, passLeft + barWidth, bottom);
+                    using var rr = MakeRRect(rect, radius, radius, radius, radius);
                     using var shader = SKShader.CreateLinearGradient(new SKPoint(0, rect.Top), new SKPoint(0, rect.Bottom),
                         new[] { passLight, passDark }, null, SKShaderTileMode.Clamp);
                     barPaint.Shader = shader;
@@ -624,20 +625,28 @@ namespace EW_Assistant.Views
 
                 if (fH > 0.1f)
                 {
-                    var rect = new SKRect(left, bottom - pH - fH, right, bottom - pH);
-                    using var rr = MakeRRect(rect, radius, radius, 0, 0);
+                    var rect = new SKRect(failLeft, bottom - fH, failLeft + barWidth, bottom);
+                    using var rr = MakeRRect(rect, radius, radius, radius, radius);
                     using var shader = SKShader.CreateLinearGradient(new SKPoint(0, rect.Top), new SKPoint(0, rect.Bottom),
                         new[] { failLight, failDark }, null, SKShaderTileMode.Clamp);
                     barPaint.Shader = shader;
                     canvas.DrawRoundRect(rr, barPaint);
                     barPaint.Shader = null;
+
+                    var failTag = d.Fail.ToString(CultureInfo.InvariantCulture);
+                    var fb = new SKRect();
+                    failValuePaint.MeasureText(failTag, ref fb);
+                    float fx = rect.MidX - fb.MidX;
+                    float fy = rect.Top - 6 - fb.MidY;
+                    if (fy < chart.Top + 4 - fb.Top) fy = chart.Top + 4 - fb.Top;
+                    canvas.DrawText(failTag, fx, fy, failValuePaint);
                 }
 
                 var tag = (d.Pass + d.Fail).ToString(CultureInfo.InvariantCulture);
                 var bounds = new SKRect();
                 valuePaint.Color = new SKColor(55, 65, 81);
                 valuePaint.MeasureText(tag, ref bounds);
-                float desired = chart.Bottom - totalH - 6;
+                float desired = chart.Bottom - Math.Max(pH, fH) - 6;
                 float baseline = SafeBaseline(valuePaint, tag, desired, chart.Top, chart.Bottom);
                 canvas.DrawText(tag, cx - bounds.MidX, baseline, valuePaint);
             }

@@ -359,7 +359,7 @@ namespace EW_Assistant
             _todayYield = total > 0 ? (double)_todayPassSum / total : 0.0;
         }
 
-        // ===== 绘图：周图（堆叠 PASS/FAIL） =====
+        // ===== 绘图：周图（PASS/FAIL 双柱） =====
         private void SkChart_PaintSurface(object sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
         {
             var canvas = e.Surface.Canvas;
@@ -376,7 +376,7 @@ namespace EW_Assistant
             using var dayPaint = new SKPaint { IsAntialias = true, Color = new SKColor(107, 114, 128), TextSize = 12 };
             using var barPaint = new SKPaint { IsAntialias = true };
 
-            int max = Math.Max(1, _week.Any() ? _week.Max(d => d.Total) : 1);
+            int max = Math.Max(1, _week.Any() ? _week.Max(d => Math.Max(d.Pass, d.Fail)) : 1);
             int gridCount = 4;
             // 上限 = 最高值 * 1.1（向上取整）
             int yMax = (int)Math.Ceiling(max * 1.10);
@@ -403,13 +403,15 @@ namespace EW_Assistant
             if (_week.Count == 0) return;
 
             float slot = chart.Width / _week.Count;
-            float barWidth = slot * 0.52f;
+            float barWidth = slot * 0.28f;
+            float gap = 0f;
             float radius = 6f;
 
             var passDark = new SKColor(59, 130, 246);
             var passLight = new SKColor(147, 197, 253);
-            var failDark = new SKColor(239, 68, 68);
-            var failLight = new SKColor(254, 202, 202);
+            var failDark = new SKColor(249, 115, 22);
+            var failLight = new SKColor(253, 186, 116);
+            using var failValuePaint = new SKPaint { IsAntialias = true, Color = failDark, TextSize = 10, FakeBoldText = true };
 
             for (int i = 0; i < _week.Count; i++)
             {
@@ -435,35 +437,42 @@ namespace EW_Assistant
 
                 float pH = chart.Height * (float)(d.Pass / Math.Max(1.0, (double)yMax)) * (float)eased;
                 float fH = chart.Height * (float)(d.Fail / Math.Max(1.0, (double)yMax)) * (float)eased;
-                float totalH = pH + fH;
 
-                float left = cx - barWidth / 2f, right = cx + barWidth / 2f;
+                float passLeft = cx - gap - barWidth;
+                float failLeft = cx + gap;
                 float bottom = chart.Bottom;
 
-                // PASS 段
+                // PASS
                 if (pH > 0.1f)
                 {
-                    var r = new SKRect(left, bottom - pH, right, bottom);
-                    using var rr = MakeRRect(r, 0, 0, radius, radius);
+                    var r = new SKRect(passLeft, bottom - pH, passLeft + barWidth, bottom);
+                    using var rr = MakeRRect(r, radius, radius, radius, radius);
                     using var shader = SKShader.CreateLinearGradient(new SKPoint(0, r.Top), new SKPoint(0, r.Bottom),
                         new[] { passLight, passDark }, null, SKShaderTileMode.Clamp);
                     barPaint.Shader = shader; canvas.DrawRoundRect(rr, barPaint); barPaint.Shader = null;
                 }
 
-                // FAIL 段
+                // FAIL
                 if (fH > 0.1f)
                 {
-                    var r = new SKRect(left, bottom - pH - fH, right, bottom - pH);
-                    using var rr = MakeRRect(r, radius, radius, 0, 0);
+                    var r = new SKRect(failLeft, bottom - fH, failLeft + barWidth, bottom);
+                    using var rr = MakeRRect(r, radius, radius, radius, radius);
                     using var shader = SKShader.CreateLinearGradient(new SKPoint(0, r.Top), new SKPoint(0, r.Bottom),
                         new[] { failLight, failDark }, null, SKShaderTileMode.Clamp);
                     barPaint.Shader = shader; canvas.DrawRoundRect(rr, barPaint); barPaint.Shader = null;
+
+                    var failTag = d.Fail.ToString();
+                    var fb = new SKRect(); failValuePaint.MeasureText(failTag, ref fb);
+                    float fx = r.MidX - fb.MidX;
+                    float fy = r.Top - 6 - fb.MidY;
+                    if (fy < chart.Top + 4 - fb.Top) fy = chart.Top + 4 - fb.Top;
+                    canvas.DrawText(failTag, fx, fy, failValuePaint);
                 }
 
                 // 顶部总数
                 var tagTotal = (d.Pass + d.Fail).ToString();
                 var tb2 = new SKRect(); valuePaint.MeasureText(tagTotal, ref tb2);
-                float desired = chart.Bottom - totalH - 6;
+                float desired = chart.Bottom - Math.Max(pH, fH) - 6;
                 float baseline = SafeBaseline(valuePaint, tagTotal, desired, chart.Top, chart.Bottom);
                 canvas.DrawText(tagTotal, cx - tb2.MidX, baseline, valuePaint);
             }
