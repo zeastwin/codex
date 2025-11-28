@@ -30,6 +30,7 @@ namespace EW_Assistant.ViewModels
         private readonly int _ignoreMinutes;
         private string _filterStatus = "Pending";
         private readonly WarningRuleOptions _options;
+        private readonly HashSet<string> _aiAttemptedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public ObservableCollection<WarningItemViewModel> Warnings { get; } = new ObservableCollection<WarningItemViewModel>();
         public WarningItemViewModel SelectedWarning
@@ -154,6 +155,7 @@ namespace EW_Assistant.ViewModels
                 foreach (var w in Warnings.ToList())
                 {
                     if (w == null || w.HasAiMarkdown) continue;
+                    if (_aiAttemptedKeys.Contains(w.Key ?? string.Empty)) continue;
                     if (TryApplyCacheForVm(w)) continue;
                     WarningItem item;
                     if (!_warningMap.TryGetValue(w.Key ?? string.Empty, out item) || item == null)
@@ -170,6 +172,8 @@ namespace EW_Assistant.ViewModels
                     item.Key = w.Key;
 
                     var md = await _aiService.AnalyzeAsync(item);
+                    _aiAttemptedKeys.Add(w.Key ?? string.Empty);
+
                     if (!string.IsNullOrWhiteSpace(md))
                     {
                         w.AiMarkdown = md;
@@ -189,6 +193,16 @@ namespace EW_Assistant.ViewModels
                         };
                         _analysisCache.Upsert(record);
 
+                        if (w == SelectedWarning)
+                        {
+                            UpdateAnalysisText();
+                        }
+                    }
+                    else
+                    {
+                        // 本次未获得有效结果，标记为已尝试，避免本次会话重复占用；不写入缓存，重启后可重试
+                        w.AiMarkdown = "AI 分析暂未生成结果，本次会话不再重复请求。";
+                        w.HasAiMarkdown = true;
                         if (w == SelectedWarning)
                         {
                             UpdateAnalysisText();
@@ -420,8 +434,9 @@ namespace EW_Assistant.ViewModels
                 var type = MapTypeDisplay(t.Type);
                 var title = string.IsNullOrEmpty(t.RuleName) ? "预警" : t.RuleName;
                 var time = t.StartTime.ToString("MM-dd HH:mm");
-                var summary = string.IsNullOrWhiteSpace(t.Summary) ? string.Empty : t.Summary;
-                var message = string.Format("【预警触发】[{0}/{1}] {2} @ {3}。{4}", level, type, title, time, summary);
+                var summary = BuildDisplaySummary(t);
+                var metric = string.IsNullOrEmpty(t.MetricName) ? string.Empty : ("，指标：" + t.MetricName);
+                var message = string.Format("【预警触发】[{0}/{1}] {2} @ {3}{4}。{5}", level, type, title, time, metric, summary);
                 MainWindow.PostProgramInfo(message, "warn");
             }
         }
@@ -539,6 +554,8 @@ namespace EW_Assistant.ViewModels
 
             var displayStatus = MapTicketStatusDisplay(ticket.Status);
 
+            var displaySummary = BuildDisplaySummary(ticket);
+
             return new WarningItemViewModel
             {
                 Key = ticket.Fingerprint,
@@ -548,7 +565,7 @@ namespace EW_Assistant.ViewModels
                 TypeDisplay = MapTypeDisplay(ticket.Type),
                 TimeRange = timeRange,
                 Title = string.IsNullOrEmpty(title) ? "预警" : title,
-                Summary = ticket.Summary ?? string.Empty,
+                Summary = displaySummary,
                 RuleName = ticket.RuleName ?? string.Empty,
                 RuleId = ticket.RuleId ?? string.Empty,
                 MetricName = ticket.MetricName ?? string.Empty,
@@ -563,6 +580,31 @@ namespace EW_Assistant.ViewModels
                 LastDetected = ticket.LastSeen,
                 OccurrenceCount = ticket.OccurrenceCount
             };
+        }
+
+        private static string BuildDisplaySummary(WarningTicketRecord ticket)
+        {
+            var text = ticket == null ? string.Empty : (ticket.Summary ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                var rule = ticket == null ? "预警" : (ticket.RuleName ?? "预警");
+                var metric = ticket == null ? string.Empty : (ticket.MetricName ?? string.Empty);
+                return string.Format("{0} 指标：{1}", rule, metric).Trim();
+            }
+
+            var idx = text.IndexOf("EVIDENCE", StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+            {
+                text = text.Substring(0, idx);
+            }
+
+            text = text.Trim().TrimEnd('。', '，', '.');
+            const int maxLen = 140;
+            if (text.Length > maxLen)
+            {
+                text = text.Substring(0, maxLen) + "...";
+            }
+            return text;
         }
 
         private static string MapTicketStatusDisplay(string status)
@@ -622,11 +664,15 @@ namespace EW_Assistant.ViewModels
         {
             if (vm == null || _analysisCache == null || string.IsNullOrWhiteSpace(vm.Key)) return false;
             WarningAnalysisRecord record;
-            if (_analysisCache.TryGet(vm.Key, out record) && record != null && !string.IsNullOrWhiteSpace(record.AiMarkdown))
+            if (_analysisCache.TryGet(vm.Key, out record) && record != null)
             {
-                vm.AiMarkdown = record.AiMarkdown;
-                vm.HasAiMarkdown = true;
-                return true;
+                if (!string.IsNullOrWhiteSpace(record.AiMarkdown))
+                {
+                    vm.AiMarkdown = record.AiMarkdown;
+                    vm.HasAiMarkdown = true;
+                    return true;
+                }
+                // 空/失败内容不标记缓存命中，让后续重试
             }
             return false;
         }

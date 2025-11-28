@@ -97,8 +97,8 @@ namespace EW_Assistant.Warnings
             var end = start.AddHours(1);
             var yieldSeries = BuildYieldSeries(allProductions, start, 6);
             var summary = string.Format(CultureInfo.InvariantCulture,
-                "{0:HH}:00-{1:HH}:00 良率 {2}，低于阈值 {3}（样本 {4}，Pass={5}，Fail={6}，近6小时良率序列 {7}）。",
-                start, end, ToPercent(yield), ToPercent(threshold), rec.Total, rec.Pass, rec.Fail, yieldSeries);
+                "{0:HH}:00-{1:HH}:00 良率 {2}，低于阈值 {3}（样本 {4}，Pass={5}，Fail={6}）。",
+                start, end, ToPercent(yield), ToPercent(threshold), rec.Total, rec.Pass, rec.Fail);
 
             var item = new WarningItem
             {
@@ -158,10 +158,9 @@ namespace EW_Assistant.Warnings
             var planSource = plan.Source == "Planned" ? "工单计划" : plan.Source == "Baseline" ? "历史基线" : "默认产能";
             var throughputSeries = BuildThroughputSeries(allProductions, start, 6);
             var summary = string.Format(CultureInfo.InvariantCulture,
-                "{0:HH}:00-{1:HH}:00 产量 {2}，低于{3} {4:F0} 的 {5}（阈值 {6:F0}，基线样本 {7}，基线值 {8}，近6小时产量 {9}）。",
+                "{0:HH}:00-{1:HH}:00 产量 {2}，低于{3} {4:F0} 的 {5}（阈值 {6:F0}，基线样本 {7}，基线值 {8}）。",
                 start, end, actual, planSource, plan.Plan, ratioText, threshold, plan.BaselineSamples,
-                plan.BaselineValue.HasValue ? plan.BaselineValue.Value.ToString("F1", CultureInfo.InvariantCulture) : "N/A",
-                throughputSeries);
+                plan.BaselineValue.HasValue ? plan.BaselineValue.Value.ToString("F1", CultureInfo.InvariantCulture) : "N/A");
 
             var item = new WarningItem
             {
@@ -287,6 +286,10 @@ namespace EW_Assistant.Warnings
             AlarmAggregate agg;
             alarmTotals.TryGetValue(rec.Hour, out agg);
             var alarmSeverity = GetAlarmSeverity(agg);
+            var topAlarm = GetTopAlarmStat(rec.Hour, alarmsByHour);
+            var topAlarmText = topAlarm == null || string.IsNullOrWhiteSpace(topAlarm.Message)
+                ? string.Empty
+                : "，报警描述：" + topAlarm.Message;
 
             if (alarmSeverity != null && rec.Total >= _options.MinYieldSamples && rec.Yield < _options.YieldCritical)
             {
@@ -294,9 +297,13 @@ namespace EW_Assistant.Warnings
                 var end = start.AddHours(1);
                 var topText = BuildTopAlarmSummary(rec.Hour, alarmsByHour);
                 var summary = string.Format(CultureInfo.InvariantCulture,
-                    "{0:HH}:00-{1:HH}:00 良率 {2}（样本 {6}）且报警 {3} 次/停机 {4:F1} 分钟，关联报警 {5}，近6小时良率 {7}。",
+                    "{0:HH}:00-{1:HH}:00 良率 {2}（样本 {6}）且报警 {3} 次/停机 {4:F1} 分钟，关联报警 {5}。",
                     start, end, ToPercent(rec.Yield), agg == null ? 0 : agg.Count, agg == null ? 0d : agg.DowntimeMinutes, topText, rec.Total,
                     BuildYieldSeries(allProductions, start, 6));
+                if (!string.IsNullOrEmpty(topAlarmText))
+                {
+                    summary += topAlarmText;
+                }
 
                 var item = new WarningItem
                 {
@@ -330,11 +337,14 @@ namespace EW_Assistant.Warnings
                 var end = start.AddHours(1);
                 var topText = BuildTopAlarmSummary(rec.Hour, alarmsByHour);
                 var summary = string.Format(CultureInfo.InvariantCulture,
-                    "{0:HH}:00-{1:HH}:00 产量 {2} 低于基线阈值 {3:F0}（基线 {7}，样本 {8}），且报警 {4} 次/停机 {5:F1} 分钟。Top：{6}，近6小时产量 {9}",
+                    "{0:HH}:00-{1:HH}:00 产量 {2} 低于基线阈值 {3:F0}（基线 {7}，样本 {8}），且报警 {4} 次/停机 {5:F1} 分钟。Top：{6}",
                     start, end, rec.Total, critThreshold, agg == null ? 0 : agg.Count, agg == null ? 0d : agg.DowntimeMinutes, topText,
                     plan.BaselineValue.HasValue ? plan.BaselineValue.Value.ToString("F1", CultureInfo.InvariantCulture) : "N/A",
-                    plan.BaselineSamples,
-                    BuildThroughputSeries(allProductions, start, 6));
+                    plan.BaselineSamples);
+                if (!string.IsNullOrEmpty(topAlarmText))
+                {
+                    summary += topAlarmText;
+                }
 
                 var item = new WarningItem
                 {
@@ -352,7 +362,7 @@ namespace EW_Assistant.Warnings
                     BaselineValue = plan.BaselineValue ?? plan.Plan,
                     ThresholdValue = critThreshold,
                     Status = "Active",
-                    Summary = summary
+                    Summary = summary + topAlarmText
                 };
 
                 TryAddWarning(bucket, item, (oldVal, newVal) => Math.Min(oldVal, newVal));
@@ -380,9 +390,11 @@ namespace EW_Assistant.Warnings
                 ? (severity == "Critical" ? _options.AlarmDowntimeCriticalMin : _options.AlarmDowntimeWarningMin)
                 : (severity == "Critical" ? _options.AlarmCountCritical : _options.AlarmCountWarning);
 
+            var code = string.IsNullOrWhiteSpace(stat.Code) ? "UNKNOWN" : stat.Code;
             var summary = string.Format(CultureInfo.InvariantCulture,
-                "{0:HH}:00-{1:HH}:00 报警 {2} 次数 {3}，停机 {4:F1} 分钟。",
-                start, end, stat.Code ?? "UNKNOWN", stat.Count, stat.DowntimeMinutes);
+                "{0:HH}:00-{1:HH}:00 报警 {2} 次数 {3}，停机 {4:F1} 分钟。EVIDENCE{{alarm_code={2}; alarm_count={3}; downtime_min={4:F1}; alarm_text={5}}}",
+                start, end, code, stat.Count, stat.DowntimeMinutes,
+                string.IsNullOrWhiteSpace(stat.Message) ? string.Empty : stat.Message);
 
             var ruleId = string.Format(CultureInfo.InvariantCulture, "ALARM_FREQUENT_{0}", string.IsNullOrWhiteSpace(stat.Code) ? "UNKNOWN" : stat.Code);
             var item = new WarningItem
@@ -810,6 +822,20 @@ namespace EW_Assistant.Warnings
                     a.DowntimeMinutes));
 
             return string.Join("，", top);
+        }
+
+        private static AlarmHourStat GetTopAlarmStat(DateTime hour, Dictionary<DateTime, List<AlarmHourStat>> alarmsByHour)
+        {
+            if (alarmsByHour == null || !alarmsByHour.TryGetValue(hour, out var list) || list.Count == 0)
+            {
+                return null;
+            }
+
+            return list
+                .OrderByDescending(a => a.DowntimeMinutes)
+                .ThenByDescending(a => a.Count)
+                .ThenBy(a => string.IsNullOrWhiteSpace(a.Code) ? "UNKNOWN" : a.Code, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
         }
 
         private static string FormatKey(string ruleId, DateTime startTime)

@@ -287,7 +287,7 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto" MinWidth="72"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -333,7 +333,7 @@
                                 <Border Grid.Row="0"
                                         Grid.Column="1"
                                         Padding="8,2"
-                                        Margin="8,0,0,0"
+                                        Margin="8,0,8,0"
                                         CornerRadius="10"
                                         VerticalAlignment="Center"
                                         Background="#F0F2FF">
