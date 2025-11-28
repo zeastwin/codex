@@ -122,6 +122,7 @@ namespace EW_Assistant.ViewModels
                 {
                     if (string.IsNullOrWhiteSpace(item.Key)) continue;
                     var fp = BuildFingerprint(item);
+                    item.Key = fp;
                     _warningMap[fp] = item;
                 }
 
@@ -153,6 +154,7 @@ namespace EW_Assistant.ViewModels
                 foreach (var w in Warnings.ToList())
                 {
                     if (w == null || w.HasAiMarkdown) continue;
+                    if (TryApplyCacheForVm(w)) continue;
                     WarningItem item;
                     if (!_warningMap.TryGetValue(w.Key ?? string.Empty, out item) || item == null)
                     {
@@ -164,6 +166,9 @@ namespace EW_Assistant.ViewModels
                     }
                     if (item == null) continue;
 
+                    // 保证 Key 与工单指纹一致，避免缓存键不匹配
+                    item.Key = w.Key;
+
                     var md = await _aiService.AnalyzeAsync(item);
                     if (!string.IsNullOrWhiteSpace(md))
                     {
@@ -172,7 +177,7 @@ namespace EW_Assistant.ViewModels
 
                         var record = new WarningAnalysisRecord
                         {
-                            Key = item.Key,
+                            Key = w.Key,
                             RuleId = item.RuleId,
                             RuleName = item.RuleName,
                             Level = item.Level,
@@ -405,6 +410,7 @@ namespace EW_Assistant.ViewModels
                 var item = ConvertToViewModel(t);
                 if (item != null)
                 {
+                    TryApplyCacheForVm(item);
                     Warnings.Add(item);
                 }
             }
@@ -581,6 +587,19 @@ namespace EW_Assistant.ViewModels
                 Status = t.Status,
                 Summary = t.Summary
             };
+        }
+
+        private bool TryApplyCacheForVm(WarningItemViewModel vm)
+        {
+            if (vm == null || _analysisCache == null || string.IsNullOrWhiteSpace(vm.Key)) return false;
+            WarningAnalysisRecord record;
+            if (_analysisCache.TryGet(vm.Key, out record) && record != null && !string.IsNullOrWhiteSpace(record.AiMarkdown))
+            {
+                vm.AiMarkdown = record.AiMarkdown;
+                vm.HasAiMarkdown = true;
+                return true;
+            }
+            return false;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
