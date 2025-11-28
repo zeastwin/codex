@@ -78,6 +78,12 @@ namespace EW_Assistant
                 var ai = new EW_Assistant.Views.AIAssistantView();  // 这一步会设置 GlobalInstance
                 _viewCache["AI助手"] = ai;
             }
+            // ✅ 预创建预警中心，使预警引擎启动时即加载，不必等待用户点击
+            if (!_viewCache.ContainsKey("预警中心"))
+            {
+                var warning = new WarningCenterView();
+                _viewCache["预警中心"] = warning;
+            }
 
             NavigateByContent("总览");
         }

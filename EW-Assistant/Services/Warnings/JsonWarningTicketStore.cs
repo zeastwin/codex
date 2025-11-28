@@ -11,6 +11,7 @@ namespace EW_Assistant.Warnings
     /// </summary>
     public class JsonWarningTicketStore : IWarningTicketStore
     {
+        private const int TicketRetentionDays = 7;
         private readonly string _filePath;
         private readonly object _lock = new object();
 
@@ -42,7 +43,7 @@ namespace EW_Assistant.Warnings
                         var json = reader.ReadToEnd();
                         if (string.IsNullOrWhiteSpace(json)) return new List<WarningTicketRecord>();
                         var records = JsonConvert.DeserializeObject<List<WarningTicketRecord>>(json);
-                        return records ?? new List<WarningTicketRecord>();
+                        return RemoveExpired(records);
                     }
                 }
                 catch
@@ -59,7 +60,8 @@ namespace EW_Assistant.Warnings
                 try
                 {
                     EnsureDirectory();
-                    var json = JsonConvert.SerializeObject(tickets ?? new List<WarningTicketRecord>(), Formatting.Indented);
+                    var pruned = RemoveExpired(tickets);
+                    var json = JsonConvert.SerializeObject(pruned ?? new List<WarningTicketRecord>(), Formatting.Indented);
                     var temp = _filePath + ".tmp";
                     var bytes = new UTF8Encoding(false).GetBytes(json);
                     using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -84,6 +86,37 @@ namespace EW_Assistant.Warnings
             {
                 Directory.CreateDirectory(dir);
             }
+        }
+
+        private List<WarningTicketRecord> RemoveExpired(IList<WarningTicketRecord> source)
+        {
+            var list = source == null ? new List<WarningTicketRecord>() : new List<WarningTicketRecord>(source);
+            var now = DateTime.Now;
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                var t = list[i];
+                if (t == null)
+                {
+                    list.RemoveAt(i);
+                    continue;
+                }
+
+                var lastSeen = t.LastSeen != default(DateTime)
+                    ? t.LastSeen
+                    : (t.UpdatedAt != default(DateTime) ? t.UpdatedAt : t.CreatedAt);
+
+                if (lastSeen == default(DateTime))
+                {
+                    lastSeen = now;
+                }
+
+                if ((now - lastSeen).TotalDays > TicketRetentionDays)
+                {
+                    list.RemoveAt(i);
+                }
+            }
+
+            return list;
         }
     }
 }

@@ -125,8 +125,9 @@ namespace EW_Assistant.ViewModels
                     _warningMap[fp] = item;
                 }
 
-                MergeTickets(items, now);
+                var newTickets = MergeTickets(items, now);
                 ApplyFilterAndRender();
+                BroadcastNewTickets(newTickets);
             }
             catch (Exception ex)
             {
@@ -305,10 +306,11 @@ namespace EW_Assistant.ViewModels
                 dimension);
         }
 
-        private void MergeTickets(IList<WarningItem> items, DateTime now)
+        private IList<WarningTicketRecord> MergeTickets(IList<WarningItem> items, DateTime now)
         {
             var existing = _ticketStore.LoadAll() ?? new List<WarningTicketRecord>();
             _ticketMap.Clear();
+            var newTickets = new List<WarningTicketRecord>();
             foreach (var t in existing)
             {
                 if (t == null || string.IsNullOrWhiteSpace(t.Fingerprint)) continue;
@@ -360,6 +362,7 @@ namespace EW_Assistant.ViewModels
                         OccurrenceCount = 1
                     };
                     _ticketMap[fp] = ticket;
+                    newTickets.Add(ticket);
                 }
                 else
                 {
@@ -404,6 +407,23 @@ namespace EW_Assistant.ViewModels
             }
 
             SaveTickets();
+            return newTickets;
+        }
+
+        private void BroadcastNewTickets(IList<WarningTicketRecord> tickets)
+        {
+            if (tickets == null || tickets.Count == 0) return;
+            foreach (var t in tickets)
+            {
+                if (t == null) continue;
+                var level = MapLevelDisplay(t.Level);
+                var type = MapTypeDisplay(t.Type);
+                var title = string.IsNullOrEmpty(t.RuleName) ? "预警" : t.RuleName;
+                var time = t.StartTime.ToString("MM-dd HH:mm");
+                var summary = string.IsNullOrWhiteSpace(t.Summary) ? string.Empty : t.Summary;
+                var message = string.Format("【预警触发】[{0}/{1}] {2} @ {3}。{4}", level, type, title, time, summary);
+                MainWindow.PostProgramInfo(message, "warn");
+            }
         }
 
         private void ApplyFilterAndRender()
@@ -554,7 +574,7 @@ namespace EW_Assistant.ViewModels
                 case "acknowledged": return "已确认";
                 case "ignored": return "已忽略";
                 case "processed": return "已处理";
-                case "resolved": return "已恢复";
+                case "resolved": return "已关闭";
                 default: return string.IsNullOrEmpty(status) ? "待处理" : status;
             }
         }
