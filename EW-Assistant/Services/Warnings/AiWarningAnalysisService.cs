@@ -4,11 +4,12 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Globalization;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace EW_Assistant.Services.Warnings
@@ -112,9 +113,23 @@ namespace EW_Assistant.Services.Warnings
         {
             var status = resp == null ? "Unknown" : string.Format("{0}({1})", (int)resp.StatusCode, resp.StatusCode);
             var head = string.Format("Status={0}", status);
-            var answer = string.IsNullOrWhiteSpace(preview) ? "无解析结果" : Truncate(preview.Replace(Environment.NewLine, " "), 200);
-            var raw = string.IsNullOrWhiteSpace(body) ? "无响应体" : Truncate(body, 500);
+            var decodedPreview = DecodeUnicode(preview);
+            var answer = string.IsNullOrWhiteSpace(decodedPreview) ? "无解析结果" : Truncate(decodedPreview.Replace(Environment.NewLine, " "), 200);
+            var decoded = DecodeUnicode(body);
+            var raw = string.IsNullOrWhiteSpace(decoded) ? "无响应体" : Truncate(decoded, 500);
             return string.Format("{0} | AnswerPreview={1} | RawBody={2}", head, answer, raw);
+        }
+        private static string DecodeUnicode(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+            try
+            {
+                return Regex.Unescape(input);
+            }
+            catch
+            {
+                return input;
+            }
         }
 
         private static string Truncate(string input, int maxLen)
@@ -167,15 +182,22 @@ namespace EW_Assistant.Services.Warnings
                 }
 
                 var path = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd") + ".log");
-                var line = string.Format("{0:yyyy-MM-dd HH:mm:ss} [{1}] {2}{3}{4}{5}",
-                    DateTime.Now,
-                    stage,
-                    url ?? string.Empty,
-                    Environment.NewLine,
-                    content ?? string.Empty,
-                    Environment.NewLine);
+                var sb = new StringBuilder();
+                if (string.Equals(stage, "Request", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 强分割：每个请求前加醒目分隔线
+                    sb.AppendLine("============================================================");
+                }
+                sb.AppendFormat("{0:yyyy-MM-dd HH:mm:ss} [{1}] {2}", DateTime.Now, stage, url ?? string.Empty);
+                sb.AppendLine();
+                if (!string.IsNullOrEmpty(content))
+                {
+                    sb.AppendLine(content);
+                }
+                // 弱分割：请求-响应之间留一空行
+                sb.AppendLine();
 
-                File.AppendAllText(path, line, new UTF8Encoding(false));
+                File.AppendAllText(path, sb.ToString(), new UTF8Encoding(false));
             }
             catch
             {

@@ -36,7 +36,7 @@ namespace EW_Assistant.Warnings
         public IList<WarningItem> BuildWarnings(DateTime now)
         {
             var bucket = new Dictionary<string, WarningItem>(StringComparer.OrdinalIgnoreCase);
-            var windowStart = now.AddHours(-24);
+            var windowStart = now.AddHours(-12);
 
             var productions = _prodReader.GetProductionRange(windowStart, now) ?? new List<ProductionHourRecord>();
             var alarms = _alarmReader.GetAlarms(windowStart, now) ?? new List<AlarmHourStat>();

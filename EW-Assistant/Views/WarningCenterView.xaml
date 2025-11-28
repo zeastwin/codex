@@ -156,7 +156,7 @@
                     <TextBlock Text="预警中心" FontSize="22" FontWeight="SemiBold" Foreground="#0B1220"/>
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
                         <TextBlock FontSize="13" Foreground="Gray"
-                                   Text="{Binding Warnings.Count, StringFormat=已显示 {0} 条预警（最近 24 小时）}"/>
+                                   Text="{Binding Warnings.Count, StringFormat=已显示 {0} 条预警}"/>
                     </StackPanel>
                     <!-- 概览：严重/警告/提示 -->
                     <ItemsControl Margin="0,4,0,0"
