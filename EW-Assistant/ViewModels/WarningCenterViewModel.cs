@@ -212,6 +212,7 @@ namespace EW_Assistant.ViewModels
             if (ticket == null) return;
             ticket.Status = "Processed";
             ticket.ProcessedAt = DateTime.Now;
+            ticket.LastSeen = DateTime.Now;
             ticket.UpdatedAt = DateTime.Now;
             SaveTickets();
             ApplyFilterAndRender();
@@ -311,16 +312,21 @@ namespace EW_Assistant.ViewModels
             foreach (var t in existing)
             {
                 if (t == null || string.IsNullOrWhiteSpace(t.Fingerprint)) continue;
+                var status = (t.Status ?? string.Empty).Trim();
                 if (t.LastSeen == default(DateTime))
                 {
                     t.LastSeen = t.CreatedAt == default(DateTime) ? DateTime.Now : t.CreatedAt;
                 }
                 if (t.LastSeen != default(DateTime))
                 {
-                    if ((now - t.LastSeen).TotalMinutes > _options.ResolveGraceMinutes && !string.Equals(t.Status ?? string.Empty, "Resolved", StringComparison.OrdinalIgnoreCase))
+                    var minutesSinceSeen = (now - t.LastSeen).TotalMinutes;
+                    if (minutesSinceSeen > _options.ResolveGraceMinutes
+                        && !string.Equals(status, "Resolved", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(status, "Processed", StringComparison.OrdinalIgnoreCase))
                     {
                         t.Status = "Resolved";
                         t.UpdatedAt = now;
+                        status = t.Status;
                     }
                 }
                 _ticketMap[t.Fingerprint] = t;
@@ -373,8 +379,7 @@ namespace EW_Assistant.ViewModels
                     ticket.OccurrenceCount = ticket.OccurrenceCount <= 0 ? 1 : ticket.OccurrenceCount + 1;
 
                     var status = (ticket.Status ?? string.Empty).Trim();
-                    if (string.Equals(status, "Resolved", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(status, "Processed", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(status, "Resolved", StringComparison.OrdinalIgnoreCase))
                     {
                         ticket.Status = "Active";
                     }
@@ -383,6 +388,11 @@ namespace EW_Assistant.ViewModels
                     {
                         ticket.Status = "Active";
                         ticket.IgnoredUntil = null;
+                    }
+                    else if (string.Equals(status, "Processed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 保持已处理状态，避免同一指纹在重启后重新回到待处理
+                        ticket.Status = "Processed";
                     }
                 }
             }
