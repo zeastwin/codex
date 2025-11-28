@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 
 namespace EW_Assistant.Views
@@ -24,6 +25,8 @@ namespace EW_Assistant.Views
             InitializeComponent();
             DataContext = ViewModel;
             AiMarkdownViewer.PreviewMouseWheel += AiMarkdownViewer_PreviewMouseWheel;
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            UpdateFilterButtons(ViewModel.FilterStatus);
 
             // 后台生成缺失的 AI 分析结果
             var _ = ViewModel.AnalyzeMissingWarningsAsync();
@@ -107,6 +110,40 @@ namespace EW_Assistant.Views
         private void BtnProcessed_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.MarkProcessedSelected();
+        }
+
+        private void FilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is not ToggleButton btn) return;
+                var tag = btn.Tag as string;
+                if (!string.IsNullOrWhiteSpace(tag))
+                {
+                    ViewModel.FilterStatus = tag;
+                    UpdateFilterButtons(tag);
+                }
+            }
+            catch
+            {
+                // ignore UI errors
+            }
+        }
+
+        private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.FilterStatus))
+            {
+                UpdateFilterButtons(ViewModel.FilterStatus);
+            }
+        }
+
+        private void UpdateFilterButtons(string status)
+        {
+            var s = (status ?? string.Empty).Trim().ToLowerInvariant();
+            BtnFilterPending.IsChecked = s == "pending" || string.IsNullOrEmpty(s);
+            BtnFilterProcessed.IsChecked = s == "processed";
+            BtnFilterResolved.IsChecked = s == "resolved";
         }
 
         private DateTime GetLatestAlarmWriteTime()
