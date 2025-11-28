@@ -100,24 +100,9 @@ namespace EW_Assistant.Views
             }
         }
 
-        private void BtnAck_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.ConfirmSelected();
-        }
-
-        private void BtnIgnore_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.IgnoreSelected();
-        }
-
         private void BtnProcessed_Click(object sender, RoutedEventArgs e)
         {
             ViewModel.MarkProcessedSelected();
-        }
-
-        private void BtnReopen_Click(object sender, RoutedEventArgs e)
-        {
-            ViewModel.ReopenSelected();
         }
 
         private DateTime GetLatestAlarmWriteTime()

@@ -201,30 +201,6 @@ namespace EW_Assistant.ViewModels
             }
         }
 
-        public void ConfirmSelected()
-        {
-            if (SelectedWarning == null) return;
-            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
-            if (ticket == null) return;
-            ticket.Status = "Acknowledged";
-            ticket.AcknowledgedAt = DateTime.Now;
-            ticket.UpdatedAt = DateTime.Now;
-            SaveTickets();
-            ApplyFilterAndRender();
-        }
-
-        public void IgnoreSelected()
-        {
-            if (SelectedWarning == null) return;
-            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
-            if (ticket == null) return;
-            ticket.Status = "Ignored";
-            ticket.IgnoredUntil = DateTime.Now.AddMinutes(_ignoreMinutes);
-            ticket.UpdatedAt = DateTime.Now;
-            SaveTickets();
-            ApplyFilterAndRender();
-        }
-
         public void MarkProcessedSelected()
         {
             if (SelectedWarning == null) return;
@@ -232,18 +208,6 @@ namespace EW_Assistant.ViewModels
             if (ticket == null) return;
             ticket.Status = "Processed";
             ticket.ProcessedAt = DateTime.Now;
-            ticket.UpdatedAt = DateTime.Now;
-            SaveTickets();
-            ApplyFilterAndRender();
-        }
-
-        public void ReopenSelected()
-        {
-            if (SelectedWarning == null) return;
-            var ticket = GetTicketByFingerprint(SelectedWarning.Key);
-            if (ticket == null) return;
-            ticket.Status = "Active";
-            ticket.IgnoredUntil = null;
             ticket.UpdatedAt = DateTime.Now;
             SaveTickets();
             ApplyFilterAndRender();

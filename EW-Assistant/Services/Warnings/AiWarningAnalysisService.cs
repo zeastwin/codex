@@ -163,13 +163,13 @@ namespace EW_Assistant.Services.Warnings
         {
             try
             {
-                var dir = Path.Combine("D:\\", "Data", "AiLog");
+                var dir = Path.Combine("D:\\", "Data", "AiLog", "WarningAI");
                 if (!Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);
                 }
 
-                var path = Path.Combine(dir, "WarningAiCall.log");
+                var path = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd") + ".log");
                 var line = string.Format("{0:yyyy-MM-dd HH:mm:ss} [{1}] {2}{3}{4}{5}",
                     DateTime.Now,
                     stage,
