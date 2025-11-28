@@ -80,13 +80,14 @@ namespace EW_Assistant.Services.Warnings
                     req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
                     req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     var json = JsonConvert.SerializeObject(payload);
-                    AppendLog("Request", url, json);
+                    AppendLog("Request", url, BuildFriendlyRequestLog(inputs));
                     req.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
                     using (var resp = await _http.SendAsync(req).ConfigureAwait(false))
                     {
                         var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        AppendLog("Response", url, string.Format("Status={0}, Body={1}", resp.StatusCode, body));
+                        var preview = TryExtractAnswer(body);
+                        AppendLog("Response", url, BuildFriendlyResponseLog(resp, preview, body));
                         if (!resp.IsSuccessStatusCode)
                         {
                             return "调用 AI 接口失败：" + resp.StatusCode;
@@ -103,6 +104,22 @@ namespace EW_Assistant.Services.Warnings
                 AppendLog("Exception", _baseUrl + "/workflows/run", ex.Message);
                 return "调用 AI 分析出错：" + ex.Message;
             }
+        }
+
+        private static string BuildFriendlyResponseLog(HttpResponseMessage resp, string preview, string body)
+        {
+            var status = resp == null ? "Unknown" : string.Format("{0}({1})", (int)resp.StatusCode, resp.StatusCode);
+            var head = string.Format("Status={0}", status);
+            var answer = string.IsNullOrWhiteSpace(preview) ? "无解析结果" : Truncate(preview.Replace(Environment.NewLine, " "), 200);
+            var raw = string.IsNullOrWhiteSpace(body) ? "无响应体" : Truncate(body, 500);
+            return string.Format("{0} | AnswerPreview={1} | RawBody={2}", head, answer, raw);
+        }
+
+        private static string Truncate(string input, int maxLen)
+        {
+            if (string.IsNullOrEmpty(input) || maxLen <= 0) return string.Empty;
+            if (input.Length <= maxLen) return input;
+            return input.Substring(0, maxLen) + "...";
         }
 
         private static string TryExtractAnswer(string body)
@@ -184,6 +201,19 @@ namespace EW_Assistant.Services.Warnings
             {
                 // 记录失败不影响主流程
             }
+        }
+
+        private static string BuildFriendlyRequestLog(Dictionary<string, object> inputs)
+        {
+            if (inputs == null) return "无请求参数";
+            var rule = inputs.ContainsKey("rule_id") ? inputs["rule_id"] : string.Empty;
+            var name = inputs.ContainsKey("rule_name") ? inputs["rule_name"] : string.Empty;
+            var level = inputs.ContainsKey("level") ? inputs["level"] : string.Empty;
+            var type = inputs.ContainsKey("type") ? inputs["type"] : string.Empty;
+            var time = inputs.ContainsKey("time_range") ? inputs["time_range"] : string.Empty;
+            var summary = inputs.ContainsKey("summary") ? inputs["summary"] : string.Empty;
+            return string.Format("Rule={0} {1} | Level={2} | Type={3} | Time={4} | Summary={5}",
+                rule, name, level, type, time, Truncate(summary?.ToString() ?? string.Empty, 200));
         }
     }
 }
