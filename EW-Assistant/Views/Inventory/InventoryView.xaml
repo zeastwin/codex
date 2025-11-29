@@ -202,7 +202,61 @@
                               GridLinesVisibility="None"
                               Background="White"
                               FontSize="14"
-                              RowHeight="34">
+                              RowHeight="34"
+                              VerticalScrollBarVisibility="Auto">
+                        <DataGrid.Resources>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E1EDFF"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0F172A"/>
+
+                            <!-- 轻量卡片风格表头 -->
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                <Setter Property="Background" Value="#F0F6FF"/>
+                                <Setter Property="Foreground" Value="#0F172A"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Height" Value="34"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="DataGridColumnHeader">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="#CFE0FF"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10,10,0,0"
+                                                    Padding="4">
+                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+
+                            <!-- 行样式：浅蓝交替、鼠标悬停/选中柔和色 -->
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="White"/>
+                                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                                <Setter Property="Padding" Value="2"/>
+                                <Style.Triggers>
+                                    <Trigger Property="AlternationIndex" Value="1">
+                                        <Setter Property="Background" Value="#F7FAFF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#F2F7FF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#E1EDFF"/>
+                                        <Setter Property="Foreground" Value="#0F172A"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+
+                            <!-- 单元格样式：去边框，留出内边距 -->
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Padding" Value="6,6"/>
+                                <Setter Property="FontSize" Value="14"/>
+                            </Style>
+                        </DataGrid.Resources>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="料号" Binding="{Binding PartNo}" Width="*" />
                             <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
@@ -313,11 +367,9 @@
 
         <!-- 底部操作条 -->
         <Border Grid.Row="2"
-                Background="#F9FAFB"
-                BorderBrush="#E5E7EB"
-                BorderThickness="0,1,0,0"
-                Padding="12"
-                CornerRadius="0,0,8,8">
+                Style="{StaticResource CardBorderStyle}"
+                Margin="0,8,0,0"
+                Padding="12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
