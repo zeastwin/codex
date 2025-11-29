@@ -78,6 +78,7 @@
     <Reference Include="MdXaml.Plugins, Version=1.27.0.0, Culture=neutral, PublicKeyToken=9f8c7afb435b7edc, processorArchitecture=MSIL">
       <HintPath>packages\MdXaml.Plugins.1.27.0\lib\net462\MdXaml.Plugins.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=9.0.0.10, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Bcl.AsyncInterfaces.9.0.10\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
@@ -113,6 +114,7 @@
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.IO" />
     <Reference Include="System.IO.Compression" />
@@ -176,6 +178,8 @@
     <Compile Include="Component\MindMap\MindMapNode.cs" />
     <Compile Include="Component\Checklist\ChecklistModels.cs" />
     <Compile Include="Component\Checklist\ChecklistStatusBrushConverter.cs" />
+    <Compile Include="Infrastructure\Inventory\ApiInventoryRepository.cs" />
+    <Compile Include="Infrastructure\Inventory\InventoryRepositoryFactory.cs" />
     <Compile Include="Services\DifyWorkflowStreaming.cs" />
     <Compile Include="Services\DocumentMindMapParser.cs" />
     <Compile Include="Services\DocumentChecklistParser.cs" />
@@ -194,6 +198,13 @@
     <Compile Include="Services\Warnings\JsonWarningTicketStore.cs" />
     <Compile Include="Services\Warnings\WarningRuleOptions.cs" />
     <Compile Include="Services\Warnings\WarningRuleEngine.cs" />
+    <Compile Include="Domain\Inventory\SparePart.cs" />
+    <Compile Include="Domain\Inventory\StockTransaction.cs" />
+    <Compile Include="Domain\Inventory\IInventoryRepository.cs" />
+    <Compile Include="Infrastructure\Inventory\FileInventoryRepository.cs" />
+    <Compile Include="Infrastructure\Inventory\InventoryModule.cs" />
+    <Compile Include="ViewModels\ViewModelBase.cs" />
+    <Compile Include="ViewModels\Inventory\InventoryViewModel.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
       <DependentUpon>AlarmView.xaml</DependentUpon>
     </Compile>
@@ -227,6 +238,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Views\Inventory\InventoryView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -247,6 +262,9 @@
     </Compile>
     <Compile Include="Views\DashboardView.xaml.cs">
       <DependentUpon>DashboardView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Inventory\InventoryView.xaml.cs">
+      <DependentUpon>InventoryView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\WarningCenterView.xaml.cs">
       <DependentUpon>WarningCenterView.xaml</DependentUpon>

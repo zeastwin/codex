@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using EW_Assistant.Infrastructure.Inventory;
 
 namespace EW_Assistant
 {
@@ -12,6 +13,21 @@ namespace EW_Assistant
             // 非 UI 线程的兜底
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+        }
+
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            try
+            {
+                // 初始化库存模块，使用文件仓储，后续可替换为 DbInventoryRepository 而无需改动 VM/View。
+                InventoryModule.EnsureInitialized();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("初始化库存模块失败：" + ex.Message, "启动错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void Application_DispatcherUnhandledException(

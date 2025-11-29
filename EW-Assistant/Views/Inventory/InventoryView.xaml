@@ -1,0 +1,346 @@
+<UserControl x:Class="EW_Assistant.Views.Inventory.InventoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="640"
+             d:DesignWidth="1100"
+             Background="#F3F4F6"
+             FontFamily="Microsoft YaHei"
+             FontSize="13">
+    <UserControl.Resources>
+        <!-- 卡片样式：白底、浅灰边框、圆角、轻微阴影 -->
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#1A000000" BlurRadius="10" ShadowDepth="2" Opacity="0.35"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 主色按钮：圆角胶囊，悬停/按下有轻微变化 -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#3B82F6"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                CornerRadius="16"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2563EB"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2563EB"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1D4ED8"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#1D4ED8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 次级按钮：浅灰背景，圆角胶囊 -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="88"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                CornerRadius="16"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E5E7EB"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D1D5DB"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid 表头与行样式 -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#F3F4F6"/>
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="DataGridRow">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Validation.ErrorTemplate" Value="{x:Null}"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Background" Value="White"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E8F0FE"/>
+                    <Setter Property="Foreground" Value="#111827"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部栏 -->
+        <Border Grid.Row="0"
+                Background="#F3F4F6"
+                BorderBrush="#E5E7EB"
+                BorderThickness="0,0,0,1"
+                CornerRadius="8,8,0,0"
+                Padding="12,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="库存管理"
+                           VerticalAlignment="Center"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="#111827"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="新增"
+                            Command="{Binding AddPartCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="刷新"
+                            Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 主体内容 -->
+        <Grid Grid.Row="1" Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 列表卡片 -->
+            <Border Grid.Column="0"
+                    Margin="0,0,12,0"
+                    Style="{StaticResource CardBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="备件列表"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="#0B1220"
+                               Margin="0,0,0,8"/>
+
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding Parts}"
+                              SelectedItem="{Binding SelectedPart, Mode=TwoWay}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              AlternationCount="2"
+                              AlternatingRowBackground="#F9FAFB"
+                              CanUserSortColumns="True"
+                              CanUserResizeColumns="True"
+                              SelectionMode="Single"
+                              SelectionUnit="FullRow"
+                              BorderThickness="0"
+                              GridLinesVisibility="None"
+                              Background="White"
+                              FontSize="14"
+                              RowHeight="34">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="料号" Binding="{Binding PartNo}" Width="*" />
+                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
+                            <DataGridTextColumn Header="规格" Binding="{Binding Spec}" Width="*" />
+                            <DataGridTextColumn Header="库存" Binding="{Binding CurrentStock}" Width="100" />
+                            <DataGridTextColumn Header="安全库存" Binding="{Binding SafeStock}" Width="120" />
+                            <DataGridTextColumn Header="状态" Binding="{Binding IsActive}" Width="80" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <!-- 详情卡片 -->
+            <Border Grid.Column="1"
+                    Style="{StaticResource CardBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid.Resources>
+                        <Style x:Key="FieldTextBoxStyle" TargetType="TextBox">
+                            <Setter Property="Background" Value="#F4F6F9"/>
+                            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="Padding" Value="6,4"/>
+                        </Style>
+                    </Grid.Resources>
+
+                    <!-- 顶部关键信息 -->
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedPart.Name}"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="#111827"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock Foreground="#6B7280" Margin="0,0,0,8">
+                            <Run Text="料号：" />
+                            <Run Text="{Binding SelectedPart.PartNo}" />
+                            <Run Text="   规格：" />
+                            <Run Text="{Binding SelectedPart.Spec}" />
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,12,0,0">
+                        <StackPanel>
+                            <!-- 基础信息 -->
+                            <TextBlock Text="基础信息" FontWeight="SemiBold" Foreground="#0B1220" Margin="0,0,0,10"/>
+                            <StackPanel Margin="0,0,0,12">
+                                <TextBlock Text="库位" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.Location, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldTextBoxStyle}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,12">
+                                <TextBlock Text="计量单位" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldTextBoxStyle}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,14">
+                                <TextBlock Text="规格" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.Spec, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <Border BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Margin="0,4,0,12"/>
+
+                            <!-- 库存信息 -->
+                            <TextBlock Text="库存信息" FontWeight="SemiBold" Foreground="#0B1220" Margin="0,0,0,10"/>
+                            <StackPanel Margin="0,0,0,12">
+                                <TextBlock Text="安全库存" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.SafeStock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldTextBoxStyle}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,12">
+                                <TextBlock Text="库存上限" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.MaxStock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldTextBoxStyle}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,12">
+                                <TextBlock Text="当前库存" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.CurrentStock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource FieldTextBoxStyle}"
+                                         FontSize="16"
+                                         FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,0,0">
+                                <TextBlock Text="启用" Foreground="#6B7280" VerticalAlignment="Center"/>
+                                <CheckBox IsChecked="{Binding SelectedPart.IsActive, Mode=TwoWay}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 操作按钮 -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="保存修改"
+                                Command="{Binding EditPartCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="删除"
+                                Command="{Binding DeletePartCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 底部操作条 -->
+        <Border Grid.Row="2"
+                Background="#F9FAFB"
+                BorderBrush="#E5E7EB"
+                BorderThickness="0,1,0,0"
+                Padding="12"
+                CornerRadius="0,0,8,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="0,4,0,0">
+                    <Button Content="入库"
+                            Command="{Binding StockInCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Margin="0,0,10,0"/>
+                    <Button Content="出库"
+                            Command="{Binding StockOutCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="0,0,10,0"/>
+                    <Button Content="调整库存"
+                            Command="{Binding AdjustStockCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

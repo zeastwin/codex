@@ -161,6 +161,8 @@
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="机台控制" Checked="NavItem_Checked" Tag="&#xE707;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
+                             Content="库存管理" Checked="NavItem_Checked" Tag="&#xE142;"/>
+                        <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
                              Content="设置" Checked="NavItem_Checked" Tag="&#xE713;"/>
                     </StackPanel>
                 </ScrollViewer>

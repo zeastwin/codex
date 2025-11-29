@@ -1,4 +1,5 @@
 ﻿using EW_Assistant.Views;
+using EW_Assistant.Views.Inventory;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -46,6 +47,7 @@ namespace EW_Assistant
             ["报警看板"] = () => new AlarmView(),
             ["预警中心"] = () => new WarningCenterView(),
             ["机台控制"] = () => new MachineControl(),
+            ["库存管理"] = () => new InventoryView(),
             ["设置"] = () => new ConfigView(),
         };
         // 缓存已创建的页面，避免反复 new
