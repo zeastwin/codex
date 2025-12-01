@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Windows;
 using System.Windows.Input;
@@ -28,9 +29,10 @@ namespace EW_Assistant.Views.Inventory
             TitleText.Text = string.IsNullOrWhiteSpace(title) ? "库存操作" : title;
             SubtitleText.Text = subtitle ?? string.Empty;
 
+            SetupReasonOptions(_mode);
             QtyBox.Text = defaultQty > 0 ? defaultQty.ToString() : string.Empty;
             NewQtyBox.Text = defaultNewQty > 0 ? defaultNewQty.ToString() : string.Empty;
-            ReasonBox.Text = string.Empty;
+            ReasonBox.Text = GetDefaultReason(_mode);
 
             // 调整模式显示“调整后库存”，入/出库隐藏
             var isAdjust = string.Equals(_mode, "Adjust", StringComparison.OrdinalIgnoreCase);
@@ -79,6 +81,52 @@ namespace EW_Assistant.Views.Inventory
         private bool TryParseInt(string text, out int value)
         {
             return int.TryParse(text, out value);
+        }
+
+        private string GetDefaultReason(string mode)
+        {
+            if (string.Equals(mode, "In", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mode, "StockIn", StringComparison.OrdinalIgnoreCase))
+            {
+                return "采购入库";
+            }
+
+            if (string.Equals(mode, "Out", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mode, "StockOut", StringComparison.OrdinalIgnoreCase))
+            {
+                return "维修领料";
+            }
+
+            return string.Empty;
+        }
+
+        private void SetupReasonOptions(string mode)
+        {
+            ReasonBox.Items.Clear();
+            var options = new List<string>();
+
+            if (string.Equals(mode, "In", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mode, "StockIn", StringComparison.OrdinalIgnoreCase))
+            {
+                options.Add("采购入库");
+                options.Add("退料入库");
+            }
+            else if (string.Equals(mode, "Out", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(mode, "StockOut", StringComparison.OrdinalIgnoreCase))
+            {
+                options.Add("维修领料");
+                options.Add("生产领料");
+                options.Add("报废出库");
+            }
+            else if (string.Equals(mode, "Adjust", StringComparison.OrdinalIgnoreCase))
+            {
+                options.Add("库存调整");
+            }
+
+            foreach (var opt in options)
+            {
+                ReasonBox.Items.Add(opt);
+            }
         }
 
         public static StockOperationResult Show(Window owner, string mode, string title, string subtitle, int defaultQty = 0, int defaultNewQty = 0)

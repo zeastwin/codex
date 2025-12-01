@@ -47,7 +47,11 @@
                 <TextBox x:Name="NewQtyBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Padding="10,6" Visibility="Collapsed"/>
 
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="原因" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBox x:Name="ReasonBox" Grid.Row="2" Grid.Column="1" Padding="10,6"/>
+                <ComboBox x:Name="ReasonBox"
+                          Grid.Row="2"
+                          Grid.Column="1"
+                          IsEditable="True"
+                          Padding="6,2"/>
             </Grid>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">

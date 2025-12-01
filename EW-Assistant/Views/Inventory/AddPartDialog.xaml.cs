@@ -16,7 +16,6 @@ namespace EW_Assistant.Views.Inventory
         {
             InitializeComponent();
             CurrentStockBox.Text = "0";
-            SafeStockBox.Text = "0";
             UnitBox.Text = "PCS";
         }
 
@@ -34,7 +33,7 @@ namespace EW_Assistant.Views.Inventory
                 return;
             }
 
-            int safe = ParseIntOrZero(SafeStockBox.Text);
+            int safe = 0;
             int current = ParseIntOrZero(CurrentStockBox.Text);
 
             Result = new SparePart
