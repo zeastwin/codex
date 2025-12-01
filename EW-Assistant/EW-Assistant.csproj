@@ -203,6 +203,15 @@
     <Compile Include="Domain\Inventory\IInventoryRepository.cs" />
     <Compile Include="Infrastructure\Inventory\FileInventoryRepository.cs" />
     <Compile Include="Infrastructure\Inventory\InventoryModule.cs" />
+    <Compile Include="Views\Inventory\AddPartDialog.xaml.cs">
+      <DependentUpon>AddPartDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Inventory\StockOperationDialog.xaml.cs">
+      <DependentUpon>StockOperationDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Inventory\InputDialog.xaml.cs">
+      <DependentUpon>InputDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="ViewModels\Inventory\InventoryViewModel.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
@@ -235,6 +244,18 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\DashboardView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Inventory\StockOperationDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Inventory\AddPartDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Inventory\InputDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -258,12 +258,10 @@
                             </Style>
                         </DataGrid.Resources>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="料号" Binding="{Binding PartNo}" Width="*" />
                             <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
                             <DataGridTextColumn Header="规格" Binding="{Binding Spec}" Width="*" />
                             <DataGridTextColumn Header="库存" Binding="{Binding CurrentStock}" Width="100" />
                             <DataGridTextColumn Header="安全库存" Binding="{Binding SafeStock}" Width="120" />
-                            <DataGridTextColumn Header="状态" Binding="{Binding IsActive}" Width="80" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -297,8 +295,7 @@
                                    Margin="0,0,0,4"/>
                         <TextBlock Foreground="#6B7280" Margin="0,0,0,8">
                             <Run Text="料号：" />
-                            <Run Text="{Binding SelectedPart.PartNo}" />
-                            <Run Text="   规格：" />
+                            <Run Text="规格：" />
                             <Run Text="{Binding SelectedPart.Spec}" />
                         </TextBlock>
                     </StackPanel>
@@ -307,11 +304,6 @@
                         <StackPanel>
                             <!-- 基础信息 -->
                             <TextBlock Text="基础信息" FontWeight="SemiBold" Foreground="#0B1220" Margin="0,0,0,10"/>
-                            <StackPanel Margin="0,0,0,12">
-                                <TextBlock Text="库位" Foreground="#6B7280" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding SelectedPart.Location, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource FieldTextBoxStyle}"/>
-                            </StackPanel>
                             <StackPanel Margin="0,0,0,12">
                                 <TextBlock Text="计量单位" Foreground="#6B7280" Margin="0,0,0,4"/>
                                 <TextBox Text="{Binding SelectedPart.Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -343,10 +335,6 @@
                                          Style="{StaticResource FieldTextBoxStyle}"
                                          FontSize="16"
                                          FontWeight="SemiBold"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,0,0">
-                                <TextBlock Text="启用" Foreground="#6B7280" VerticalAlignment="Center"/>
-                                <CheckBox IsChecked="{Binding SelectedPart.IsActive, Mode=TwoWay}" Margin="8,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>

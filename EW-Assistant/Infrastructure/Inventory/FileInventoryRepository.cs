@@ -45,7 +45,7 @@ namespace EW_Assistant.Infrastructure.Inventory
                 return await Task.Run(() =>
                 {
                     var parts = LoadPartsLocked();
-                    return parts.OrderBy(p => p.PartNo).ToList();
+                    return parts.OrderBy(p => p.Name).ToList();
                 }).ConfigureAwait(false);
             }
             finally
@@ -128,7 +128,6 @@ namespace EW_Assistant.Infrastructure.Inventory
                         throw new InvalidOperationException("指定的备件不存在，无法更新。");
                     }
 
-                    existing.PartNo = part.PartNo;
                     existing.Name = part.Name;
                     existing.Spec = part.Spec;
                     existing.Unit = part.Unit;
@@ -136,7 +135,6 @@ namespace EW_Assistant.Infrastructure.Inventory
                     existing.SafeStock = part.SafeStock;
                     existing.MaxStock = part.MaxStock;
                     existing.CurrentStock = part.CurrentStock;
-                    existing.IsActive = part.IsActive;
                     existing.UpdatedAt = DateTime.Now;
 
                     SavePartsLocked(parts);

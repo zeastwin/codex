@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using Microsoft.VisualBasic;
 using EW_Assistant.Domain.Inventory;
 using EW_Assistant.ViewModels;
+using EW_Assistant.Views.Inventory;
 
 namespace EW_Assistant.ViewModels.Inventory
 {
@@ -128,7 +127,7 @@ namespace EW_Assistant.ViewModels.Inventory
 
         private async Task AddPartAsync()
         {
-            var part = PromptPartInfo(new SparePart());
+            var part = AddPartDialog.ShowDialog(Application.Current != null ? Application.Current.MainWindow : null);
             if (part == null)
             {
                 return;
@@ -155,15 +154,12 @@ namespace EW_Assistant.ViewModels.Inventory
             var part = new SparePart
             {
                 Id = SelectedPart.Id,
-                PartNo = SelectedPart.PartNo,
                 Name = SelectedPart.Name,
                 Spec = SelectedPart.Spec,
                 Unit = SelectedPart.Unit,
-                Location = SelectedPart.Location,
                 SafeStock = SelectedPart.SafeStock,
                 MaxStock = SelectedPart.MaxStock,
                 CurrentStock = SelectedPart.CurrentStock,
-                IsActive = SelectedPart.IsActive,
                 CreatedAt = SelectedPart.CreatedAt,
                 UpdatedAt = SelectedPart.UpdatedAt
             };
@@ -212,20 +208,28 @@ namespace EW_Assistant.ViewModels.Inventory
                 return;
             }
 
-            var qty = PromptInt("请输入入库数量", 1);
-            if (qty <= 0)
+            var result = StockOperationDialog.Show(
+                Application.Current != null ? Application.Current.MainWindow : null,
+                "In",
+                "入库",
+                SelectedPart.Name,
+                1);
+            if (result == null)
+            {
+                return;
+            }
+            if (result.Quantity <= 0)
             {
                 MessageBox.Show("数量必须大于 0。", "入库", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            var reason = PromptText("入库原因", "补货");
-            var refNo = PromptText("关联单号", string.Empty);
-            var operatorName = PromptText("操作人", Environment.UserName);
+            var reason = string.IsNullOrWhiteSpace(result.Reason) ? "入库" : result.Reason;
+            var refNo = result.RefNo ?? string.Empty;
+            var operatorName = Environment.UserName;
 
             try
             {
-                await _repository.StockInAsync(SelectedPart.Id, qty, reason, refNo, operatorName);
+                await _repository.StockInAsync(SelectedPart.Id, result.Quantity, reason, refNo, operatorName);
                 await RefreshAsync();
             }
             catch (Exception ex)
@@ -241,20 +245,28 @@ namespace EW_Assistant.ViewModels.Inventory
                 return;
             }
 
-            var qty = PromptInt("请输入出库数量", 1);
-            if (qty <= 0)
+            var result = StockOperationDialog.Show(
+                Application.Current != null ? Application.Current.MainWindow : null,
+                "Out",
+                "出库",
+                SelectedPart.Name,
+                1);
+            if (result == null)
+            {
+                return;
+            }
+            if (result.Quantity <= 0)
             {
                 MessageBox.Show("数量必须大于 0。", "出库", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            var reason = PromptText("出库原因", "领用");
-            var refNo = PromptText("关联单号", string.Empty);
-            var operatorName = PromptText("操作人", Environment.UserName);
+            var reason = string.IsNullOrWhiteSpace(result.Reason) ? "出库" : result.Reason;
+            var refNo = result.RefNo ?? string.Empty;
+            var operatorName = Environment.UserName;
 
             try
             {
-                await _repository.StockOutAsync(SelectedPart.Id, qty, reason, refNo, operatorName);
+                await _repository.StockOutAsync(SelectedPart.Id, result.Quantity, reason, refNo, operatorName);
                 await RefreshAsync();
             }
             catch (Exception ex)
@@ -270,9 +282,20 @@ namespace EW_Assistant.ViewModels.Inventory
                 return;
             }
 
-            var newQty = PromptInt("请输入调整后的库存数量", SelectedPart.CurrentStock);
-            var reason = PromptText("调整原因", "盘点调整");
-            var operatorName = PromptText("操作人", Environment.UserName);
+            var result = StockOperationDialog.Show(
+                Application.Current != null ? Application.Current.MainWindow : null,
+                "Adjust",
+                "调整库存",
+                SelectedPart.Name,
+                SelectedPart.CurrentStock,
+                SelectedPart.CurrentStock);
+            if (result == null)
+            {
+                return;
+            }
+            var newQty = result.NewQuantity;
+            var reason = string.IsNullOrWhiteSpace(result.Reason) ? "库存调整" : result.Reason;
+            var operatorName = Environment.UserName;
 
             try
             {
@@ -285,90 +308,20 @@ namespace EW_Assistant.ViewModels.Inventory
             }
         }
 
-        private SparePart PromptPartInfo(SparePart source)
-        {
-            var partNo = PromptText("请输入料号", source.PartNo);
-            if (string.IsNullOrWhiteSpace(partNo))
-            {
-                return null;
-            }
-
-            var name = PromptText("请输入名称", source.Name);
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return null;
-            }
-
-            var spec = PromptText("规格/型号", source.Spec);
-            var unit = PromptText("计量单位", source.Unit);
-            var location = PromptText("库位/存放位置", source.Location);
-            var safeStock = PromptInt("安全库存", source.SafeStock);
-            var maxStock = PromptInt("库存上限", source.MaxStock);
-            var currentStock = PromptInt("当前库存", source.CurrentStock);
-
-            var activeText = PromptText("是否启用（是/否，默认是）", source.IsActive ? "是" : "否");
-            var isActive = ParseBool(activeText, source.IsActive);
-
-            var part = new SparePart
-            {
-                Id = source.Id,
-                PartNo = partNo.Trim(),
-                Name = name.Trim(),
-                Spec = spec,
-                Unit = unit,
-                Location = location,
-                SafeStock = safeStock,
-                MaxStock = maxStock,
-                CurrentStock = currentStock,
-                IsActive = isActive,
-                CreatedAt = source.CreatedAt,
-                UpdatedAt = source.UpdatedAt
-            };
-
-            return part;
-        }
-
         private string PromptText(string prompt, string defaultValue)
         {
-            return Interaction.InputBox(prompt, "库存管理", defaultValue ?? string.Empty);
+            return InputDialog.Show("库存管理", prompt, defaultValue ?? string.Empty);
         }
 
         private int PromptInt(string prompt, int defaultValue)
         {
-            var input = Interaction.InputBox(prompt, "库存管理", defaultValue.ToString());
+            var input = InputDialog.Show("库存管理", prompt, defaultValue.ToString());
             int result;
             if (!int.TryParse(input, out result))
             {
                 result = defaultValue;
             }
             return result;
-        }
-
-        private bool ParseBool(string value, bool defaultValue)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return defaultValue;
-            }
-
-            var text = value.Trim();
-            if (string.Equals(text, "是", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(text, "yes", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(text, "y", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(text, "true", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (string.Equals(text, "否", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(text, "no", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(text, "n", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(text, "false", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            return defaultValue;
         }
 
         private void UpdateCommandStates()

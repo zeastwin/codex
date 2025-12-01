@@ -6,8 +6,6 @@ namespace EW_Assistant.Domain.Inventory
     {
         public int Id { get; set; }
 
-        public string PartNo { get; set; }
-
         public string Name { get; set; }
 
         public string Spec { get; set; }
@@ -21,8 +19,6 @@ namespace EW_Assistant.Domain.Inventory
         public int MaxStock { get; set; }
 
         public int CurrentStock { get; set; }
-
-        public bool IsActive { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
