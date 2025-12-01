@@ -193,22 +193,18 @@ namespace EW_Assistant.ViewModels.Inventory
             {
                 return;
             }
-            var part = new SparePart
+            var updated = EditPartDialog.ShowDialog(Application.Current != null ? Application.Current.MainWindow : null, SelectedPart);
+            if (updated == null)
             {
-                Id = SelectedPart.Id,
-                Name = SelectedPart.Name,
-                Spec = SelectedPart.Spec,
-                Unit = SelectedPart.Unit,
-                Location = SelectedPart.Location,
-                SafeStock = SelectedPart.SafeStock,
-                CurrentStock = SelectedPart.CurrentStock,
-                CreatedAt = SelectedPart.CreatedAt,
-                UpdatedAt = SelectedPart.UpdatedAt
-            };
+                return;
+            }
+            updated.Id = SelectedPart.Id;
+            updated.CreatedAt = SelectedPart.CreatedAt;
+            updated.UpdatedAt = SelectedPart.UpdatedAt;
 
             try
             {
-                await _repository.UpdatePartAsync(part);
+                await _repository.UpdatePartAsync(updated);
                 await RefreshAsync();
                 MessageBox.Show("更新成功。", "库存管理", MessageBoxButton.OK, MessageBoxImage.Information);
             }

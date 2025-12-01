@@ -206,6 +206,9 @@
     <Compile Include="Views\Inventory\AddPartDialog.xaml.cs">
       <DependentUpon>AddPartDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Inventory\EditPartDialog.xaml.cs">
+      <DependentUpon>EditPartDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Inventory\StockOperationDialog.xaml.cs">
       <DependentUpon>StockOperationDialog.xaml</DependentUpon>
     </Compile>
@@ -245,6 +248,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Inventory\StockOperationDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Inventory\EditPartDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

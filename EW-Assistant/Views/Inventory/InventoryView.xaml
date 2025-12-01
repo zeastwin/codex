@@ -263,6 +263,7 @@
                             </DataGrid.Resources>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="单位" Binding="{Binding Unit}" Width="80" />
                                 <DataGridTextColumn Header="库位" Binding="{Binding Location}" Width="*" />
                                 <DataGridTextColumn Header="规格" Binding="{Binding Spec}" Width="*" />
                                 <DataGridTextColumn Header="库存" Binding="{Binding CurrentStock}" Width="100" />
@@ -364,14 +365,16 @@
                         <TextBox Grid.Row="0" Grid.Column="1"
                                  Text="{Binding SelectedPart.Location, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource FieldTextBoxStyle}"
-                                 Margin="0,0,0,10"/>
+                                 Margin="0,0,0,10"
+                                 IsReadOnly="True"/>
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="计量单位" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,10"/>
                         <ComboBox Grid.Row="1" Grid.Column="1"
                                   Text="{Binding SelectedPart.Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                   IsEditable="True"
                                   Padding="6,2"
-                                  Margin="0,0,0,10">
+                                  Margin="0,0,0,10"
+                                  IsEnabled="False">
                             <ComboBoxItem Content="PCS"/>
                             <ComboBoxItem Content="套"/>
                             <ComboBoxItem Content="箱"/>
@@ -387,7 +390,8 @@
                         <TextBox Grid.Row="2" Grid.Column="1"
                                  Text="{Binding SelectedPart.Spec, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource FieldTextBoxStyle}"
-                                 Margin="0,0,0,10"/>
+                                 Margin="0,0,0,10"
+                                 IsReadOnly="True"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="当前库存" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,10"/>
                         <TextBox Grid.Row="3" Grid.Column="1"
@@ -395,17 +399,19 @@
                                  Style="{StaticResource FieldTextBoxStyle}"
                                  FontSize="16"
                                  FontWeight="SemiBold"
-                                 Margin="0,0,0,10"/>
+                                 Margin="0,0,0,10"
+                                 IsReadOnly="True"/>
 
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="安全库存" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox Grid.Row="4" Grid.Column="1"
                                  Text="{Binding SelectedPart.SafeStock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource FieldTextBoxStyle}"/>
+                                 Style="{StaticResource FieldTextBoxStyle}"
+                                 IsReadOnly="True"/>
                     </Grid>
 
                     <!-- 操作按钮 -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="保存修改"
+                        <Button Content="编辑"
                                 Command="{Binding EditPartCommand}"
                                 Style="{StaticResource PrimaryButtonStyle}"
                                 Margin="0,0,8,0"/>
