@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -23,6 +24,7 @@ namespace EW_Assistant.ViewModels.Inventory
         private readonly RelayCommand _adjustCommand;
 
         private ObservableCollection<SparePart> _parts = new ObservableCollection<SparePart>();
+        private ObservableCollection<StockTransactionView> _transactions = new ObservableCollection<StockTransactionView>();
         private SparePart _selectedPart;
         private bool _isRefreshing;
 
@@ -85,6 +87,11 @@ namespace EW_Assistant.ViewModels.Inventory
 
         public ICommand AdjustStockCommand { get; private set; }
 
+        public ObservableCollection<StockTransactionView> Transactions
+        {
+            get { return _transactions; }
+        }
+
         /// <summary>
         /// 刷新并应用搜索过滤。
         /// </summary>
@@ -100,6 +107,7 @@ namespace EW_Assistant.ViewModels.Inventory
             {
                 var list = await _repository.GetAllPartsAsync();
                 UpdateParts(list);
+                await LoadTransactionsAsync(list);
             }
             catch (Exception ex)
             {
@@ -122,6 +130,38 @@ namespace EW_Assistant.ViewModels.Inventory
             foreach (var item in items)
             {
                 Parts.Add(item);
+            }
+        }
+
+        private async Task LoadTransactionsAsync(IList<SparePart> parts)
+        {
+            Transactions.Clear();
+            var partLookup = (parts ?? new List<SparePart>()).ToDictionary(p => p.Id, p => p);
+            try
+            {
+                var records = await _repository.GetTransactionsAsync();
+                if (records == null) return;
+
+                foreach (var t in records)
+                {
+                    SparePart p;
+                    partLookup.TryGetValue(t.PartId, out p);
+                    Transactions.Add(new StockTransactionView
+                    {
+                        PartName = p != null ? p.Name : $"ID:{t.PartId}",
+                        Type = t.Type,
+                        QtyChange = t.QtyChange,
+                        AfterQty = t.AfterQty,
+                        Reason = t.Reason,
+                        RefNo = t.RefNo,
+                        Operator = t.Operator,
+                        CreatedAt = t.CreatedAt
+                    });
+                }
+            }
+            catch
+            {
+                // 忽略历史加载失败，不影响主流程
             }
         }
 
@@ -315,6 +355,18 @@ namespace EW_Assistant.ViewModels.Inventory
             _stockInCommand.RaiseCanExecuteChanged();
             _stockOutCommand.RaiseCanExecuteChanged();
             _adjustCommand.RaiseCanExecuteChanged();
+        }
+
+        public class StockTransactionView
+        {
+            public string PartName { get; set; }
+            public string Type { get; set; }
+            public int QtyChange { get; set; }
+            public int AfterQty { get; set; }
+            public string Reason { get; set; }
+            public string RefNo { get; set; }
+            public string Operator { get; set; }
+            public DateTime CreatedAt { get; set; }
         }
     }
 }

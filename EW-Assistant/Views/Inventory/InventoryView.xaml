@@ -170,103 +170,151 @@
                 <ColumnDefinition Width="2*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- 列表卡片 -->
-            <Border Grid.Column="0"
-                    Margin="0,0,12,0"
-                    Style="{StaticResource CardBorderStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <Grid Grid.Column="0" Margin="0,0,12,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                    <TextBlock Text="备件列表"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Foreground="#0B1220"
-                               Margin="0,0,0,8"/>
+                <!-- 列表卡片 -->
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <DataGrid Grid.Row="1"
-                              ItemsSource="{Binding Parts}"
-                              SelectedItem="{Binding SelectedPart, Mode=TwoWay}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              HeadersVisibility="Column"
-                              AlternationCount="2"
-                              AlternatingRowBackground="#F9FAFB"
-                              CanUserSortColumns="True"
-                              CanUserResizeColumns="True"
-                              SelectionMode="Single"
-                              SelectionUnit="FullRow"
-                              BorderThickness="0"
-                              GridLinesVisibility="None"
-                              Background="White"
-                              FontSize="14"
-                              RowHeight="34"
-                              VerticalScrollBarVisibility="Auto">
-                        <DataGrid.Resources>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E1EDFF"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0F172A"/>
+                        <TextBlock Text="备件列表"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0B1220"
+                                   Margin="0,0,0,8"/>
 
-                            <!-- 轻量卡片风格表头 -->
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                <Setter Property="Background" Value="#F0F6FF"/>
-                                <Setter Property="Foreground" Value="#0F172A"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Height" Value="34"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="DataGridColumnHeader">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="#CFE0FF"
-                                                    BorderThickness="1"
-                                                    CornerRadius="10,10,0,0"
-                                                    Padding="4">
-                                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                  VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding Parts}"
+                                  SelectedItem="{Binding SelectedPart, Mode=TwoWay}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  AlternationCount="2"
+                                  AlternatingRowBackground="#F9FAFB"
+                                  CanUserSortColumns="True"
+                                  CanUserResizeColumns="True"
+                                  SelectionMode="Single"
+                                  SelectionUnit="FullRow"
+                                  BorderThickness="0"
+                                  GridLinesVisibility="None"
+                                  Background="White"
+                                  FontSize="14"
+                                  RowHeight="34"
+                                  VerticalScrollBarVisibility="Auto">
+                            <DataGrid.Resources>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E1EDFF"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0F172A"/>
 
-                            <!-- 行样式：浅蓝交替、鼠标悬停/选中柔和色 -->
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="Background" Value="White"/>
-                                <Setter Property="SnapsToDevicePixels" Value="True"/>
-                                <Setter Property="Padding" Value="2"/>
-                                <Style.Triggers>
-                                    <Trigger Property="AlternationIndex" Value="1">
-                                        <Setter Property="Background" Value="#F7FAFF"/>
-                                    </Trigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#F2F7FF"/>
-                                    </Trigger>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#E1EDFF"/>
-                                        <Setter Property="Foreground" Value="#0F172A"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
+                                <!-- 轻量卡片风格表头 -->
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="Background" Value="#F0F6FF"/>
+                                    <Setter Property="Foreground" Value="#0F172A"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Height" Value="34"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="DataGridColumnHeader">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="#CFE0FF"
+                                                        BorderThickness="1"
+                                                        CornerRadius="10,10,0,0"
+                                                        Padding="4">
+                                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
 
-                            <!-- 单元格样式：去边框，留出内边距 -->
-                            <Style TargetType="DataGridCell">
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="Padding" Value="6,6"/>
-                                <Setter Property="FontSize" Value="14"/>
-                            </Style>
-                        </DataGrid.Resources>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
-                            <DataGridTextColumn Header="库位" Binding="{Binding Location}" Width="*" />
-                            <DataGridTextColumn Header="规格" Binding="{Binding Spec}" Width="*" />
-                            <DataGridTextColumn Header="库存" Binding="{Binding CurrentStock}" Width="100" />
-                            <DataGridTextColumn Header="安全库存" Binding="{Binding SafeStock}" Width="120" />
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
+                                <!-- 行样式：浅蓝交替、鼠标悬停/选中柔和色 -->
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="White"/>
+                                    <Setter Property="SnapsToDevicePixels" Value="True"/>
+                                    <Setter Property="Padding" Value="2"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="AlternationIndex" Value="1">
+                                            <Setter Property="Background" Value="#F7FAFF"/>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#F2F7FF"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#E1EDFF"/>
+                                            <Setter Property="Foreground" Value="#0F172A"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+
+                                <!-- 单元格样式：去边框，留出内边距 -->
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="6,6"/>
+                                    <Setter Property="FontSize" Value="14"/>
+                                </Style>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="库位" Binding="{Binding Location}" Width="*" />
+                                <DataGridTextColumn Header="规格" Binding="{Binding Spec}" Width="*" />
+                                <DataGridTextColumn Header="库存" Binding="{Binding CurrentStock}" Width="100" />
+                                <DataGridTextColumn Header="安全库存" Binding="{Binding SafeStock}" Width="120" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <!-- 历史记录卡片 -->
+                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="历史进出库记录"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0B1220"
+                                   Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding Transactions}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  AlternationCount="2"
+                                  AlternatingRowBackground="#F9FAFB"
+                                  CanUserSortColumns="True"
+                                  CanUserResizeColumns="True"
+                                  SelectionMode="Single"
+                                  SelectionUnit="FullRow"
+                                  BorderThickness="0"
+                                  GridLinesVisibility="None"
+                                  Background="White"
+                                  FontSize="13"
+                                  RowHeight="30"
+                                  VerticalScrollBarVisibility="Auto">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="备件" Binding="{Binding PartName}" Width="*" />
+                                <DataGridTextColumn Header="类型" Binding="{Binding Type}" Width="100" />
+                                <DataGridTextColumn Header="变更" Binding="{Binding QtyChange}" Width="80" />
+                                <DataGridTextColumn Header="变更后" Binding="{Binding AfterQty}" Width="80" />
+                                <DataGridTextColumn Header="原因" Binding="{Binding Reason}" Width="*" />
+                                <DataGridTextColumn Header="单号/备注" Binding="{Binding RefNo}" Width="*" />
+                                <DataGridTextColumn Header="操作人" Binding="{Binding Operator}" Width="100" />
+                                <DataGridTextColumn Header="时间" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm}" Width="150" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
 
             <!-- 详情卡片 -->
             <Border Grid.Column="1"

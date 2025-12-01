@@ -20,5 +20,7 @@ namespace EW_Assistant.Domain.Inventory
         Task StockOutAsync(int partId, int qty, string reason, string refNo, string operatorName);
 
         Task AdjustStockAsync(int partId, int newQty, string reason, string operatorName);
+
+        Task<List<StockTransaction>> GetTransactionsAsync();
     }
 }

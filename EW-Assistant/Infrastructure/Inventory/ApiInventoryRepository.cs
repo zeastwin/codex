@@ -60,5 +60,10 @@ namespace EW_Assistant.Infrastructure.Inventory
         {
             throw new NotImplementedException();
         }
+
+        public Task<List<StockTransaction>> GetTransactionsAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

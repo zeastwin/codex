@@ -328,5 +328,23 @@ namespace EW_Assistant.Infrastructure.Inventory
             var json = JsonConvert.SerializeObject(transactions, Formatting.Indented);
             File.WriteAllText(_transactionsFilePath, json, new UTF8Encoding(false));
         }
+
+        public async Task<List<StockTransaction>> GetTransactionsAsync()
+        {
+            await _syncRoot.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                EnsureFilesExistLocked();
+                return await Task.Run(() =>
+                {
+                    var list = LoadTransactionsLocked();
+                    return list.OrderByDescending(t => t.CreatedAt).ToList();
+                }).ConfigureAwait(false);
+            }
+            finally
+            {
+                _syncRoot.Release();
+            }
+        }
     }
 }
