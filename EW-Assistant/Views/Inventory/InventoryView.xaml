@@ -123,12 +123,6 @@
             </Style.Triggers>
         </Style>
 
-        <!-- 通用右对齐单元格样式 -->
-        <Style x:Key="RightAlignCellStyle" TargetType="DataGridCell">
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-            <Setter Property="Padding" Value="6,4"/>
-        </Style>
-
         <!-- 通用居中单元格样式 -->
         <Style x:Key="CenterCellStyle" TargetType="DataGridCell">
             <Setter Property="HorizontalContentAlignment" Value="Center"/>

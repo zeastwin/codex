@@ -97,6 +97,11 @@ namespace EW_Assistant.Views.Inventory
                 return "维修领料";
             }
 
+            if (string.Equals(mode, "Adjust", StringComparison.OrdinalIgnoreCase))
+            {
+                return "库存调整";
+            }
+
             return string.Empty;
         }
 
