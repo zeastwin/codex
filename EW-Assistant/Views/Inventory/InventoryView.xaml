@@ -103,26 +103,6 @@
             </Setter>
         </Style>
 
-        <!-- DataGrid 表头与行样式 -->
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="Background" Value="#F3F4F6"/>
-            <Setter Property="Foreground" Value="#111827"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-        <Style TargetType="DataGridRow">
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Validation.ErrorTemplate" Value="{x:Null}"/>
-            <Setter Property="MinHeight" Value="28"/>
-            <Setter Property="Background" Value="White"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#E8F0FE"/>
-                    <Setter Property="Foreground" Value="#111827"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
         <!-- 通用居中单元格样式 -->
         <Style x:Key="CenterCellStyle" TargetType="DataGridCell">
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
