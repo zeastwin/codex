@@ -3,8 +3,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
-        Title="EW-Assistant" Height="720" Width="1280" WindowState="Maximized">
+        Title="EW-Assistant"
+        Height="720"
+        Width="1280"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        WindowState="Maximized"
+        Background="#FFF5F5F7">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome ResizeBorderThickness="0,6,6,6" />
+    </shell:WindowChrome.WindowChrome>
 
     <!-- ===== 左侧栏配色与样式（仿图风格） ===== -->
     <Window.Resources>
@@ -19,7 +30,6 @@
             <Setter Property="Foreground" Value="#111827"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -68,6 +78,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
         <!-- 圆角小按钮（中性灰） -->
         <Style x:Key="RoundSmallButton" TargetType="Button">
             <Setter Property="Height" Value="28"/>
@@ -82,13 +93,13 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd"
-                        CornerRadius="12"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
+                                CornerRadius="12"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
                             <ContentPresenter HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      Margin="{TemplateBinding Padding}"/>
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -106,6 +117,70 @@
             </Setter>
         </Style>
 
+        <!-- 右上角标题栏按钮（扩大点击范围） -->
+        <Style x:Key="CaptionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="11"/>
+
+            <Setter Property="Cursor" Value="Arrow"/>
+
+            <!-- 保留这个，让按钮在 Chrome 区域也能吃到鼠标 -->
+            <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome"
+            Value="True"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                        Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#33FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#55FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+
+        <!-- 关闭按钮专用（红色悬停） -->
+        <Style x:Key="CloseCaptionButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource CaptionButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#FFE11A1A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#FFC30F0F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Window.Resources>
 
     <Grid>
@@ -114,20 +189,67 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#493A8B">
-            <Grid>
+        <!-- 自定义标题栏：可拖动 -->
+        <Border Grid.Row="0"
+                Background="#493A8B"
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <!-- 左边留 8px，右边不留缝 -->
+            <Grid Margin="8,0,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="{Binding ActualWidth, ElementName=CompanyIcon}" Height="0" />
-                <TextBlock Grid.Column="1" Text="T66-TCT Program Powered By EW AI"
-                           Foreground="White" FontSize="22" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
+
+                <!-- 左侧 logo + 程序名 -->
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Image Source="/Assets/EW.ico"
+                           Width="20"
+                           Height="20"
+                           Stretch="Uniform"
+                           Margin="0,0,6,0"
+                           ToolTip="EW"/>
+                    <TextBlock Text="EW-Assistant"
+                               Foreground="White"
+                               FontSize="13"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- 中间标题（可截断） -->
+                <TextBlock Grid.Column="1"
+                           Text="T66-TCT Program Powered By EW AI"
+                           Foreground="White"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
-                <Image Grid.Column="2" x:Name="CompanyIcon" Source="/Assets/EW.ico"
-                       Height="48" Stretch="Uniform" VerticalAlignment="Top" ToolTip="EW" />
+
+                <!-- 右上角窗口按钮 -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Stretch">
+                    <!-- 最小化 -->
+                    <Button Style="{StaticResource CaptionButtonStyle}"
+                            Click="MinimizeButton_Click"
+                            ToolTip="最小化">
+                        <TextBlock Text="&#xE921;"/>
+                    </Button>
+                    <!-- 最大化/还原 -->
+                    <Button Style="{StaticResource CaptionButtonStyle}"
+                            Click="MaximizeButton_Click"
+                            ToolTip="最大化/还原">
+                        <TextBlock Text="&#xE922;"/>
+                    </Button>
+                    <!-- 关闭 -->
+                    <Button Style="{StaticResource CloseCaptionButtonStyle}"
+                            Click="CloseButton_Click"
+                            ToolTip="关闭">
+                        <TextBlock Text="&#xE8BB;"/>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -143,27 +265,30 @@
             </Grid.ColumnDefinitions>
 
             <!-- 左侧栏 -->
-            <Border Grid.Column="0" Background="{StaticResource SideBgBrush}" BorderBrush="#E5E7EB" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0"
+                    Background="{StaticResource SideBgBrush}"
+                    BorderBrush="#E5E7EB"
+                    BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0,8,0,12">
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}" IsChecked="True"
-                             Content="总览" Checked="NavItem_Checked" Tag="&#xE770;"/>
+                                     Content="总览" Checked="NavItem_Checked" Tag="&#xE770;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="AI助手" Checked="NavItem_Checked" Tag="&#xE7FD;"/>
+                                     Content="AI助手" Checked="NavItem_Checked" Tag="&#xE7FD;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="AI文档" Checked="NavItem_Checked" Tag="&#xE8EF;"/>
+                                     Content="AI文档" Checked="NavItem_Checked" Tag="&#xE8EF;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="产能看板" Checked="NavItem_Checked" Tag="&#xE9D2;"/>
+                                     Content="产能看板" Checked="NavItem_Checked" Tag="&#xE9D2;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="报警看板" Checked="NavItem_Checked" Tag="&#xE81F;"/>
+                                     Content="报警看板" Checked="NavItem_Checked" Tag="&#xE81F;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="预警中心" Checked="NavItem_Checked" Tag="&#xE7BA;"/>
+                                     Content="预警中心" Checked="NavItem_Checked" Tag="&#xE7BA;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="机台控制" Checked="NavItem_Checked" Tag="&#xE707;"/>
+                                     Content="机台控制" Checked="NavItem_Checked" Tag="&#xE707;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="库存管理" Checked="NavItem_Checked" Tag="&#xE142;"/>
+                                     Content="库存管理" Checked="NavItem_Checked" Tag="&#xE142;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
-                             Content="设置" Checked="NavItem_Checked" Tag="&#xE713;"/>
+                                     Content="设置" Checked="NavItem_Checked" Tag="&#xE713;"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -187,28 +312,26 @@
                     <!-- 标题 + 操作 -->
                     <DockPanel Grid.Row="0" LastChildFill="False" Margin="2,0,2,8">
                         <TextBlock Text="AI运行信息" FontSize="16" FontWeight="SemiBold" Foreground="#0B1220"
-                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                                   VerticalAlignment="Center" DockPanel.Dock="Left"/>
                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                             <Button Content="清空"
-            Click="BtnClearInfo_Click"
-            Margin="8,0,0,0"
-            Style="{StaticResource RoundSmallButton}"/>
+                                    Click="BtnClearInfo_Click"
+                                    Margin="8,0,0,0"
+                                    Style="{StaticResource RoundSmallButton}"/>
                         </StackPanel>
-
                     </DockPanel>
 
                     <!-- 消息列表 -->
                     <ListBox x:Name="InfoList"
-         Grid.Row="1"
-         BorderThickness="0"
-         Background="Transparent"
-         FontSize="14"
-         ItemsSource="{Binding InfoItems}"
-         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-         ScrollViewer.VerticalScrollBarVisibility="Auto"
-         ScrollViewer.CanContentScroll="False">
+                             Grid.Row="1"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             FontSize="14"
+                             ItemsSource="{Binding InfoItems}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="False">
 
-                        <!-- 关键：让每个 ListBoxItem 横向撑满，子元素才有“宽度约束”可换行 -->
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -224,19 +347,18 @@
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0"
-                           Text="{Binding Time, StringFormat=HH:mm:ss}"
-                           FontSize="12" Foreground="#94A3B8" Margin="2,0,2,4"/>
+                                               Text="{Binding Time, StringFormat=HH:mm:ss}"
+                                               FontSize="12" Foreground="#94A3B8" Margin="2,0,2,4"/>
 
                                     <Border Grid.Row="1" x:Name="Bubble"
-                        Background="#F1F5F9"
-                        Padding="8"
-                        CornerRadius="8"
-                        HorizontalAlignment="Stretch">
-                                        <!-- 关键：Wrap 或 WrapWithOverflow，保证超长单词/URL 也断开 -->
+                                            Background="#F1F5F9"
+                                            Padding="8"
+                                            CornerRadius="8"
+                                            HorizontalAlignment="Stretch">
                                         <TextBlock Text="{Binding Text}"
-                               TextWrapping="WrapWithOverflow"
-                               TextTrimming="None"
-                               Foreground="#0B1220"/>
+                                                   TextWrapping="WrapWithOverflow"
+                                                   TextTrimming="None"
+                                                   Foreground="#0B1220"/>
                                     </Border>
                                 </Grid>
 

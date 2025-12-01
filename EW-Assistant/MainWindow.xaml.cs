@@ -1,4 +1,4 @@
-﻿using EW_Assistant.Views;
+using EW_Assistant.Views;
 using EW_Assistant.Views.Inventory;
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Path = System.IO.Path;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace EW_Assistant
 {
@@ -88,6 +90,151 @@ namespace EW_Assistant
             }
 
             NavigateByContent("总览");
+        }
+        // === 关键：修正无边框窗口最大化时的区域 ===
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var source = (HwndSource)PresentationSource.FromVisual(this);
+            if (source != null)
+            {
+                source.AddHook(WndProc);
+            }
+        }
+
+        private const int WM_GETMINMAXINFO = 0x0024;
+        private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public int dwFlags;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_GETMINMAXINFO)
+            {
+                WmGetMinMaxInfo(hwnd, lParam);
+                handled = false; // 这里让 WPF 接着处理其他部分
+            }
+
+            return IntPtr.Zero;
+        }
+
+        private void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+        {
+            var mmi = (MINMAXINFO)Marshal.PtrToStructure(lParam, typeof(MINMAXINFO));
+
+            IntPtr monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+            if (monitor != IntPtr.Zero)
+            {
+                var monitorInfo = new MONITORINFO();
+                monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+                if (GetMonitorInfo(monitor, ref monitorInfo))
+                {
+                    RECT rcWorkArea = monitorInfo.rcWork;     // 工作区（去掉任务栏）
+                    RECT rcMonitorArea = monitorInfo.rcMonitor; // 整个显示器
+
+                    // 最大化时窗口左上角相对于显示器左上角的偏移
+                    mmi.ptMaxPosition.X = rcWorkArea.Left - rcMonitorArea.Left;
+                    mmi.ptMaxPosition.Y = rcWorkArea.Top - rcMonitorArea.Top;
+
+                    // 最大化时窗口的宽高 = 工作区大小
+                    mmi.ptMaxSize.X = rcWorkArea.Right - rcWorkArea.Left;
+                    mmi.ptMaxSize.Y = rcWorkArea.Bottom - rcWorkArea.Top;
+
+                    // 最大跟踪尺寸也同步一下，防止拖拉超过工作区
+                    mmi.ptMaxTrackSize = mmi.ptMaxSize;
+                }
+            }
+
+            Marshal.StructureToPtr(mmi, lParam, true);
+        }
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                // 双击标题栏：最大化/还原
+                if (WindowState == WindowState.Maximized)
+                {
+                    WindowState = WindowState.Normal;
+                }
+                else
+                {
+                    WindowState = WindowState.Maximized;
+                }
+            }
+            else
+            {
+                // 拖动窗口
+                try
+                {
+                    DragMove();
+                }
+                catch
+                {
+                    // 忽略偶发异常
+                }
+            }
+        }
+
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                WindowState = WindowState.Normal;
+            }
+            else
+            {
+                WindowState = WindowState.Maximized;
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
         }
 
         private void NavItem_Checked(object sender, RoutedEventArgs e)
