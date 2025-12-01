@@ -9,7 +9,6 @@ namespace EW_Assistant.Views.Inventory
         public int Quantity { get; set; }
         public int NewQuantity { get; set; }
         public string Reason { get; set; }
-        public string RefNo { get; set; }
     }
 
     /// <summary>
@@ -32,14 +31,12 @@ namespace EW_Assistant.Views.Inventory
             QtyBox.Text = defaultQty > 0 ? defaultQty.ToString() : string.Empty;
             NewQtyBox.Text = defaultNewQty > 0 ? defaultNewQty.ToString() : string.Empty;
             ReasonBox.Text = string.Empty;
-            RefNoBox.Text = string.Empty;
 
             // 调整模式显示“调整后库存”，入/出库隐藏
             var isAdjust = string.Equals(_mode, "Adjust", StringComparison.OrdinalIgnoreCase);
             NewQtyLabel.Visibility = isAdjust ? Visibility.Visible : Visibility.Collapsed;
             NewQtyBox.Visibility = isAdjust ? Visibility.Visible : Visibility.Collapsed;
             QtyLabel.Text = isAdjust ? "变更数量" : "数量";
-            RefNoLabel.Text = isAdjust ? "备注" : "关联单号";
         }
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -68,8 +65,7 @@ namespace EW_Assistant.Views.Inventory
             {
                 Quantity = qty,
                 NewQuantity = newQty,
-                Reason = ReasonBox.Text ?? string.Empty,
-                RefNo = RefNoBox.Text ?? string.Empty
+                Reason = ReasonBox.Text ?? string.Empty
             };
 
             DialogResult = true;

@@ -34,7 +34,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="120"/>
@@ -47,11 +46,8 @@
                 <TextBlock x:Name="NewQtyLabel" Grid.Row="1" Grid.Column="0" Text="调整后库存" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,8" Visibility="Collapsed"/>
                 <TextBox x:Name="NewQtyBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Padding="10,6" Visibility="Collapsed"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="原因" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,8"/>
-                <TextBox x:Name="ReasonBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" Padding="10,6"/>
-
-                <TextBlock x:Name="RefNoLabel" Grid.Row="3" Grid.Column="0" Text="关联单号" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBox x:Name="RefNoBox" Grid.Row="3" Grid.Column="1" Padding="10,6"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="原因" Foreground="#6B7280" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox x:Name="ReasonBox" Grid.Row="2" Grid.Column="1" Padding="10,6"/>
             </Grid>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">

@@ -142,22 +142,20 @@ namespace EW_Assistant.ViewModels.Inventory
                 var records = await _repository.GetTransactionsAsync();
                 if (records == null) return;
 
-                foreach (var t in records)
+            foreach (var t in records)
+            {
+                SparePart p;
+                partLookup.TryGetValue(t.PartId, out p);
+                Transactions.Add(new StockTransactionView
                 {
-                    SparePart p;
-                    partLookup.TryGetValue(t.PartId, out p);
-                    Transactions.Add(new StockTransactionView
-                    {
-                        PartName = p != null ? p.Name : $"ID:{t.PartId}",
-                        Type = t.Type,
-                        QtyChange = t.QtyChange,
-                        AfterQty = t.AfterQty,
-                        Reason = t.Reason,
-                        RefNo = t.RefNo,
-                        Operator = t.Operator,
-                        CreatedAt = t.CreatedAt
-                    });
-                }
+                    PartName = p != null ? p.Name : $"ID:{t.PartId}",
+                    Type = ToDisplayType(t.Type),
+                    QtyChange = t.QtyChange,
+                    AfterQty = t.AfterQty,
+                    Reason = t.Reason,
+                    CreatedAt = t.CreatedAt
+                });
+            }
             }
             catch
             {
@@ -175,6 +173,10 @@ namespace EW_Assistant.ViewModels.Inventory
 
             try
             {
+                if (part.SafeStock <= 0)
+                {
+                    part.SafeStock = await CalculateSuggestedSafeStockAsync(part.Name);
+                }
                 await _repository.AddPartAsync(part);
                 await RefreshAsync();
                 MessageBox.Show("新增备件成功。", "库存管理", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -264,8 +266,8 @@ namespace EW_Assistant.ViewModels.Inventory
                 return;
             }
             var reason = string.IsNullOrWhiteSpace(result.Reason) ? "入库" : result.Reason;
-            var refNo = result.RefNo ?? string.Empty;
-            var operatorName = Environment.UserName;
+            var refNo = string.Empty;
+            var operatorName = string.Empty;
 
             try
             {
@@ -301,8 +303,8 @@ namespace EW_Assistant.ViewModels.Inventory
                 return;
             }
             var reason = string.IsNullOrWhiteSpace(result.Reason) ? "出库" : result.Reason;
-            var refNo = result.RefNo ?? string.Empty;
-            var operatorName = Environment.UserName;
+            var refNo = string.Empty;
+            var operatorName = string.Empty;
 
             try
             {
@@ -335,7 +337,7 @@ namespace EW_Assistant.ViewModels.Inventory
             }
             var newQty = result.NewQuantity;
             var reason = string.IsNullOrWhiteSpace(result.Reason) ? "库存调整" : result.Reason;
-            var operatorName = Environment.UserName;
+            var operatorName = string.Empty;
 
             try
             {
@@ -364,9 +366,73 @@ namespace EW_Assistant.ViewModels.Inventory
             public int QtyChange { get; set; }
             public int AfterQty { get; set; }
             public string Reason { get; set; }
-            public string RefNo { get; set; }
-            public string Operator { get; set; }
             public DateTime CreatedAt { get; set; }
+        }
+
+        private string ToDisplayType(string type)
+        {
+            if (string.IsNullOrWhiteSpace(type)) return "其他";
+            var key = type.Trim().ToLowerInvariant();
+            switch (key)
+            {
+                case "stockin":
+                case "in":
+                    return "入库";
+                case "stockout":
+                case "out":
+                    return "出库";
+                case "adjust":
+                    return "调整";
+                default:
+                    return type;
+            }
+        }
+
+        private async Task<int> CalculateSuggestedSafeStockAsync(string partName)
+        {
+            var now = DateTime.Now;
+            var threshold = now.AddDays(-90);
+            int partId = -1;
+            if (!string.IsNullOrWhiteSpace(partName))
+            {
+                var match = Parts.FirstOrDefault(p => string.Equals(p.Name, partName, StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                {
+                    partId = match.Id;
+                }
+            }
+
+            try
+            {
+                var records = await _repository.GetTransactionsAsync();
+                if (records == null || records.Count == 0)
+                {
+                    return 2;
+                }
+
+                var query = records.Where(r => r.CreatedAt >= threshold);
+                if (partId > 0)
+                {
+                    query = query.Where(r => r.PartId == partId);
+                }
+
+                var totalOut = query.Where(r => r.QtyChange < 0).Sum(r => -r.QtyChange);
+                if (totalOut <= 0)
+                {
+                    return 2;
+                }
+
+                decimal avgDaily = totalOut / 90m;
+                decimal coverDays = 30m;
+                var initial = (int)Math.Ceiling(avgDaily * coverDays);
+                if (initial < 2) initial = 2;
+                if (initial > 500) initial = 500;
+                return initial;
+            }
+            catch
+            {
+                return 2;
+            }
         }
     }
 }
