@@ -126,7 +126,20 @@
         <!-- 通用居中单元格样式 -->
         <Style x:Key="CenterCellStyle" TargetType="DataGridCell">
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Grid Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="CenterTextStyle" TargetType="TextBlock">
             <Setter Property="TextAlignment" Value="Center"/>
@@ -218,9 +231,10 @@
                                   Background="White"
                                   FontSize="14"
                                   RowHeight="30"
-                                  VerticalScrollBarVisibility="Auto">
+                                  VerticalScrollBarVisibility="Auto"
+                                  FocusVisualStyle="{x:Null}">
                             <DataGrid.Resources>
-                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E1EDFF"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#DCE7FF"/>
                                 <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0F172A"/>
 
                                 <!-- 轻量卡片风格表头 -->
@@ -262,6 +276,7 @@
                                     <Setter Property="Padding" Value="6,4"/>
                                     <Setter Property="FontSize" Value="14"/>
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                 </Style>
                             </DataGrid.Resources>
                             <DataGrid.Columns>
@@ -306,8 +321,11 @@
                                   RowHeight="28"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalGridLinesBrush="#E5E7EB"
-                                  VerticalGridLinesBrush="#E5E7EB">
+                                  VerticalGridLinesBrush="#E5E7EB"
+                                  FocusVisualStyle="{x:Null}">
                             <DataGrid.Resources>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#DCE7FF"/>
+                                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0F172A"/>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                     <Setter Property="Background" Value="#E9EEF7"/>
@@ -341,6 +359,7 @@
                                     <Setter Property="BorderThickness" Value="0"/>
                                     <Setter Property="Padding" Value="6,3"/>
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
                                 </Style>
                             </DataGrid.Resources>
                             <DataGrid.Columns>
