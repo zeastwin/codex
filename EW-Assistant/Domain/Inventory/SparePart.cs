@@ -16,8 +16,6 @@ namespace EW_Assistant.Domain.Inventory
 
         public int SafeStock { get; set; }
 
-        public int MaxStock { get; set; }
-
         public int CurrentStock { get; set; }
 
         public DateTime CreatedAt { get; set; }

@@ -259,6 +259,7 @@
                         </DataGrid.Resources>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
+                            <DataGridTextColumn Header="库位" Binding="{Binding Location}" Width="*" />
                             <DataGridTextColumn Header="规格" Binding="{Binding Spec}" Width="*" />
                             <DataGridTextColumn Header="库存" Binding="{Binding CurrentStock}" Width="100" />
                             <DataGridTextColumn Header="安全库存" Binding="{Binding SafeStock}" Width="120" />
@@ -305,9 +306,26 @@
                             <!-- 基础信息 -->
                             <TextBlock Text="基础信息" FontWeight="SemiBold" Foreground="#0B1220" Margin="0,0,0,10"/>
                             <StackPanel Margin="0,0,0,12">
-                                <TextBlock Text="计量单位" Foreground="#6B7280" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding SelectedPart.Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBlock Text="库位" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SelectedPart.Location, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource FieldTextBoxStyle}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,12">
+                                <TextBlock Text="计量单位" Foreground="#6B7280" Margin="0,0,0,4"/>
+                                <ComboBox Text="{Binding SelectedPart.Unit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          Padding="6,2"
+                                          Margin="0,0,0,10">
+                                    <ComboBoxItem Content="PCS"/>
+                                    <ComboBoxItem Content="套"/>
+                                    <ComboBoxItem Content="箱"/>
+                                    <ComboBoxItem Content="卷"/>
+                                    <ComboBoxItem Content="袋"/>
+                                    <ComboBoxItem Content="米"/>
+                                    <ComboBoxItem Content="M"/>
+                                    <ComboBoxItem Content="公斤"/>
+                                    <ComboBoxItem Content="KG"/>
+                                </ComboBox>
                             </StackPanel>
                             <StackPanel Margin="0,0,0,14">
                                 <TextBlock Text="规格" Foreground="#6B7280" Margin="0,0,0,4"/>
@@ -322,11 +340,6 @@
                             <StackPanel Margin="0,0,0,12">
                                 <TextBlock Text="安全库存" Foreground="#6B7280" Margin="0,0,0,4"/>
                                 <TextBox Text="{Binding SelectedPart.SafeStock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource FieldTextBoxStyle}"/>
-                            </StackPanel>
-                            <StackPanel Margin="0,0,0,12">
-                                <TextBlock Text="库存上限" Foreground="#6B7280" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding SelectedPart.MaxStock, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource FieldTextBoxStyle}"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,0,12">

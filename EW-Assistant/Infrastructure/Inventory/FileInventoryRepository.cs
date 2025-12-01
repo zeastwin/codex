@@ -133,7 +133,6 @@ namespace EW_Assistant.Infrastructure.Inventory
                     existing.Unit = part.Unit;
                     existing.Location = part.Location;
                     existing.SafeStock = part.SafeStock;
-                    existing.MaxStock = part.MaxStock;
                     existing.CurrentStock = part.CurrentStock;
                     existing.UpdatedAt = DateTime.Now;
 

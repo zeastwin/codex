@@ -15,9 +15,9 @@ namespace EW_Assistant.Views.Inventory
         public AddPartDialog()
         {
             InitializeComponent();
-            SafeStockBox.Text = "0";
-            MaxStockBox.Text = "0";
             CurrentStockBox.Text = "0";
+            SafeStockBox.Text = "0";
+            UnitBox.Text = "PCS";
         }
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -35,16 +35,15 @@ namespace EW_Assistant.Views.Inventory
             }
 
             int safe = ParseIntOrZero(SafeStockBox.Text);
-            int max = ParseIntOrZero(MaxStockBox.Text);
             int current = ParseIntOrZero(CurrentStockBox.Text);
 
             Result = new SparePart
             {
                 Name = NameBox.Text.Trim(),
                 Spec = SpecBox.Text ?? string.Empty,
-                Unit = UnitBox.Text ?? string.Empty,
+                Unit = string.IsNullOrWhiteSpace(UnitBox.Text) ? "PCS" : UnitBox.Text.Trim(),
+                Location = LocationBox.Text ?? string.Empty,
                 SafeStock = safe,
-                MaxStock = max,
                 CurrentStock = current,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now

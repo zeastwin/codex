@@ -157,8 +157,8 @@ namespace EW_Assistant.ViewModels.Inventory
                 Name = SelectedPart.Name,
                 Spec = SelectedPart.Spec,
                 Unit = SelectedPart.Unit,
+                Location = SelectedPart.Location,
                 SafeStock = SelectedPart.SafeStock,
-                MaxStock = SelectedPart.MaxStock,
                 CurrentStock = SelectedPart.CurrentStock,
                 CreatedAt = SelectedPart.CreatedAt,
                 UpdatedAt = SelectedPart.UpdatedAt
@@ -306,22 +306,6 @@ namespace EW_Assistant.ViewModels.Inventory
             {
                 MessageBox.Show("调整库存失败：" + ex.Message, "库存调整", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private string PromptText(string prompt, string defaultValue)
-        {
-            return InputDialog.Show("库存管理", prompt, defaultValue ?? string.Empty);
-        }
-
-        private int PromptInt(string prompt, int defaultValue)
-        {
-            var input = InputDialog.Show("库存管理", prompt, defaultValue.ToString());
-            int result;
-            if (!int.TryParse(input, out result))
-            {
-                result = defaultValue;
-            }
-            return result;
         }
 
         private void UpdateCommandStates()
