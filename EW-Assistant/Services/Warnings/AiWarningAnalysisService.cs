@@ -185,7 +185,7 @@ namespace EW_Assistant.Services.Warnings
                 var sb = new StringBuilder();
                 if (string.Equals(stage, "Request", StringComparison.OrdinalIgnoreCase))
                 {
-                    // 强分割：每个请求前加醒目分隔线
+                
                     sb.AppendLine("============================================================");
                 }
                 sb.AppendFormat("{0:yyyy-MM-dd HH:mm:ss} [{1}] {2}", DateTime.Now, stage, url ?? string.Empty);
@@ -194,7 +194,7 @@ namespace EW_Assistant.Services.Warnings
                 {
                     sb.AppendLine(content);
                 }
-                // 弱分割：请求-响应之间留一空行
+         
                 sb.AppendLine();
 
                 File.AppendAllText(path, sb.ToString(), new UTF8Encoding(false));
