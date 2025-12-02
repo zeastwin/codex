@@ -14,6 +14,41 @@
         <SolidColorBrush x:Key="BotBubbleBrush"  Color="#F9F9F9"/>
         <SolidColorBrush x:Key="BotBubbleText"   Color="#0B1220"/>
         <SolidColorBrush x:Key="Divider"         Color="#E6E8EF"/>
+        <Style x:Key="IconGhostButton" TargetType="Button">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="0.8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#94A3B8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#64748B"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="ChatListItemNoHoverStyle" TargetType="ListBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -135,7 +170,7 @@
 
         <!-- 气泡模板（已集成“流式轻文本 → 完成Markdown”切换） -->
         <DataTemplate x:Key="MessageTemplate">
-            <Grid>
+            <Grid x:Name="MessageRoot" Background="Transparent">
                 <Border x:Name="Bubble"
                         MaxWidth="860" Padding="12"
                         CornerRadius="16"
@@ -168,6 +203,20 @@
                                                  Visibility="Collapsed"/>
                     </Grid>
                 </Border>
+
+                <!-- 悬浮分享按钮（仅机器人消息显示） -->
+                <Button x:Name="ShareButton"
+                        Style="{StaticResource IconGhostButton}"
+                        Content=""
+                        FontFamily="Segoe MDL2 Assets"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,2,2"
+                        Visibility="Collapsed"
+                        Click="ShareButton_Click"
+                        Foreground="#0F172A"
+                        Tag="{Binding}"
+                        Panel.ZIndex="2"/>
             </Grid>
 
             <DataTemplate.Triggers>
@@ -185,6 +234,22 @@
                     <Setter TargetName="Md" Property="TextElement.Foreground" Value="{StaticResource UserBubbleText}"/>
                     <Setter TargetName="StreamView" Property="TextElement.Foreground" Value="{StaticResource UserBubbleText}"/>
                 </DataTrigger>
+
+                <!-- 仅机器人消息悬停时展示分享按钮 -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsUser}" Value="False"/>
+                        <Condition Binding="{Binding IsMouseOver, ElementName=MessageRoot}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="ShareButton" Property="UIElement.Visibility" Value="Visible"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsUser}" Value="False"/>
+                        <Condition Binding="{Binding IsMouseOver, ElementName=ShareButton}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="ShareButton" Property="UIElement.Visibility" Value="Visible"/>
+                </MultiDataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
     </UserControl.Resources>

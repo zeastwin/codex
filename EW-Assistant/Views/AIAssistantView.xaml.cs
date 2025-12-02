@@ -3,6 +3,7 @@ using EW_Assistant.Settings;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -15,6 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace EW_Assistant.Views
 {
@@ -423,6 +425,42 @@ namespace EW_Assistant.Views
             _streamStates[msg] = st;
             ScrollToEndThrottled();
             return msg;
+        }
+
+        private void ShareButton_Click(object sender, RoutedEventArgs e)
+        {
+            // 导出当前机器人回复为 Markdown 文件
+            var fe = sender as FrameworkElement;
+            var msg = fe?.DataContext as MessageItem;
+            if (msg == null) return;
+
+            var content = msg.Markdown;
+            if (!msg.IsFinal || string.IsNullOrWhiteSpace(content))
+            {
+                MessageBox.Show("当前回复尚未完成，或没有可导出的 Markdown 内容。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Markdown 文件|*.md|所有文件|*.*",
+                DefaultExt = ".md",
+                AddExtension = true,
+                FileName = $"AI-Reply-{msg.Timestamp:yyyyMMdd-HHmmss}.md"
+            };
+
+            var result = dialog.ShowDialog();
+            if (result != true) return;
+
+            try
+            {
+                File.WriteAllText(dialog.FileName, content, new UTF8Encoding(false));
+                MessageBox.Show("已导出当前回复。", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"导出失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
 
