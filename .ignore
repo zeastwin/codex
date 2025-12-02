@@ -1,0 +1,7 @@
+# .ignore（给 rg/搜索用）
+.vs/
+**/.vs/**
+bin/
+obj/
+**/bin/**
+**/obj/**
