@@ -206,8 +206,8 @@
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <Image Source="/Assets/EW.ico"
-                           Width="20"
-                           Height="20"
+                           Width="40"
+                           Height="40"
                            Stretch="Uniform"
                            Margin="0,0,6,0"
                            ToolTip="EW"/>
