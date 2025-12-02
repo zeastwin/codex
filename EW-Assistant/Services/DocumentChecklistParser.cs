@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +16,7 @@ namespace EW_Assistant.Services
     {
         private readonly MindmapService _workflowService;
         private readonly string _prompt;
+        private static readonly object s_checklistLogLock = new object();
 
         private const string DefaultPrompt = "";
 
@@ -39,7 +41,10 @@ namespace EW_Assistant.Services
                 .BuildMindmapJsonAsync(filePath, prompt, userId, token, extraInputs)
                 .ConfigureAwait(false);
 
-            return ParseFromJson(jsonText);
+            var normalized = NormalizeJson(jsonText);
+            AppendChecklistLog(filePath, normalized);
+
+            return ParseFromJson(normalized);
         }
 
         public DocumentChecklist ParseFromJson(string jsonText)
@@ -194,6 +199,33 @@ namespace EW_Assistant.Services
             if (string.IsNullOrWhiteSpace(text))
                 return fallback;
             return text.Trim();
+        }
+
+        /// <summary>将 Checklist 的原始 JSON 结果落盘，便于排查。</summary>
+        private static void AppendChecklistLog(string filePath, string json)
+        {
+            try
+            {
+                var dir = Path.Combine("D:\\", "Data", "AiLog", "DocumentAI");
+                Directory.CreateDirectory(dir);
+                var logPath = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd") + ".txt");
+
+                var sb = new StringBuilder();
+                sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] [Checklist] 文件={1} 长度={2}", DateTime.Now, Path.GetFileName(filePath), json?.Length ?? 0);
+                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(json))
+                    sb.AppendLine(json.Trim());
+                sb.AppendLine(new string('-', 80));
+
+                lock (s_checklistLogLock)
+                {
+                    File.AppendAllText(logPath, sb.ToString(), new UTF8Encoding(false));
+                }
+            }
+            catch
+            {
+                // 日志失败不影响主流程
+            }
         }
     }
 }

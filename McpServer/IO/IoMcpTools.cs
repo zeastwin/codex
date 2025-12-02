@@ -1,10 +1,11 @@
-﻿using EW_Assistant.Io;
+using EW_Assistant.Io;
 using ModelContextProtocol.Server;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using McpServer;
 
 namespace EW_Assistant.McpTools
 {
@@ -38,40 +39,82 @@ namespace EW_Assistant.McpTools
             return (false, "无法识别开/关，请明确：open / close（或 打开/关闭）");
         }
 
-        [McpServerTool, Description("单个 IO 控制（成对地址：Close/Open；统一写 on）")]
+        [McpServerTool, Description(
+     "控制现场设备 IO 点位（如气缸、电磁阀、继电器）的打开/关闭。\n" +
+     "当用户说『打开/关闭 某某气缸/电磁阀/IO』时，应优先调用此工具，而不是清除报警。\n" +
+     "示例：\n" +
+     " - 打开 A未测分料气缸 → IoCommand(ioName=\"A未测分料气缸\", op=\"open\")\n" +
+     " - 关闭 A未测分料气缸 → IoCommand(ioName=\"A未测分料气缸\", op=\"close\")\n" +
+     "注意：本工具只做 IO 动作，不清除报警或复位机台。"
+ )]
         public static async Task<string> IoCommand(
-            [Description("目标 IO 名称（与映射表一致）")] string ioName = null,
-            [Description("意图：open/close；支持口语别名")] string op = "open")
+     [Description("目标 IO 名称；与 IO 映射表中的 Name 完全一致，例如：\"A未测分料气缸\"")]
+    string ioName = null,
+
+     [Description(
+        "操作意图：open=打开 / close=关闭。\n" +
+        "支持自然语言别名：\"打开/开启/ON\" 归一为 open；\"关闭/关掉/OFF\" 归一为 close。"
+    )]
+    string op = "open")
         {
             if (IoMapRepository.Count == 0)
-                return Err("IoCommand", "IO 映射未加载，请先调用 LoadIoMap。");
+            {
+                var err = Err("IoCommand", "IO 映射未加载，请先调用 LoadIoMap。");
+                ToolCallLogger.Log(nameof(IoCommand), new { ioName, op }, null, "IO 映射未加载");
+                return err;
+            }
             if (string.IsNullOrWhiteSpace(ioName))
-                return Err("IoCommand", "请提供 ioName。");
+            {
+                var err = Err("IoCommand", "请提供 ioName。");
+                ToolCallLogger.Log(nameof(IoCommand), new { ioName, op }, null, "缺少 ioName");
+                return err;
+            }
             if (!IoMapRepository.TryGetEntry(ioName, out IoEntry entry) || entry == null)
-                return Err("IoCommand", $"未找到 IO 名称：{ioName}");
+            {
+                var err = Err("IoCommand", $"未找到 IO 名称：{ioName}");
+                ToolCallLogger.Log(nameof(IoCommand), new { ioName, op }, null, "映射未找到");
+                return err;
+            }
 
             // 判定意图（仅用于选地址）
             var norm = NormalizeIntent(op);
-            if (!norm.ok) return Err("IoCommand", norm.intentOrReason);
+            if (!norm.ok)
+            {
+                var err = Err("IoCommand", norm.intentOrReason);
+                ToolCallLogger.Log(nameof(IoCommand), new { ioName, op }, null, norm.intentOrReason);
+                return err;
+            }
             var intent = norm.intentOrReason; // "open" / "close"
 
             // 选择目标地址（始终写 on）
             var targetAddress = intent == "open" ? entry.OpenAddress : entry.CloseAddress;
             if (string.IsNullOrWhiteSpace(targetAddress))
-                return Err("IoCommand", $"映射项缺少{(intent == "open" ? "OpenAddress" : "CloseAddress")}：{entry.Name}");
+            {
+                var err = Err("IoCommand", $"映射项缺少{(intent == "open" ? "OpenAddress" : "CloseAddress")}：{entry.Name}");
+                ToolCallLogger.Log(nameof(IoCommand), new { ioName, op }, null, "映射缺少地址");
+                return err;
+            }
 
             // 组装参数；checkAddress 可为空（表示不做读回判定）
             var pd = Tool.PD(
                 ("ioIndex", entry.Index),
                 ("address", targetAddress)
             );
-            string CheckAddress = entry.CheckAddress;
-            if (targetAddress == "30001")
+
+            // 读回地址：允许为空
+            var checkAddress = entry.CheckAddress;
+
+            // 特殊地址 30001 的读回地址重定向
+            if (!string.IsNullOrWhiteSpace(checkAddress) && targetAddress == "30001")
             {
-                CheckAddress = entry.CheckAddress.Replace("3010", "3012");
+                checkAddress = checkAddress.Replace("3010", "3012");
             }
-            if (!string.IsNullOrWhiteSpace(entry.CheckAddress))
-                pd.Add("checkAddress", CheckAddress);
+
+            // 最终有读回地址才传给下位机
+            if (!string.IsNullOrWhiteSpace(checkAddress))
+            {
+                pd.Add("checkAddress", checkAddress);
+            }
 
             // 下发
             var writeRaw = await Tool.SendCommand(
@@ -84,7 +127,7 @@ namespace EW_Assistant.McpTools
             if (writeRaw.Contains("超时", StringComparison.OrdinalIgnoreCase) ||
                 writeRaw.Contains("timeout", StringComparison.OrdinalIgnoreCase))
             {
-                return JsonConvert.SerializeObject(new
+                var resTimeout = JsonConvert.SerializeObject(new
                 {
                     type = "io.command",
                     ok = false,
@@ -94,6 +137,8 @@ namespace EW_Assistant.McpTools
                     address = targetAddress,
                     reason = "request timeout/no response"
                 });
+                ToolCallLogger.Log(nameof(IoCommand), new { ioName, op, address = targetAddress }, resTimeout, "timeout/no response");
+                return resTimeout;
             }
 
             // —— 读回期望：open=true / close=false（可通过常量翻转语义）——
@@ -110,7 +155,7 @@ namespace EW_Assistant.McpTools
                 (statusWord is null || bitValue is null) ? "readback_unavailable" :
                 (bitValue == expected) ? "ok" : "mismatch";
 
-            return JsonConvert.SerializeObject(
+            var res = JsonConvert.SerializeObject(
                 new
                 {
                     type = "io.command",
@@ -124,7 +169,10 @@ namespace EW_Assistant.McpTools
                 },
                 new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }
             );
+            ToolCallLogger.Log(nameof(IoCommand), new { ioName, op, address = targetAddress }, res, verdict == "ok" ? null : $"status={verdict}");
+            return res;
         }
+
 
         // ===== 解析 IoWrite 返回的 16位状态字（从 "status" 字段）=====
         private static (int? statusWord, string? bits16, bool? bitValue)

@@ -1,4 +1,4 @@
-﻿using ModelContextProtocol.Server;
+using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -33,7 +33,8 @@ public static class Tool
             return "打开失败: " + ex.Message;
         }
     }
-    [McpServerTool, Description("Clear machine alarms，对机台设备报警进行消除")]
+    [McpServerTool, Description("Clear machine alarms，对机台设备报警进行消除"+
+            "不会控制任何气缸、电磁阀或 IO 点位，不负责『打开/关闭 某个气缸/电磁阀/IO』。")]
     public static async Task<string> ClearMachineAlarms()
     {
         return await SendCommand(

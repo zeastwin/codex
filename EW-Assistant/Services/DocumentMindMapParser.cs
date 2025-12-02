@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,6 +17,7 @@ namespace EW_Assistant.Services
     {
         private readonly MindmapService _mindmapService;
         private readonly string _prompt;
+        private static readonly object s_mindmapLogLock = new object();
 
         private const string DefaultPrompt = "";
         public DocumentMindMapParser(string workflowId = null, string promptOverride = null)
@@ -40,6 +42,7 @@ namespace EW_Assistant.Services
                 .ConfigureAwait(false);
 
             var normalized = NormalizeJson(jsonText);
+            AppendMindmapLog(filePath, normalized);
             var rootToken = ParseJson(normalized);
             var rootNode = ConvertToken(rootToken);
             if (rootNode == null)
@@ -132,6 +135,33 @@ namespace EW_Assistant.Services
             }
 
             return node;
+        }
+
+        /// <summary>将思维导图原始 JSON 结果落盘，便于排查。</summary>
+        private static void AppendMindmapLog(string filePath, string json)
+        {
+            try
+            {
+                var dir = Path.Combine("D:\\", "Data", "AiLog", "DocumentAI");
+                Directory.CreateDirectory(dir);
+                var logPath = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd") + ".txt");
+
+                var sb = new StringBuilder();
+                sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] 文件={1} 长度={2}", DateTime.Now, Path.GetFileName(filePath), json?.Length ?? 0);
+                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(json))
+                    sb.AppendLine(json.Trim());
+                sb.AppendLine(new string('-', 80));
+
+                lock (s_mindmapLogLock)
+                {
+                    File.AppendAllText(logPath, sb.ToString(), new UTF8Encoding(false));
+                }
+            }
+            catch
+            {
+                // 日志失败不影响主流程
+            }
         }
     }
 }

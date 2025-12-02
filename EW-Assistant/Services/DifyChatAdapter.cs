@@ -194,8 +194,39 @@ namespace EW_Assistant.Services
             {
                 Directory.CreateDirectory(@"D:\Data\AiLog\Chat");
                 var path = Path.Combine(@"D:\Data\AiLog\Chat", DateTime.Now.ToString("yyyy-MM-dd") + ".txt");
-                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}]     {str}"
-                            .Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
+                // 仅保留问与答，去掉 conv/task 等噪声，显著分隔每轮 QA
+                var normalized = (str ?? string.Empty).Replace("\r\n", "\n");
+                var lines = normalized.Split('\n');
+                string question = null;
+                string answer = null;
+                foreach (var l in lines)
+                {
+                    var t = l?.Trim();
+                    if (string.IsNullOrWhiteSpace(t)) continue;
+                    if (question == null && t.StartsWith("Q:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        question = t;
+                        continue;
+                    }
+                    if (answer == null && t.StartsWith("A:", StringComparison.OrdinalIgnoreCase))
+                {
+                    answer = t;
+                    continue;
+                }
+            }
+
+            // 只在同时拿到问与答时写日志，避免重复的“仅问”记录
+            if (string.IsNullOrWhiteSpace(question) || string.IsNullOrWhiteSpace(answer)) return;
+
+            var sb = new StringBuilder();
+            sb.AppendLine(new string('=', 72));
+            sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] ", DateTime.Now);
+            sb.AppendLine();
+            if (!string.IsNullOrWhiteSpace(question)) sb.AppendLine(question);
+            if (!string.IsNullOrWhiteSpace(question) && !string.IsNullOrWhiteSpace(answer))
+                sb.AppendLine(new string('-', 20));
+            if (!string.IsNullOrWhiteSpace(answer)) sb.AppendLine(answer);
+            var line = sb.ToString();
 
                 lock (s_logLock)
                 {
