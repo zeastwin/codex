@@ -115,24 +115,28 @@
                                                                  Duration="0:0:0.18"/>
                                                 <ColorAnimation Storyboard.TargetName="PillBrush"
                                                                 Storyboard.TargetProperty="Color"
-                                                                To="#E4EBFF"
+                                                                To="#DFE7FF"
                                                                 Duration="0:0:0.20"/>
                                                 <ColorAnimation Storyboard.TargetName="IconFill"
                                                                 Storyboard.TargetProperty="Color"
-                                                                To="#F2F6FF"
+                                                                To="#E8EEFF"
                                                                 Duration="0:0:0.20"/>
                                                 <ColorAnimation Storyboard.TargetName="IconStroke"
                                                                 Storyboard.TargetProperty="Color"
-                                                                To="#5B85E8"
+                                                                To="#698AEC"
                                                                 Duration="0:0:0.20"/>
                                                 <ColorAnimation Storyboard.TargetName="GlyphBrush"
                                                                 Storyboard.TargetProperty="Color"
-                                                                To="#2F63C7"
+                                                                To="#3250B0"
                                                                 Duration="0:0:0.20"/>
                                                 <ColorAnimation Storyboard.TargetName="LabelBrush"
                                                                 Storyboard.TargetProperty="Color"
                                                                 To="#0B1220"
                                                                 Duration="0:0:0.20"/>
+                                                <DoubleAnimation Storyboard.TargetName="Glow"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0.35"
+                                                                 Duration="0:0:0.20"/>
                                             </Storyboard>
                                         </VisualState>
                                         <VisualState x:Name="Pressed">
@@ -260,10 +264,10 @@
                             <Condition Property="IsMouseOver" Value="True"/>
                             <Condition Property="IsChecked" Value="False"/>
                         </MultiTrigger.Conditions>
-                        <Setter TargetName="Pill" Property="Background" Value="#E4EBFF"/>
-                        <Setter TargetName="IconCircle" Property="Fill" Value="#F2F6FF"/>
-                        <Setter TargetName="IconCircle" Property="Stroke" Value="#5B85E8"/>
-                        <Setter TargetName="Glyph" Property="Foreground" Value="#2F63C7"/>
+                        <Setter TargetName="Pill" Property="Background" Value="#DFE7FF"/>
+                        <Setter TargetName="IconCircle" Property="Fill" Value="#E8EEFF"/>
+                        <Setter TargetName="IconCircle" Property="Stroke" Value="#698AEC"/>
+                        <Setter TargetName="Glyph" Property="Foreground" Value="#3250B0"/>
                         <Setter TargetName="Label" Property="Foreground" Value="#0B1220"/>
                     </MultiTrigger>
                 </ControlTemplate.Triggers>
