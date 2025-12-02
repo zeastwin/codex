@@ -1,12 +1,10 @@
 using EW_Assistant.Services;
 using EW_Assistant.Settings;
-using MdXaml;
-using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -17,19 +15,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using static System.Net.Mime.MediaTypeNames;
-using System.Collections.Concurrent;   
 
 namespace EW_Assistant.Views
 {
-    public interface IAiResultSink
-    {
-        MessageItem AddBotMarkdown(string md);
-    }
-}
-namespace EW_Assistant.Views
-{
-    public partial class AIAssistantView : UserControl, INotifyPropertyChanged, IAiResultSink
+    public partial class AIAssistantView : UserControl, INotifyPropertyChanged
     {
         // 全局可用的接收器实例（程序启动时就创建，不随页面切换而销毁）
         public static AIAssistantView GlobalInstance { get; internal set; }
@@ -131,9 +120,6 @@ namespace EW_Assistant.Views
             InitializeComponent();
             DataContext = this;
             GlobalInstance = this;
-
-            // 欢迎消息（可删）
-          //  AddBotMarkdown("你好！这里是 **AI 对话** 组件（UserControl）。\n\n- 支持 **Markdown** 渲染\n- 支持 **流式** 追加\n- 外部通过 `StreamRequested` 推 token 即可");
 
             // 初始化 Dify 适配器（复用你已有的静态 HttpClient）
             _dify = new DifyChatAdapter(s_http, ConfigService.Current.URL + "/chat-messages", ConfigService.Current.ChatKey, ChatUserId);
@@ -310,7 +296,7 @@ namespace EW_Assistant.Views
 
         // ====== 发送/停止（你已有） ======
 
-        private async void StopBtn_Click(object sender, RoutedEventArgs e)
+        private void StopBtn_Click(object sender, RoutedEventArgs e)
         {
             _cts?.Cancel();
             // 额外通知 Dify 停止当前 task（尽量非阻塞）
@@ -320,10 +306,10 @@ namespace EW_Assistant.Views
         // ====== 发送与停止 ======
         private async void SendBtn_Click(object sender, RoutedEventArgs e) => await SendCurrentAsync();
 
-        private async Task SendCurrentAsync()
+        private Task SendCurrentAsync()
         {
             var text = (InputText ?? "").Trim();
-            if (string.IsNullOrEmpty(text)) return;
+            if (string.IsNullOrEmpty(text)) return Task.CompletedTask;
         
             // 在开启新一轮对话前执行限量清空
             MaybeAutoClearBeforeNewTurn();
@@ -331,62 +317,40 @@ namespace EW_Assistant.Views
             AddUserMarkdown(text);
             InputText = string.Empty;
 
-            var bot = AddBotMarkdown(string.Empty);
-
-            _cts?.Cancel();
-            _cts = new CancellationTokenSource();
-            var args = new StreamRequestEventArgs(
-       input: text,
-       ct: _cts.Token,
-       appendToken: token => AppendAssistantToken(bot, token),
-       replaceAll: md => ReplaceAssistantMarkdown(bot, md),
-       complete: () => Dispatcher.BeginInvoke(new Action(() => CompleteAssistantMessage(bot)), DispatcherPriority.Background)
-   );
-
-
-            if (StreamRequested != null)
-            {
-                // 交由外部驱动：SSE/分片回调 AppendToken
-                StreamRequested.Invoke(this, args);
-            }
-            else
-            {
-                // 无外部实现时，做一个假流演示（可删）
-                await FakeStreamAsync(bot,
-                    "这是 **Markdown** _流式_ 回复示例：\n\n1. 第一段文字\n2. `代码` 与链接\n\n> 支持引用块\n\n完成。",
-                    10);
-            }
+            StartStream(text);
+            return Task.CompletedTask;
         }
-        private async Task SendCurrentAsyncByInfo(string text)
+        private Task SendCurrentAsyncByInfo(string text)
         {
             // 在开启新一轮对话前执行限量清空
             MaybeAutoClearBeforeNewTurn();
 
+            StartStream(text);
+            return Task.CompletedTask;
+        }
+
+        private void StartStream(string text)
+        {
             var bot = AddBotMarkdown(string.Empty);
 
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
             var args = new StreamRequestEventArgs(
-    input: text,
-    ct: _cts.Token,
-    appendToken: token => AppendAssistantToken(bot, token),
-    replaceAll: md => ReplaceAssistantMarkdown(bot, md),
-    complete: () => Dispatcher.BeginInvoke(new Action(() => CompleteAssistantMessage(bot)), DispatcherPriority.Background)
-);
+                input: text,
+                ct: _cts.Token,
+                appendToken: token => AppendAssistantToken(bot, token),
+                replaceAll: md => ReplaceAssistantMarkdown(bot, md),
+                complete: () => Dispatcher.BeginInvoke(new Action(() => CompleteAssistantMessage(bot)), DispatcherPriority.Background)
+            );
 
+            if (StreamRequested == null)
+            {
+                AppendAssistantToken(bot, "\n\n> ❌ 未找到流式处理器，无法发送当前请求。\n");
+                CompleteAssistantMessage(bot);
+                return;
+            }
 
-            if (StreamRequested != null)
-            {
-                // 交由外部驱动：SSE/分片回调 AppendToken
-                StreamRequested.Invoke(this, args);
-            }
-            else
-            {
-                // 无外部实现时，做一个假流演示（可删）
-                await FakeStreamAsync(bot,
-                    "这是 **Markdown** _流式_ 回复示例：\n\n1. 第一段文字\n2. `代码` 与链接\n\n> 支持引用块\n\n完成。",
-                    10);
-            }
+            StreamRequested.Invoke(this, args);
         }
         private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -404,22 +368,6 @@ namespace EW_Assistant.Views
             if (Messages.Count >= HistoryLimit)
             {
                 ClearAll(); // 仅清空UI；如果你集成了 Dify，可在 ClearAll 里顺便重置会话（见下）
-            }
-        }
-        
-
-        // ====== 假流示例（本地分片）======
-        private async Task FakeStreamAsync(MessageItem target, string fullText, int chunks)
-        {
-            chunks = Math.Max(1, chunks);
-            int len = fullText.Length;
-            int step = Math.Max(1, len / chunks);
-            for (int i = 0; i < len; i += step)
-            {
-                if (_cts?.IsCancellationRequested == true) break;
-                var piece = fullText.Substring(i, Math.Min(step, len - i));
-                AppendAssistantToken(target, piece);
-                await Task.Delay(60);
             }
         }
 
