@@ -464,38 +464,29 @@
                     BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0,8,0,12">
-                        <Border Margin="12,8,12,12" Padding="16" CornerRadius="18">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#EEF2FF" Offset="0"/>
-                                    <GradientStop Color="#E0EAFF" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
+                        <Border Margin="12,8,12,12"
+                                Padding="20,14"
+                                CornerRadius="18"
+                                Background="#F5F7FF">
                             <Border.Effect>
-                                <DropShadowEffect Color="#33000000" BlurRadius="18" ShadowDepth="2" Opacity="0.45"/>
+                                <DropShadowEffect Color="#1A000000" BlurRadius="16" ShadowDepth="2" Opacity="0.30"/>
                             </Border.Effect>
-                            <Grid>
-                                <Ellipse Width="150" Height="150" Fill="#1A3B82F6"
-                                         HorizontalAlignment="Right"
-                                         VerticalAlignment="Top"
-                                         Margin="0,-58,-36,0">
-                                    <Ellipse.RenderTransform>
-                                        <RotateTransform Angle="-18"/>
-                                    </Ellipse.RenderTransform>
-                                </Ellipse>
-                                <StackPanel x:Name="NavTitlePanel" Orientation="Vertical" Margin="2,0,0,0" Opacity="1">
-                                    <StackPanel.RenderTransform>
-                                        <TranslateTransform x:Name="NavTitleTransform" Y="0"/>
-                                    </StackPanel.RenderTransform>
-                                    <TextBlock Text="{Binding CurrentPageTitle, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               FontSize="40"
-                                               FontWeight="Bold"
-                                               Foreground="#0B1220"
-                                               TextTrimming="CharacterEllipsis"
-                                               VerticalAlignment="Bottom"
-                                               Margin="0,0,0,0"/>
-                                </StackPanel>
-                            </Grid>
+                            <StackPanel x:Name="NavTitlePanel" Orientation="Vertical" Margin="2,0,0,0" Opacity="1">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform x:Name="NavTitleTransform" Y="0"/>
+                                </StackPanel.RenderTransform>
+                                <TextBlock Text="当前模块"
+                                           FontSize="11"
+                                           FontWeight="Normal"
+                                           Foreground="#9CA3AF"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding CurrentPageTitle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           Foreground="#111827"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Bottom"/>
+                            </StackPanel>
                         </Border>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}" IsChecked="True"
                                      Content="总览" Checked="NavItem_Checked" Tag="&#xE770;"/>
