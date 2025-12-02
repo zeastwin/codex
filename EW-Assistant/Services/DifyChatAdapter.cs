@@ -75,13 +75,7 @@ namespace EW_Assistant.Services
                 {
                     hasCompleted = true;
                     var elapsed = (DateTime.Now - startAt).TotalSeconds;
-                    // ConversationId / LastTaskId 建议是你类上的字段，HandleSseChunk 已在事件里赋值
-                    WriteLog(
-                        $"[CHAT] completed" + Environment.NewLine +
-                        $"Q: {query}" + Environment.NewLine +
-                        $"A: {answerSb}" + Environment.NewLine +
-                        $"conv={ConversationId ?? ""} task={LastTaskId ?? ""} elapsed={elapsed:F2}s"
-                    );
+                    WriteLog($"Q: {query}{Environment.NewLine}A: {answerSb}{Environment.NewLine}[耗时]{elapsed:F2}s");
                 }
                 onComplete?.Invoke();
             }
@@ -115,13 +109,6 @@ namespace EW_Assistant.Services
             });
 
             using var reader = new StreamReader(stream, Encoding.UTF8);
-
-            // 先把“问”记一笔（方便排查，即使后面失败也能看到问题）
-            WriteLog(
-                $"[CHAT] start" + Environment.NewLine +
-                $"Q: {query}" + Environment.NewLine +
-                $"conv(pre)={ConversationId ?? ""}"
-            );
 
             var buffer = new StringBuilder();
             try
@@ -164,11 +151,11 @@ namespace EW_Assistant.Services
                 if (!hasCompleted)
                 {
                     WriteLog(
-                        $"[CHAT] exception: {ex.Message}" + Environment.NewLine +
                         $"Q: {query}" + Environment.NewLine +
                         $"A(partial): {answerSb}" + Environment.NewLine +
-                        $"conv={ConversationId ?? ""} task={LastTaskId ?? ""}"
+                        $"[异常] {ex.Message}"
                     );
+                    hasCompleted = true;
                 }
                 throw;
             }
@@ -178,12 +165,7 @@ namespace EW_Assistant.Services
                 if (!hasCompleted)
                 {
                     var elapsed = (DateTime.Now - startAt).TotalSeconds;
-                    WriteLog(
-                        $"[CHAT] finalize(no message_end)" + Environment.NewLine +
-                        $"Q: {query}" + Environment.NewLine +
-                        $"A(partial): {answerSb}" + Environment.NewLine +
-                        $"conv={ConversationId ?? ""} task={LastTaskId ?? ""} elapsed={elapsed:F2}s"
-                    );
+                    WriteLog($"Q: {query}{Environment.NewLine}A(partial): {answerSb}{Environment.NewLine}[耗时]{elapsed:F2}s");
                 }
             }
         }
@@ -194,39 +176,14 @@ namespace EW_Assistant.Services
             {
                 Directory.CreateDirectory(@"D:\Data\AiLog\Chat");
                 var path = Path.Combine(@"D:\Data\AiLog\Chat", DateTime.Now.ToString("yyyy-MM-dd") + ".txt");
-                // 仅保留问与答，去掉 conv/task 等噪声，显著分隔每轮 QA
+                // 简单直写：在每条 Q/A 前增加显著分隔，保持原始内容
                 var normalized = (str ?? string.Empty).Replace("\r\n", "\n");
-                var lines = normalized.Split('\n');
-                string question = null;
-                string answer = null;
-                foreach (var l in lines)
-                {
-                    var t = l?.Trim();
-                    if (string.IsNullOrWhiteSpace(t)) continue;
-                    if (question == null && t.StartsWith("Q:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        question = t;
-                        continue;
-                    }
-                    if (answer == null && t.StartsWith("A:", StringComparison.OrdinalIgnoreCase))
-                {
-                    answer = t;
-                    continue;
-                }
-            }
-
-            // 只在同时拿到问与答时写日志，避免重复的“仅问”记录
-            if (string.IsNullOrWhiteSpace(question) || string.IsNullOrWhiteSpace(answer)) return;
-
-            var sb = new StringBuilder();
-            sb.AppendLine(new string('=', 72));
-            sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] ", DateTime.Now);
-            sb.AppendLine();
-            if (!string.IsNullOrWhiteSpace(question)) sb.AppendLine(question);
-            if (!string.IsNullOrWhiteSpace(question) && !string.IsNullOrWhiteSpace(answer))
-                sb.AppendLine(new string('-', 20));
-            if (!string.IsNullOrWhiteSpace(answer)) sb.AppendLine(answer);
-            var line = sb.ToString();
+                var sb = new StringBuilder();
+                sb.AppendLine(new string('=', 72));
+                sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] ", DateTime.Now);
+                sb.AppendLine();
+                sb.AppendLine(normalized);
+                var line = sb.ToString();
 
                 lock (s_logLock)
                 {
