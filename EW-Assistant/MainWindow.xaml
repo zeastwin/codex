@@ -91,11 +91,6 @@
                                                     <SolidColorBrush x:Name="LabelBrush" Color="#111827"/>
                                                 </TextBlock.Foreground>
                                             </TextBlock>
-                                            <TextBlock x:Name="Sub"
-                                                       Text="丝滑切换"
-                                                       FontSize="11"
-                                                       Foreground="#94A3B8"
-                                                       Visibility="Collapsed"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
