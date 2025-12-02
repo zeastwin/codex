@@ -3,6 +3,7 @@ using EW_Assistant.Views.Inventory;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Path = System.IO.Path;
@@ -24,7 +26,7 @@ using System.Windows.Interop;
 
 namespace EW_Assistant
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
         // 单例用于静态调用
         public static MainWindow Instance { get; private set; }
@@ -36,9 +38,27 @@ namespace EW_Assistant
         public string StatusText
         {
             get => _statusText;
-            set { _statusText = value; Dispatcher.Invoke(() => { DataContext = this; }); }
+            set
+            {
+                _statusText = value;
+                SafeNotifyPropertyChanged(nameof(StatusText));
+            }
         }
         private string _statusText = "就绪";
+
+        // 当前页面标题
+        public string CurrentPageTitle
+        {
+            get => _currentPageTitle;
+            set
+            {
+                if (string.Equals(_currentPageTitle, value, StringComparison.Ordinal))
+                    return;
+                _currentPageTitle = value ?? string.Empty;
+                SafeNotifyPropertyChanged(nameof(CurrentPageTitle));
+            }
+        }
+        private string _currentPageTitle = "总览";
 
         private readonly Dictionary<string, Func<UIElement>> _routes = new Dictionary<string, Func<UIElement>>()
         {
@@ -260,6 +280,37 @@ namespace EW_Assistant
             }
             RightHost.Children.Clear();
             RightHost.Children.Add(view);
+
+            UpdateNavTitle(label);
+        }
+
+        private void UpdateNavTitle(string label)
+        {
+            CurrentPageTitle = label;
+
+            if (NavTitlePanel == null || NavTitleTransform == null)
+                return;
+
+            NavTitlePanel.Opacity = 0;
+            NavTitleTransform.Y = 10;
+
+            var fade = new DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = TimeSpan.FromMilliseconds(280),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            var slide = new DoubleAnimation
+            {
+                From = 10,
+                To = 0,
+                Duration = TimeSpan.FromMilliseconds(260),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            NavTitlePanel.BeginAnimation(UIElement.OpacityProperty, fade);
+            NavTitleTransform.BeginAnimation(TranslateTransform.YProperty, slide);
         }
 
         // ===== 日志相关静态字段 =====
@@ -371,6 +422,25 @@ namespace EW_Assistant
         {
             InfoItems.Clear();
             StatusText = "已清空";
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private void SafeNotifyPropertyChanged(string propertyName)
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                OnPropertyChanged(propertyName);
+            }
+            else
+            {
+                Dispatcher.Invoke(() => OnPropertyChanged(propertyName));
+            }
         }
     }
     public class ProgramInfoItem

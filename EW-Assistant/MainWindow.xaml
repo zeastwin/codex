@@ -35,49 +35,242 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
                         <Border Background="Transparent">
-                            <Grid Margin="12,6,12,0">
-                                <Border x:Name="Pill" Background="Transparent" CornerRadius="12" />
-                                <StackPanel Orientation="Horizontal" Margin="12,8,12,8">
-                                    <Grid Width="28" Height="28">
-                                        <Ellipse x:Name="IconCircle" Fill="Transparent" Stroke="#CBD5E1" StrokeThickness="1.5"/>
-                                        <TextBlock x:Name="Glyph"
-                                                   FontFamily="Segoe MDL2 Assets"
-                                                   Text="{TemplateBinding Tag}"
-                                                   FontSize="12"
-                                                   Foreground="#64748B"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                    <TextBlock x:Name="Label"
-                                               Text="{TemplateBinding Content}"
-                                               Margin="12,0,0,0"
-                                               VerticalAlignment="Center"
-                                               FontSize="14"
-                                               Foreground="#111827"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <!-- 悬停-->
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Pill" Property="Background" Value="#F2F6FF"/>
-                            </Trigger>
-                            <!-- 选中-->
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Pill" Property="Background" Value="#E6EEFF"/>
-                                <Setter TargetName="IconCircle" Property="Fill" Value="#3B82F6"/>
-                                <Setter TargetName="IconCircle" Property="Stroke" Value="#3B82F6"/>
-                                <Setter TargetName="Glyph" Property="Foreground" Value="White"/>
-                                <Setter TargetName="Label" Property="FontWeight" Value="SemiBold"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.6"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+                            <Grid Margin="12,6,12,0" x:Name="Root">
+                                <Grid>
+                                    <Border x:Name="Glow" CornerRadius="16" Margin="-6" Opacity="0">
+                                        <Border.Background>
+                                            <RadialGradientBrush GradientOrigin="0.3,0.3" RadiusX="0.8" RadiusY="0.8">
+                                                <GradientStop Color="#403B82F6" Offset="0"/>
+                                                <GradientStop Color="#103B82F6" Offset="1"/>
+                                            </RadialGradientBrush>
+                                        </Border.Background>
+                                        <Border.Effect>
+                                            <BlurEffect Radius="18"/>
+                                        </Border.Effect>
+                                    </Border>
+
+                                    <Border x:Name="Pill" CornerRadius="12" RenderTransformOrigin="0.5,0.5">
+                                        <Border.Background>
+                                            <SolidColorBrush x:Name="PillBrush" Color="#00FFFFFF"/>
+                                        </Border.Background>
+                                        <Border.RenderTransform>
+                                            <ScaleTransform x:Name="PillScale" ScaleX="1" ScaleY="1"/>
+                                        </Border.RenderTransform>
+                                    </Border>
+
+                                    <StackPanel Orientation="Horizontal" Margin="12,8,12,8">
+                                        <Grid Width="32" Height="32">
+                                            <Ellipse x:Name="IconCircle" StrokeThickness="1.5" RenderTransformOrigin="0.5,0.5">
+                                                <Ellipse.Fill>
+                                                    <SolidColorBrush x:Name="IconFill" Color="#00FFFFFF"/>
+                                                </Ellipse.Fill>
+                                                <Ellipse.Stroke>
+                                                    <SolidColorBrush x:Name="IconStroke" Color="#CBD5E1"/>
+                                                </Ellipse.Stroke>
+                                                <Ellipse.RenderTransform>
+                                                    <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
+                                                </Ellipse.RenderTransform>
+                                            </Ellipse>
+                                            <TextBlock x:Name="Glyph"
+                                                       FontFamily="Segoe MDL2 Assets"
+                                                       Text="{TemplateBinding Tag}"
+                                                       FontSize="13"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Foreground>
+                                                    <SolidColorBrush x:Name="GlyphBrush" Color="#64748B"/>
+                                                </TextBlock.Foreground>
+                                            </TextBlock>
+                                        </Grid>
+                                        <StackPanel Orientation="Vertical" VerticalAlignment="Center" Margin="12,0,0,0">
+                                            <TextBlock x:Name="Label"
+                                                       Text="{TemplateBinding Content}"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="15">
+                                                <TextBlock.Foreground>
+                                                    <SolidColorBrush x:Name="LabelBrush" Color="#111827"/>
+                                                </TextBlock.Foreground>
+                                            </TextBlock>
+                                            <TextBlock x:Name="Sub"
+                                                       Text="丝滑切换"
+                                                       FontSize="11"
+                                                       Foreground="#94A3B8"
+                                                       Visibility="Collapsed"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal"/>
+                                        <VisualState x:Name="MouseOver">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                 To="1.02"
+                                                                 Duration="0:0:0.18"/>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                 To="1.02"
+                                                                 Duration="0:0:0.18"/>
+                                                <ColorAnimation Storyboard.TargetName="PillBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#E4EBFF"
+                                                                Duration="0:0:0.20"/>
+                                                <ColorAnimation Storyboard.TargetName="IconFill"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#F2F6FF"
+                                                                Duration="0:0:0.20"/>
+                                                <ColorAnimation Storyboard.TargetName="IconStroke"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#5B85E8"
+                                                                Duration="0:0:0.20"/>
+                                                <ColorAnimation Storyboard.TargetName="GlyphBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#2F63C7"
+                                                                Duration="0:0:0.20"/>
+                                                <ColorAnimation Storyboard.TargetName="LabelBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#0B1220"
+                                                                Duration="0:0:0.20"/>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                 To="0.98"
+                                                                 Duration="0:0:0.12"/>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                 To="0.98"
+                                                                 Duration="0:0:0.12"/>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="Root"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0.6"
+                                                                 Duration="0:0:0.10"/>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+
+                                    <VisualStateGroup x:Name="CheckStates">
+                                        <VisualStateGroup.Transitions>
+                                            <VisualTransition GeneratedDuration="0:0:0.22"/>
+                                        </VisualStateGroup.Transitions>
+                                        <VisualState x:Name="Unchecked">
+                                            <Storyboard>
+                                                <ColorAnimation Storyboard.TargetName="PillBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#00FFFFFF"
+                                                                Duration="0:0:0.22"/>
+                                                <ColorAnimation Storyboard.TargetName="IconFill"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#00FFFFFF"
+                                                                Duration="0:0:0.22"/>
+                                                <ColorAnimation Storyboard.TargetName="IconStroke"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#CBD5E1"
+                                                                Duration="0:0:0.22"/>
+                                                <ColorAnimation Storyboard.TargetName="GlyphBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#64748B"
+                                                                Duration="0:0:0.22"/>
+                                                <ColorAnimation Storyboard.TargetName="LabelBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#111827"
+                                                                Duration="0:0:0.22"/>
+                                                <DoubleAnimation Storyboard.TargetName="Glow"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0"
+                                                                 Duration="0:0:0.22"/>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                 To="1"
+                                                                 Duration="0:0:0.22"/>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                 To="1"
+                                                                 Duration="0:0:0.22"/>
+                                                <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                 To="1"
+                                                                 Duration="0:0:0.22"/>
+                                                <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                 To="1"
+                                                                 Duration="0:0:0.22"/>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Checked">
+                                            <Storyboard>
+                                                <ColorAnimation Storyboard.TargetName="PillBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#F0F5FF"
+                                                                Duration="0:0:0.24"/>
+                                                <ColorAnimation Storyboard.TargetName="IconFill"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#3B82F6"
+                                                                Duration="0:0:0.24"/>
+                                                <ColorAnimation Storyboard.TargetName="IconStroke"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#3B82F6"
+                                                                Duration="0:0:0.24"/>
+                                                <ColorAnimation Storyboard.TargetName="GlyphBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#FFFFFF"
+                                                                Duration="0:0:0.24"/>
+                                                <ColorAnimation Storyboard.TargetName="LabelBrush"
+                                                                Storyboard.TargetProperty="Color"
+                                                                To="#0B1220"
+                                                                Duration="0:0:0.24"/>
+                                                <DoubleAnimation Storyboard.TargetName="Glow"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0.85"
+                                                                 Duration="0:0:0.24"/>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                 To="1.05"
+                                                                 Duration="0:0:0.24"/>
+                                                <DoubleAnimation Storyboard.TargetName="PillScale"
+                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                 To="1.05"
+                                                                 Duration="0:0:0.24"/>
+                                                <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                                 Storyboard.TargetProperty="ScaleX"
+                                                                 To="1.08"
+                                                                 Duration="0:0:0.24"/>
+                                                <DoubleAnimation Storyboard.TargetName="IconScale"
+                                                                 Storyboard.TargetProperty="ScaleY"
+                                                                 To="1.08"
+                                                                 Duration="0:0:0.24"/>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <!-- 悬停兜底：即便状态机失效也能变色 -->
+                    <MultiTrigger>
+                        <MultiTrigger.Conditions>
+                            <Condition Property="IsMouseOver" Value="True"/>
+                            <Condition Property="IsChecked" Value="False"/>
+                        </MultiTrigger.Conditions>
+                        <Setter TargetName="Pill" Property="Background" Value="#E4EBFF"/>
+                        <Setter TargetName="IconCircle" Property="Fill" Value="#F2F6FF"/>
+                        <Setter TargetName="IconCircle" Property="Stroke" Value="#5B85E8"/>
+                        <Setter TargetName="Glyph" Property="Foreground" Value="#2F63C7"/>
+                        <Setter TargetName="Label" Property="Foreground" Value="#0B1220"/>
+                    </MultiTrigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
 
         <!-- 圆角小按钮（中性灰） -->
         <Style x:Key="RoundSmallButton" TargetType="Button">
@@ -271,6 +464,39 @@
                     BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0,8,0,12">
+                        <Border Margin="12,8,12,12" Padding="16" CornerRadius="18">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#EEF2FF" Offset="0"/>
+                                    <GradientStop Color="#E0EAFF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#33000000" BlurRadius="18" ShadowDepth="2" Opacity="0.45"/>
+                            </Border.Effect>
+                            <Grid>
+                                <Ellipse Width="150" Height="150" Fill="#1A3B82F6"
+                                         HorizontalAlignment="Right"
+                                         VerticalAlignment="Top"
+                                         Margin="0,-58,-36,0">
+                                    <Ellipse.RenderTransform>
+                                        <RotateTransform Angle="-18"/>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                                <StackPanel x:Name="NavTitlePanel" Orientation="Vertical" Margin="2,0,0,0" Opacity="1">
+                                    <StackPanel.RenderTransform>
+                                        <TranslateTransform x:Name="NavTitleTransform" Y="0"/>
+                                    </StackPanel.RenderTransform>
+                                    <TextBlock Text="{Binding CurrentPageTitle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               FontSize="40"
+                                               FontWeight="Bold"
+                                               Foreground="#0B1220"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Bottom"
+                                               Margin="0,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}" IsChecked="True"
                                      Content="总览" Checked="NavItem_Checked" Tag="&#xE770;"/>
                         <RadioButton GroupName="Nav" Style="{StaticResource SidebarNavStyle}"
