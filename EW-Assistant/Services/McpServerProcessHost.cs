@@ -30,22 +30,19 @@ namespace EW_Assistant.Services
         {
             lock (_syncRoot)
             {
+                if (_process != null && _process.HasExited)
+                {
+                    _process.Dispose();
+                    _process = null;
+                }
+
                 if (_process != null && !_process.HasExited)
                 {
                     logger?.Invoke("MCP Server 已在运行，无需重复启动。", "info");
                     return true;
                 }
 
-                if (TryAttachExistingProcess(logger))
-                {
-                    return true;
-                }
-
-                if (DetectForeignInstance(logger))
-                {
-                    // 已有其他目录的 MCP Server 在运行，避免再次启动导致端口冲突
-                    return false;
-                }
+                TerminateExistingProcesses(logger);
 
                 if (!File.Exists(_exePath))
                 {
@@ -141,82 +138,69 @@ namespace EW_Assistant.Services
             Stop();
         }
 
-        private bool TryAttachExistingProcess(Action<string, string> logger)
+        /// <summary>
+        /// 清理当前机器上已存在的 MCP Server 进程，确保重新拉起的是本目录版本
+        /// </summary>
+        private void TerminateExistingProcesses(Action<string, string> logger)
         {
             try
             {
                 var exeName = Path.GetFileNameWithoutExtension(_exePath);
                 if (string.IsNullOrEmpty(exeName))
-                    return false;
-
-                var candidates = Process.GetProcessesByName(exeName);
-                foreach (var candidate in candidates)
-                {
-                    try
-                    {
-                        var candidatePath = candidate.MainModule?.FileName;
-                        if (string.IsNullOrEmpty(candidatePath))
-                            continue;
-
-                        if (!string.Equals(Path.GetFullPath(candidatePath), Path.GetFullPath(_exePath), StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        WatchProcess(candidate, logger);
-                        logger?.Invoke($"检测到已运行的 MCP Server（PID={candidate.Id}），复用现有实例。", "info");
-                        return true;
-                    }
-                    catch (Exception inner)
-                    {
-                        logger?.Invoke($"检测现有 MCP Server 失败：{inner.Message}", "warn");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.Invoke($"列举 MCP Server 进程失败：{ex.Message}", "warn");
-            }
-
-            return false;
-        }
-
-        private bool DetectForeignInstance(Action<string, string> logger)
-        {
-            try
-            {
-                var exeName = Path.GetFileNameWithoutExtension(_exePath);
-                if (string.IsNullOrEmpty(exeName))
-                    return false;
-
-                var expectedPath = Path.GetFullPath(_exePath);
-                var foreignFound = false;
+                    return;
 
                 foreach (var candidate in Process.GetProcessesByName(exeName))
                 {
+                    Process proc = null;
                     try
                     {
-                        var candidatePath = candidate.MainModule?.FileName;
-                        if (string.IsNullOrEmpty(candidatePath))
-                            continue;
+                        proc = candidate;
+                        var pid = proc.Id;
+                        string path = string.Empty;
+                        try
+                        {
+                            path = proc.MainModule?.FileName ?? string.Empty;
+                        }
+                        catch (Exception inner)
+                        {
+                            logger?.Invoke($"读取 MCP Server 进程路径失败（PID={pid}）：{inner.Message}", "warn");
+                        }
 
-                        var fullCandidatePath = Path.GetFullPath(candidatePath);
-                        if (string.Equals(fullCandidatePath, expectedPath, StringComparison.OrdinalIgnoreCase))
-                            continue;
+                        try
+                        {
+                            proc.CloseMainWindow();
+                        }
+                        catch
+                        {
+                            // 可能无窗口，忽略异常
+                        }
 
-                        logger?.Invoke($"检测到其他目录运行的 MCP Server（PID={candidate.Id}, Path={fullCandidatePath}），请先关闭该实例后再启动 UI 托管。", "warn");
-                        foreignFound = true;
+                        if (!proc.WaitForExit(1000))
+                        {
+                            proc.Kill();
+                            proc.WaitForExit(2000);
+                        }
+
+                        if (proc.HasExited)
+                        {
+                            var fullPath = string.IsNullOrEmpty(path) ? string.Empty : Path.GetFullPath(path);
+                            var pathInfo = string.IsNullOrEmpty(fullPath) ? string.Empty : $", Path={fullPath}";
+                            logger?.Invoke($"已终止存在的 MCP Server 实例（PID={pid}{pathInfo}），准备重启。", "warn");
+                        }
                     }
-                    catch (Exception inner)
+                    catch (Exception ex)
                     {
-                        logger?.Invoke($"检测外部 MCP Server 失败：{inner.Message}", "warn");
+                        logger?.Invoke($"终止已存在的 MCP Server 失败：{ex.Message}", "error");
+                    }
+                    finally
+                    {
+                        proc?.Dispose();
                     }
                 }
-
-                return foreignFound;
             }
             catch (Exception ex)
             {
                 logger?.Invoke($"列举 MCP Server 进程失败：{ex.Message}", "warn");
-                return false;
             }
         }
 
