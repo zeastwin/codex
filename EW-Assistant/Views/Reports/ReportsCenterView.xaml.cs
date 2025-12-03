@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -10,7 +11,7 @@ using EW_Assistant.ViewModels;
 namespace EW_Assistant.Views.Reports
 {
     /// <summary>
-    /// 报表中心视图，暂时展示占位数据与示例 Markdown。
+    /// 报表中心视图，支持本地报表生成、预览与导出。
     /// </summary>
     public partial class ReportsCenterView : UserControl
     {
@@ -23,24 +24,24 @@ namespace EW_Assistant.Views.Reports
             DataContext = _viewModel;
         }
 
-        private void DailyProdButton_Click(object sender, RoutedEventArgs e)
+        private async void DailyProdButton_Click(object sender, RoutedEventArgs e)
         {
-            _viewModel.SwitchReportType(ReportType.DailyProd);
+            await _viewModel.GenerateReportAsync(ReportType.DailyProd);
         }
 
-        private void WeeklyProdButton_Click(object sender, RoutedEventArgs e)
+        private async void WeeklyProdButton_Click(object sender, RoutedEventArgs e)
         {
-            _viewModel.SwitchReportType(ReportType.WeeklyProd);
+            await _viewModel.GenerateReportAsync(ReportType.WeeklyProd);
         }
 
-        private void DailyAlarmButton_Click(object sender, RoutedEventArgs e)
+        private async void DailyAlarmButton_Click(object sender, RoutedEventArgs e)
         {
-            _viewModel.SwitchReportType(ReportType.DailyAlarm);
+            await _viewModel.GenerateReportAsync(ReportType.DailyAlarm);
         }
 
-        private void WeeklyAlarmButton_Click(object sender, RoutedEventArgs e)
+        private async void WeeklyAlarmButton_Click(object sender, RoutedEventArgs e)
         {
-            _viewModel.SwitchReportType(ReportType.WeeklyAlarm);
+            await _viewModel.GenerateReportAsync(ReportType.WeeklyAlarm);
         }
 
         private void OpenFolderButton_Click(object sender, RoutedEventArgs e)

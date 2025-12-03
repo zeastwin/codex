@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using EW_Assistant.Domain.Reports;
 using EW_Assistant.Services.Reports;
 
@@ -13,10 +16,13 @@ namespace EW_Assistant.ViewModels
     public class ReportsCenterViewModel : ViewModelBase
     {
         private readonly ReportStorageService _storage;
+        private readonly ReportGeneratorService _generator;
         private ReportType _currentReportType;
         private string _currentReportTypeName;
         private string _previewMarkdown;
         private ReportInfo _selectedReport;
+        private bool _isBusy;
+        private CancellationTokenSource _cts;
 
         public ObservableCollection<ReportInfo> Reports { get; private set; }
 
@@ -54,9 +60,17 @@ namespace EW_Assistant.ViewModels
             set { SetProperty(ref _previewMarkdown, value); }
         }
 
+        /// <summary>生成或切换时的忙碌状态。</summary>
+        public bool IsBusy
+        {
+            get { return _isBusy; }
+            set { SetProperty(ref _isBusy, value); }
+        }
+
         public ReportsCenterViewModel()
         {
             _storage = new ReportStorageService();
+            _generator = new ReportGeneratorService(_storage, new LlmReportClient());
             Reports = new ObservableCollection<ReportInfo>();
             SwitchReportType(ReportType.DailyProd);
         }
@@ -69,6 +83,76 @@ namespace EW_Assistant.ViewModels
             CurrentReportType = type;
             CurrentReportTypeName = _storage.GetTypeDisplayName(type);
             LoadReports(type);
+        }
+
+        /// <summary>
+        /// 触发生成报表并刷新列表。
+        /// </summary>
+        public async Task GenerateReportAsync(ReportType type)
+        {
+            if (IsBusy)
+            {
+                return;
+            }
+
+            var cts = new CancellationTokenSource();
+            _cts = cts;
+            IsBusy = true;
+            CurrentReportType = type;
+            CurrentReportTypeName = _storage.GetTypeDisplayName(type);
+
+            ReportInfo generated = null;
+
+            try
+            {
+                if (type == ReportType.DailyProd)
+                {
+                    generated = await _generator.GenerateDailyProdAsync(DateTime.Today, cts.Token);
+                }
+                else if (type == ReportType.DailyAlarm)
+                {
+                    generated = await _generator.GenerateDailyAlarmAsync(DateTime.Today, cts.Token);
+                }
+                else if (type == ReportType.WeeklyProd)
+                {
+                    generated = await _generator.GenerateWeeklyProdAsync(DateTime.Today, cts.Token);
+                }
+                else if (type == ReportType.WeeklyAlarm)
+                {
+                    generated = await _generator.GenerateWeeklyAlarmAsync(DateTime.Today, cts.Token);
+                }
+
+                LoadReports(type);
+                if (generated != null)
+                {
+                    var target = FindMatchingReport(generated);
+                    if (target != null)
+                    {
+                        SelectedReport = target;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                PreviewMarkdown = BuildPlaceholderMarkdown("生成已取消。");
+            }
+            catch (ReportGenerationException ex)
+            {
+                PreviewMarkdown = BuildPlaceholderMarkdown(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                PreviewMarkdown = BuildPlaceholderMarkdown("生成报表失败：" + ex.Message);
+            }
+            finally
+            {
+                if (_cts == cts)
+                {
+                    _cts = null;
+                    try { cts.Dispose(); } catch { }
+                }
+                IsBusy = false;
+            }
         }
 
         private void LoadReports(ReportType type)
@@ -172,6 +256,18 @@ namespace EW_Assistant.ViewModels
                 errorMessage = ex.Message;
                 return false;
             }
+        }
+
+        private ReportInfo FindMatchingReport(ReportInfo generated)
+        {
+            if (generated == null || Reports == null || Reports.Count == 0)
+            {
+                return null;
+            }
+
+            return Reports.FirstOrDefault(r =>
+                (!string.IsNullOrWhiteSpace(generated.Id) && string.Equals(r.Id, generated.Id, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(generated.FilePath) && string.Equals(r.FilePath, generated.FilePath, StringComparison.OrdinalIgnoreCase)));
         }
     }
 }

@@ -12,6 +12,7 @@
              FontFamily="Microsoft YaHei UI, Microsoft YaHei"
              FontSize="14">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <Style x:Key="PillButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="36"/>
             <Setter Property="MinWidth" Value="132"/>
@@ -88,25 +89,75 @@
                            Margin="0,0,12,0"/>
                 <WrapPanel DockPanel.Dock="Left">
                     <Button Content="当日产能报表"
-                            Style="{StaticResource PillButtonStyle}"
-                            Click="DailyProdButton_Click"/>
+                            Click="DailyProdButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Opacity" Value="0.6"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="产能周报"
-                            Style="{StaticResource PillButtonStyle}"
-                            Click="WeeklyProdButton_Click"/>
+                            Click="WeeklyProdButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Opacity" Value="0.6"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="当日报警报表"
-                            Style="{StaticResource PillButtonStyle}"
-                            Click="DailyAlarmButton_Click"/>
+                            Click="DailyAlarmButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Opacity" Value="0.6"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button Content="报警周报"
-                            Style="{StaticResource PillButtonStyle}"
-                            Click="WeeklyAlarmButton_Click"/>
+                            Click="WeeklyAlarmButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Opacity" Value="0.6"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                 </WrapPanel>
-                <TextBlock DockPanel.Dock="Right"
-                           Text="{Binding CurrentReportTypeName}"
-                           VerticalAlignment="Center"
-                           Foreground="#111827"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Margin="12,0,0,0"/>
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentReportTypeName}"
+                               VerticalAlignment="Center"
+                               Foreground="#111827"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Margin="12,0,0,0"/>
+                    <TextBlock Text="生成中..."
+                               VerticalAlignment="Center"
+                               Foreground="#DC2626"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Margin="8,0,0,0"
+                               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
             </DockPanel>
         </Border>
 

@@ -89,9 +89,9 @@ namespace EW_Assistant.Services.Reports
         }
 
         /// <summary>
-        /// 保存日报 Markdown 内容。
+        /// 保存日报 Markdown 内容，并返回写入的文件路径。
         /// </summary>
-        public void SaveReportContent(ReportType type, DateTime date, string markdown)
+        public string SaveReportContent(ReportType type, DateTime date, string markdown)
         {
             if (type != ReportType.DailyProd && type != ReportType.DailyAlarm)
             {
@@ -101,12 +101,13 @@ namespace EW_Assistant.Services.Reports
             var path = BuildReportFilePath(type, date, null);
             EnsureDirectoryForPath(path);
             File.WriteAllText(path, markdown ?? string.Empty, Encoding.UTF8);
+            return path;
         }
 
         /// <summary>
-        /// 保存周报 Markdown 内容。
+        /// 保存周报 Markdown 内容，并返回写入的文件路径。
         /// </summary>
-        public void SaveReportContent(ReportType type, DateTime startDate, DateTime endDate, string markdown)
+        public string SaveReportContent(ReportType type, DateTime startDate, DateTime endDate, string markdown)
         {
             if (type != ReportType.WeeklyProd && type != ReportType.WeeklyAlarm)
             {
@@ -123,6 +124,7 @@ namespace EW_Assistant.Services.Reports
             var path = BuildReportFilePath(type, startDate, endDate);
             EnsureDirectoryForPath(path);
             File.WriteAllText(path, markdown ?? string.Empty, Encoding.UTF8);
+            return path;
         }
 
         /// <summary>
@@ -148,6 +150,21 @@ namespace EW_Assistant.Services.Reports
             }
 
             return type.ToString();
+        }
+
+        /// <summary>
+        /// 通过文件路径重新解析报表信息，便于生成后立即刷新索引。
+        /// </summary>
+        public ReportInfo GetReportInfoByPath(ReportType type, string filePath)
+        {
+            try
+            {
+                return ParseReportInfo(type, filePath);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private void EnsureDirectories()
