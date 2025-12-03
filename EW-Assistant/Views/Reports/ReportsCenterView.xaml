@@ -330,14 +330,15 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" VerticalAlignment="Center" Margin="0,0,0,6">
+                <!-- 操作区独立卡片 -->
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Padding="10" Margin="0,0,0,8">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -361,16 +362,17 @@
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding SelectedReport}" Value="{x:Null}">
                                                 <Setter Property="IsEnabled" Value="False"/>
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                                                <Setter Property="Opacity" Value="0.6"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                             <Button Content="重新生成"
                                     Click="RegenerateButton_Click">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                        <Setter Property="Margin" Value="0,0,8,0"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding SelectedReport}" Value="{x:Null}">
                                                 <Setter Property="IsEnabled" Value="False"/>
@@ -395,16 +397,18 @@
                             </Button>
                         </StackPanel>
                     </Grid>
+                </Border>
 
-                    <md:MarkdownScrollViewer Grid.Row="1"
-                                             Markdown="{Binding PreviewMarkdown}"
+                <!-- 内容区卡片 -->
+                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                    <md:MarkdownScrollViewer Markdown="{Binding PreviewMarkdown}"
                                              PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel"
                                              Background="White"
                                              BorderThickness="0"
-                                             Padding="0,0,2,4"
+                                             Padding="12,12,22,12"
                                              VerticalScrollBarVisibility="Auto"/>
-                </Grid>
-            </Border>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>
