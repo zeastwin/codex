@@ -34,7 +34,7 @@ namespace EW_Assistant.Services.Reports
             }
 
             var cfg = ConfigService.Current;
-            if (cfg == null || string.IsNullOrWhiteSpace(cfg.URL) || string.IsNullOrWhiteSpace(cfg.ChatKey))
+            if (cfg == null || string.IsNullOrWhiteSpace(cfg.URL) || string.IsNullOrWhiteSpace(cfg.ReportKey))
             {
                 throw new InvalidOperationException("LLM 地址或密钥未配置，请在设置中填写。");
             }
@@ -50,7 +50,7 @@ namespace EW_Assistant.Services.Reports
 
             using (var req = new HttpRequestMessage(HttpMethod.Post, url))
             {
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg.ChatKey);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg.ReportKey);
                 req.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
 
                 using (var resp = await _http.SendAsync(req, token).ConfigureAwait(false))

@@ -178,6 +178,9 @@
     <Compile Include="Component\MindMap\MindMapNode.cs" />
     <Compile Include="Component\Checklist\ChecklistModels.cs" />
     <Compile Include="Component\Checklist\ChecklistStatusBrushConverter.cs" />
+    <Compile Include="Domain\Reports\DailyAlarmData.cs" />
+    <Compile Include="Domain\Reports\WeeklyAlarmData.cs" />
+    <Compile Include="Domain\Reports\WeeklyProdData.cs" />
     <Compile Include="Infrastructure\Inventory\ApiInventoryRepository.cs" />
     <Compile Include="Infrastructure\Inventory\InventoryRepositoryFactory.cs" />
     <Compile Include="Services\DifyWorkflowStreaming.cs" />
@@ -189,6 +192,18 @@
     <Compile Include="Services\Reports\ReportPromptBuilder.cs" />
     <Compile Include="Services\Reports\ReportScheduler.cs" />
     <Compile Include="Services\Reports\ReportStorageService.cs" />
+    <Compile Include="Services\Reports\DailyProdCalculator.cs" />
+    <Compile Include="Services\Reports\DailyProdReportMarkdownFormatter.cs" />
+    <Compile Include="Services\Reports\DailyProdReportPromptBuilder.cs" />
+    <Compile Include="Services\Reports\DailyAlarmCalculator.cs" />
+    <Compile Include="Services\Reports\DailyAlarmReportMarkdownFormatter.cs" />
+    <Compile Include="Services\Reports\DailyAlarmReportPromptBuilder.cs" />
+    <Compile Include="Services\Reports\WeeklyProdCalculator.cs" />
+    <Compile Include="Services\Reports\WeeklyProdReportMarkdownFormatter.cs" />
+    <Compile Include="Services\Reports\WeeklyProdReportPromptBuilder.cs" />
+    <Compile Include="Services\Reports\WeeklyAlarmCalculator.cs" />
+    <Compile Include="Services\Reports\WeeklyAlarmReportMarkdownFormatter.cs" />
+    <Compile Include="Services\Reports\WeeklyAlarmReportPromptBuilder.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Services\Warnings\AiWarningAnalysisService.cs" />
     <Compile Include="Services\Warnings\CsvEncoding.cs" />
@@ -208,6 +223,7 @@
     <Compile Include="Domain\Inventory\IInventoryRepository.cs" />
     <Compile Include="Domain\Reports\ReportInfo.cs" />
     <Compile Include="Domain\Reports\ReportType.cs" />
+    <Compile Include="Domain\Reports\DailyProdData.cs" />
     <Compile Include="Infrastructure\Inventory\FileInventoryRepository.cs" />
     <Compile Include="Infrastructure\Inventory\InventoryModule.cs" />
     <Compile Include="Views\Inventory\AddPartDialog.xaml.cs">

@@ -3,13 +3,11 @@ using EW_Assistant.Services;
 using EW_Assistant.Warnings;
 using Newtonsoft.Json;   // 需安装包：Install-Package Newtonsoft.Json
 using System;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Windows;
-using System.Windows.Controls;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace EW_Assistant.Views
 {
@@ -37,6 +35,7 @@ namespace EW_Assistant.Views
                     || string.IsNullOrWhiteSpace(Config.AutoKey)
                     || string.IsNullOrWhiteSpace(Config.ChatKey)
                     || string.IsNullOrWhiteSpace(Config.DocumentKey)
+                    || string.IsNullOrWhiteSpace(Config.ReportKey)
                     || string.IsNullOrWhiteSpace(Config.EarlyWarningKey))
                 {
                     MainWindow.PostProgramInfo(
@@ -70,6 +69,7 @@ namespace EW_Assistant.Views
                     this.Config.AutoKey = fresh.AutoKey;
                     this.Config.ChatKey = fresh.ChatKey;
                     this.Config.DocumentKey = fresh.DocumentKey;
+                    this.Config.ReportKey = fresh.ReportKey;
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
                     this.Config.FlatFileLayout = fresh.FlatFileLayout;
                     this.Config.UseOkNgSplitTables = fresh.UseOkNgSplitTables;
@@ -180,6 +180,14 @@ namespace EW_Assistant.Settings
             get => _documentKey;
             set { if (_documentKey != value) { _documentKey = value; OnPropertyChanged(); } }
         }
+
+        private string _reportKey = "";
+        public string ReportKey
+        {
+            get => _reportKey;
+            set { if (_reportKey != value) { _reportKey = value; OnPropertyChanged(); } }
+        }
+
         private string _earlyWarningKey = "";
         public string EarlyWarningKey
         {
@@ -297,6 +305,7 @@ namespace EW_Assistant.Services
                 _current.AutoKey = cfg.AutoKey;
                 _current.ChatKey = cfg.ChatKey;
                 _current.DocumentKey = cfg.DocumentKey;
+                _current.ReportKey = cfg.ReportKey;
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
                 _current.FlatFileLayout = cfg.FlatFileLayout;
                 _current.UseOkNgSplitTables = cfg.UseOkNgSplitTables;
@@ -321,6 +330,8 @@ namespace EW_Assistant.Services
                 cfg.IoMapCsvPath = @"D:\";
             if (string.IsNullOrWhiteSpace(cfg.MCPServerIP))
                 cfg.MCPServerIP = "127.0.0.1:8081";
+            if (cfg.ReportKey == null)
+                cfg.ReportKey = string.Empty;
             cfg.WarningOptions = WarningRuleOptions.Normalize(cfg.WarningOptions);
         }
 

@@ -98,7 +98,10 @@ namespace EW_Assistant.ViewModels
                 if (info.Type == ReportType.DailyProd || info.Type == ReportType.DailyAlarm)
                 {
                     var date = info.Date ?? DateTime.Today;
-                    generated = await _generator.GenerateDailyAsync(info.Type, date, CancellationToken.None);
+                    if (info.Type == ReportType.DailyProd)
+                        generated = await _generator.GenerateDailyProdAsync(date, CancellationToken.None);
+                    else
+                        generated = await _generator.GenerateDailyAsync(info.Type, date, CancellationToken.None);
                 }
                 else if (info.Type == ReportType.WeeklyProd || info.Type == ReportType.WeeklyAlarm)
                 {

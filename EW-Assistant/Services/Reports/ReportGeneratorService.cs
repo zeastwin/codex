@@ -15,33 +15,154 @@ namespace EW_Assistant.Services.Reports
     {
         private readonly ReportStorageService _storage;
         private readonly LlmReportClient _llm;
+        private readonly DailyProdCalculator _dailyProdCalculator;
+        private readonly DailyAlarmCalculator _dailyAlarmCalculator;
+        private readonly WeeklyProdCalculator _weeklyProdCalculator;
+        private readonly WeeklyAlarmCalculator _weeklyAlarmCalculator;
 
         public ReportGeneratorService(ReportStorageService storage = null, LlmReportClient llm = null)
         {
             _storage = storage ?? new ReportStorageService();
             _llm = llm ?? new LlmReportClient();
+            _dailyProdCalculator = new DailyProdCalculator();
+            _dailyAlarmCalculator = new DailyAlarmCalculator();
+            _weeklyProdCalculator = new WeeklyProdCalculator();
+            _weeklyAlarmCalculator = new WeeklyAlarmCalculator();
         }
 
         public async Task<ReportInfo> GenerateDailyProdAsync(DateTime date, CancellationToken token = default(CancellationToken))
         {
-            return await GenerateDailyAsync(ReportType.DailyProd, date, token, ReportPromptBuilder.BuildDailyProdPrompt(date)).ConfigureAwait(false);
+            try
+            {
+                // 如果已存在，直接返回
+                var existing = _storage.GetDailyReportInfo(ReportType.DailyProd, date.Date);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                token.ThrowIfCancellationRequested();
+
+                var data = _dailyProdCalculator.Calculate(date.Date);
+                var userPrompt = DailyProdReportPromptBuilder.BuildUserPrompt(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var fullMd = DailyProdReportMarkdownFormatter.Render(data, analysisMd);
+
+                var path = _storage.SaveReportContent(ReportType.DailyProd, date.Date, fullMd);
+                var info = _storage.GetReportInfoByPath(ReportType.DailyProd, path) ?? BuildFallbackInfo(ReportType.DailyProd, date.Date, null, path);
+                LogGeneration(ReportType.DailyProd, date.Date, null, path, true, null, fullMd);
+                return info;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogGeneration(ReportType.DailyProd, date.Date, null, null, false, ex.Message, null);
+                throw new ReportGenerationException("生成日报失败：" + ex.Message, ex);
+            }
         }
 
         public async Task<ReportInfo> GenerateDailyAlarmAsync(DateTime date, CancellationToken token = default(CancellationToken))
         {
-            return await GenerateDailyAsync(ReportType.DailyAlarm, date, token, ReportPromptBuilder.BuildDailyAlarmPrompt(date)).ConfigureAwait(false);
+            try
+            {
+                var existing = _storage.GetDailyReportInfo(ReportType.DailyAlarm, date.Date);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                token.ThrowIfCancellationRequested();
+
+                var data = _dailyAlarmCalculator.Calculate(date.Date);
+                var userPrompt = DailyAlarmReportPromptBuilder.BuildUserPrompt(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var fullMd = DailyAlarmReportMarkdownFormatter.Render(data, analysisMd);
+
+                var path = _storage.SaveReportContent(ReportType.DailyAlarm, date.Date, fullMd);
+                var info = _storage.GetReportInfoByPath(ReportType.DailyAlarm, path) ?? BuildFallbackInfo(ReportType.DailyAlarm, date.Date, null, path);
+                LogGeneration(ReportType.DailyAlarm, date.Date, null, path, true, null, fullMd);
+                return info;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogGeneration(ReportType.DailyAlarm, date.Date, null, null, false, ex.Message, null);
+                throw new ReportGenerationException("生成报警日报失败：" + ex.Message, ex);
+            }
         }
 
         public async Task<ReportInfo> GenerateWeeklyProdAsync(DateTime endDate, CancellationToken token = default(CancellationToken))
         {
             var start = endDate.Date.AddDays(-6);
-            return await GenerateWeeklyAsync(ReportType.WeeklyProd, start, endDate.Date, token, ReportPromptBuilder.BuildWeeklyProdPrompt(endDate)).ConfigureAwait(false);
+            try
+            {
+                var existing = _storage.GetWeeklyReportInfo(ReportType.WeeklyProd, endDate.Date);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                token.ThrowIfCancellationRequested();
+
+                var data = _weeklyProdCalculator.Calculate(start, endDate.Date);
+                var userPrompt = WeeklyProdReportPromptBuilder.BuildUserPrompt(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var fullMd = WeeklyProdReportMarkdownFormatter.Render(data, analysisMd);
+
+                var path = _storage.SaveReportContent(ReportType.WeeklyProd, start, endDate.Date, fullMd);
+                var info = _storage.GetReportInfoByPath(ReportType.WeeklyProd, path) ?? BuildFallbackInfo(ReportType.WeeklyProd, start, endDate.Date, path);
+                LogGeneration(ReportType.WeeklyProd, start, endDate.Date, path, true, null, fullMd);
+                return info;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogGeneration(ReportType.WeeklyProd, start, endDate.Date, null, false, ex.Message, null);
+                throw new ReportGenerationException("生成产能周报失败：" + ex.Message, ex);
+            }
         }
 
         public async Task<ReportInfo> GenerateWeeklyAlarmAsync(DateTime endDate, CancellationToken token = default(CancellationToken))
         {
             var start = endDate.Date.AddDays(-6);
-            return await GenerateWeeklyAsync(ReportType.WeeklyAlarm, start, endDate.Date, token, ReportPromptBuilder.BuildWeeklyAlarmPrompt(endDate)).ConfigureAwait(false);
+            try
+            {
+                var existing = _storage.GetWeeklyReportInfo(ReportType.WeeklyAlarm, endDate.Date);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                token.ThrowIfCancellationRequested();
+
+                var data = _weeklyAlarmCalculator.Calculate(start, endDate.Date);
+                var userPrompt = WeeklyAlarmReportPromptBuilder.BuildUserPrompt(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var fullMd = WeeklyAlarmReportMarkdownFormatter.Render(data, analysisMd);
+
+                var path = _storage.SaveReportContent(ReportType.WeeklyAlarm, start, endDate.Date, fullMd);
+                var info = _storage.GetReportInfoByPath(ReportType.WeeklyAlarm, path) ?? BuildFallbackInfo(ReportType.WeeklyAlarm, start, endDate.Date, path);
+                LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, path, true, null, fullMd);
+                return info;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, null, false, ex.Message, null);
+                throw new ReportGenerationException("生成报警周报失败：" + ex.Message, ex);
+            }
         }
 
         internal async Task<ReportInfo> GenerateDailyAsync(ReportType type, DateTime date, CancellationToken token, string prompt = null)
