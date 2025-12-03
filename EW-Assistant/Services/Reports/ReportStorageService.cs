@@ -49,6 +49,14 @@ namespace EW_Assistant.Services.Reports
             return File.Exists(path);
         }
 
+        /// <summary>获取指定日期的日报元数据（若文件存在）。</summary>
+        public ReportInfo GetDailyReportInfo(ReportType type, DateTime date)
+        {
+            if (!DailyReportExists(type, date)) return null;
+            var path = BuildReportFilePath(type, date.Date, null);
+            return GetReportInfoByPath(type, path);
+        }
+
         /// <summary>
         /// 判断指定结束日期的周报文件是否已存在（区间=结束日向前 6 天）。
         /// </summary>
@@ -62,6 +70,15 @@ namespace EW_Assistant.Services.Reports
             var start = endDate.Date.AddDays(-6);
             var path = BuildReportFilePath(type, start, endDate.Date);
             return File.Exists(path);
+        }
+
+        /// <summary>获取指定结束日对应周报的元数据（若文件存在）。</summary>
+        public ReportInfo GetWeeklyReportInfo(ReportType type, DateTime endDate)
+        {
+            if (!WeeklyReportExists(type, endDate)) return null;
+            var start = endDate.Date.AddDays(-6);
+            var path = BuildReportFilePath(type, start, endDate.Date);
+            return GetReportInfoByPath(type, path);
         }
 
         /// <summary>

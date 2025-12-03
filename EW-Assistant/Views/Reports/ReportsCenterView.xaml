@@ -312,6 +312,14 @@
                                                     <Setter TargetName="Bd" Property="Background" Value="#E0E7FF"/>
                                                     <Setter TargetName="Bd" Property="BorderBrush" Value="#818CF8"/>
                                                 </Trigger>
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsSelected" Value="True"/>
+                                                        <Condition Property="IsMouseOver" Value="True"/>
+                                                    </MultiTrigger.Conditions>
+                                                    <Setter TargetName="Bd" Property="Background" Value="#D6DBFF"/>
+                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#6B82F3"/>
+                                                </MultiTrigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -380,7 +388,7 @@
                                              PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel"
                                              Background="White"
                                              BorderThickness="0"
-                                             Padding="0,0,8,4"
+                                             Padding="0,0,2,4"
                                              VerticalScrollBarVisibility="Auto"/>
                 </Grid>
             </Border>

@@ -48,6 +48,13 @@ namespace EW_Assistant.Services.Reports
         {
             try
             {
+                // 如果已存在，直接返回元数据，避免重复生成
+                var existing = _storage.GetDailyReportInfo(type, date.Date);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
                 token.ThrowIfCancellationRequested();
                 var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
                 var path = _storage.SaveReportContent(type, date.Date, md);
@@ -70,6 +77,13 @@ namespace EW_Assistant.Services.Reports
         {
             try
             {
+                // 如果已存在，直接返回元数据
+                var existing = _storage.GetWeeklyReportInfo(type, endDate.Date);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
                 token.ThrowIfCancellationRequested();
                 var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
                 var path = _storage.SaveReportContent(type, startDate.Date, endDate.Date, md);
