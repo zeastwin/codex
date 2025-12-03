@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Win32;
 using EW_Assistant.Domain.Reports;
 using EW_Assistant.ViewModels;
@@ -101,6 +103,42 @@ namespace EW_Assistant.Views.Reports
             {
                 MessageBox.Show("导出失败：" + error, "提示", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void ReportList_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var sv = FindScrollViewer(sender as DependencyObject);
+            if (sv == null) return;
+
+            double factor = 1.5;
+            double delta = -e.Delta * factor;
+            sv.ScrollToVerticalOffset(sv.VerticalOffset + delta);
+            e.Handled = true;
+        }
+
+        private void PreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var sv = sender as ScrollViewer ?? FindScrollViewer(sender as DependencyObject);
+            if (sv == null) return;
+
+            double factor = 1.5;
+            double delta = -e.Delta * factor;
+            sv.ScrollToVerticalOffset(sv.VerticalOffset + delta);
+            e.Handled = true;
+        }
+
+        private static ScrollViewer FindScrollViewer(DependencyObject source)
+        {
+            if (source == null) return null;
+            if (source is ScrollViewer sv) return sv;
+            int count = VisualTreeHelper.GetChildrenCount(source);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(source, i);
+                var result = FindScrollViewer(child);
+                if (result != null) return result;
+            }
+            return null;
         }
     }
 }

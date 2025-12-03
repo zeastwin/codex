@@ -90,8 +90,13 @@ namespace EW_Assistant.ViewModels
         /// </summary>
         public async Task GenerateReportAsync(ReportType type)
         {
+            // 生成过程中允许切换到其他类型查看已有报表，但不再启动新的生成。
             if (IsBusy)
             {
+                if (type != CurrentReportType)
+                {
+                    SwitchReportType(type);
+                }
                 return;
             }
 
@@ -177,6 +182,7 @@ namespace EW_Assistant.ViewModels
             IList<ReportInfo> reports = null;
             Reports.Clear();
             SelectedReport = null;
+            PreviewMarkdown = BuildPlaceholderMarkdown("正在加载报表列表，请稍候...");
 
             try
             {
@@ -236,11 +242,11 @@ namespace EW_Assistant.ViewModels
         private string BuildPlaceholderMarkdown(string message, string title = null)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("# " + (title ?? CurrentReportTypeName));
+            sb.AppendLine("# " + (title ?? CurrentReportTypeName ?? "报表预览"));
             sb.AppendLine();
             sb.AppendLine("> " + message);
             sb.AppendLine();
-            sb.AppendLine("- 报表类型：" + CurrentReportTypeName);
+            sb.AppendLine("- 报表类型：" + (CurrentReportTypeName ?? "未选择"));
             sb.AppendLine("- 更新时间：" + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
             return sb.ToString();
         }

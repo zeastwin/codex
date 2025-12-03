@@ -93,9 +93,9 @@
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.6"/>
+                                    <DataTrigger Binding="{Binding CurrentReportType}" Value="{x:Static reports:ReportType.DailyProd}">
+                                        <Setter Property="Background" Value="#E0E7FF"/>
+                                        <Setter Property="BorderBrush" Value="#818CF8"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -106,9 +106,9 @@
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.6"/>
+                                    <DataTrigger Binding="{Binding CurrentReportType}" Value="{x:Static reports:ReportType.WeeklyProd}">
+                                        <Setter Property="Background" Value="#E0E7FF"/>
+                                        <Setter Property="BorderBrush" Value="#818CF8"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -119,9 +119,9 @@
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.6"/>
+                                    <DataTrigger Binding="{Binding CurrentReportType}" Value="{x:Static reports:ReportType.DailyAlarm}">
+                                        <Setter Property="Background" Value="#E0E7FF"/>
+                                        <Setter Property="BorderBrush" Value="#818CF8"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -132,9 +132,9 @@
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                        <Setter Property="Opacity" Value="0.6"/>
+                                    <DataTrigger Binding="{Binding CurrentReportType}" Value="{x:Static reports:ReportType.WeeklyAlarm}">
+                                        <Setter Property="Background" Value="#E0E7FF"/>
+                                        <Setter Property="BorderBrush" Value="#818CF8"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -184,6 +184,7 @@
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding Reports}"
                              SelectedItem="{Binding SelectedReport, Mode=TwoWay}"
+                             PreviewMouseWheel="ReportList_PreviewMouseWheel"
                              BorderThickness="0"
                              Background="Transparent"
                              Padding="0"
@@ -315,9 +316,10 @@
 
                     <md:MarkdownScrollViewer Grid.Row="1"
                                              Markdown="{Binding PreviewMarkdown}"
+                                             PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel"
                                              Background="White"
                                              BorderThickness="0"
-                                             Padding="6"
+                                             Padding="0,0,0,0"
                                              VerticalScrollBarVisibility="Auto"/>
                 </Grid>
             </Border>
