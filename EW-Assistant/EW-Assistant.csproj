@@ -187,9 +187,9 @@
     <Compile Include="Services\DocumentMindMapParser.cs" />
     <Compile Include="Services\DocumentChecklistParser.cs" />
     <Compile Include="Services\FileWorkflowClient.cs" />
-    <Compile Include="Services\Reports\LlmReportClient.cs" />
+    <!-- LLM Workflow 客户端 -->
+    <Compile Include="Services\Reports\LlmWorkflowClient.cs" />
     <Compile Include="Services\Reports\ReportGeneratorService.cs" />
-    <Compile Include="Services\Reports\ReportPromptBuilder.cs" />
     <Compile Include="Services\Reports\ReportScheduler.cs" />
     <Compile Include="Services\Reports\ReportStorageService.cs" />
     <Compile Include="Services\Reports\DailyProdCalculator.cs" />
@@ -223,6 +223,7 @@
     <Compile Include="Domain\Inventory\IInventoryRepository.cs" />
     <Compile Include="Domain\Reports\ReportInfo.cs" />
     <Compile Include="Domain\Reports\ReportType.cs" />
+    <Compile Include="Domain\Reports\ReportPromptPayload.cs" />
     <Compile Include="Domain\Reports\DailyProdData.cs" />
     <Compile Include="Infrastructure\Inventory\FileInventoryRepository.cs" />
     <Compile Include="Infrastructure\Inventory\InventoryModule.cs" />

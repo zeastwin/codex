@@ -17,7 +17,7 @@ namespace EW_Assistant.Services.Reports
         public ReportScheduler(ReportStorageService storage = null, ReportGeneratorService generator = null)
         {
             _storage = storage ?? new ReportStorageService();
-            _generator = generator ?? new ReportGeneratorService(_storage, new LlmReportClient());
+            _generator = generator ?? new ReportGeneratorService(_storage, new LlmWorkflowClient());
         }
 
         /// <summary>

@@ -10,19 +10,29 @@ namespace EW_Assistant.Services.Reports
     /// </summary>
     public static class DailyProdReportPromptBuilder
     {
-        public static string BuildUserPrompt(DailyProdData data)
+        public static ReportPromptPayload BuildPayload(DailyProdData data)
         {
-            var task = BuildTaskText(data);
+            var task = BuildTaskText(data).Trim();
             var json = JsonConvert.SerializeObject(data, Formatting.None);
 
             var sb = new StringBuilder();
             sb.AppendLine("【REPORT_TASK】");
-            sb.AppendLine(task.Trim());
+            sb.AppendLine(task);
             sb.AppendLine();
             sb.AppendLine("【REPORT_DATA_JSON】");
             sb.AppendLine(json);
 
-            return sb.ToString();
+            return new ReportPromptPayload
+            {
+                ReportTask = task,
+                ReportDataJson = json,
+                CombinedPrompt = sb.ToString()
+            };
+        }
+
+        public static string BuildUserPrompt(DailyProdData data)
+        {
+            return BuildPayload(data).CombinedPrompt;
         }
 
         private static string BuildTaskText(DailyProdData data)

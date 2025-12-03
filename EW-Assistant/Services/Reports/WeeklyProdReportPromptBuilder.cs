@@ -7,17 +7,28 @@ namespace EW_Assistant.Services.Reports
 {
     public static class WeeklyProdReportPromptBuilder
     {
-        public static string BuildUserPrompt(WeeklyProdData data)
+        public static ReportPromptPayload BuildPayload(WeeklyProdData data)
         {
-            var task = BuildTaskText(data);
+            var task = BuildTaskText(data).Trim();
             var json = JsonConvert.SerializeObject(data, Formatting.None);
             var sb = new StringBuilder();
             sb.AppendLine("【REPORT_TASK】");
-            sb.AppendLine(task.Trim());
+            sb.AppendLine(task);
             sb.AppendLine();
             sb.AppendLine("【REPORT_DATA_JSON】");
             sb.AppendLine(json);
-            return sb.ToString();
+
+            return new ReportPromptPayload
+            {
+                ReportTask = task,
+                ReportDataJson = json,
+                CombinedPrompt = sb.ToString()
+            };
+        }
+
+        public static string BuildUserPrompt(WeeklyProdData data)
+        {
+            return BuildPayload(data).CombinedPrompt;
         }
 
         private static string BuildTaskText(WeeklyProdData data)

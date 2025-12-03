@@ -84,7 +84,7 @@ namespace EW_Assistant
             InitializeComponent();
             Instance = this;
             DataContext = this;
-            _reportGenerator = new ReportGeneratorService(_reportStorage, new LlmReportClient());
+            _reportGenerator = new ReportGeneratorService(_reportStorage, new LlmWorkflowClient());
             _reportScheduler = new ReportScheduler(_reportStorage, _reportGenerator);
 
             // 启动 HTTP 服务（常驻）

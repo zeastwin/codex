@@ -14,16 +14,16 @@ namespace EW_Assistant.Services.Reports
     public class ReportGeneratorService
     {
         private readonly ReportStorageService _storage;
-        private readonly LlmReportClient _llm;
+        private readonly LlmWorkflowClient _llm;
         private readonly DailyProdCalculator _dailyProdCalculator;
         private readonly DailyAlarmCalculator _dailyAlarmCalculator;
         private readonly WeeklyProdCalculator _weeklyProdCalculator;
         private readonly WeeklyAlarmCalculator _weeklyAlarmCalculator;
 
-        public ReportGeneratorService(ReportStorageService storage = null, LlmReportClient llm = null)
+        public ReportGeneratorService(ReportStorageService storage = null, LlmWorkflowClient llm = null)
         {
             _storage = storage ?? new ReportStorageService();
-            _llm = llm ?? new LlmReportClient();
+            _llm = llm ?? new LlmWorkflowClient();
             _dailyProdCalculator = new DailyProdCalculator();
             _dailyAlarmCalculator = new DailyAlarmCalculator();
             _weeklyProdCalculator = new WeeklyProdCalculator();
@@ -44,8 +44,8 @@ namespace EW_Assistant.Services.Reports
                 token.ThrowIfCancellationRequested();
 
                 var data = _dailyProdCalculator.Calculate(date.Date);
-                var userPrompt = DailyProdReportPromptBuilder.BuildUserPrompt(data);
-                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var prompt = DailyProdReportPromptBuilder.BuildPayload(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = DailyProdReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.DailyProd, date.Date, fullMd);
@@ -77,8 +77,8 @@ namespace EW_Assistant.Services.Reports
                 token.ThrowIfCancellationRequested();
 
                 var data = _dailyAlarmCalculator.Calculate(date.Date);
-                var userPrompt = DailyAlarmReportPromptBuilder.BuildUserPrompt(data);
-                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var prompt = DailyAlarmReportPromptBuilder.BuildPayload(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = DailyAlarmReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.DailyAlarm, date.Date, fullMd);
@@ -111,8 +111,8 @@ namespace EW_Assistant.Services.Reports
                 token.ThrowIfCancellationRequested();
 
                 var data = _weeklyProdCalculator.Calculate(start, endDate.Date);
-                var userPrompt = WeeklyProdReportPromptBuilder.BuildUserPrompt(data);
-                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var prompt = WeeklyProdReportPromptBuilder.BuildPayload(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = WeeklyProdReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.WeeklyProd, start, endDate.Date, fullMd);
@@ -145,8 +145,8 @@ namespace EW_Assistant.Services.Reports
                 token.ThrowIfCancellationRequested();
 
                 var data = _weeklyAlarmCalculator.Calculate(start, endDate.Date);
-                var userPrompt = WeeklyAlarmReportPromptBuilder.BuildUserPrompt(data);
-                var analysisMd = await _llm.GenerateMarkdownAsync(userPrompt, token).ConfigureAwait(false);
+                var prompt = WeeklyAlarmReportPromptBuilder.BuildPayload(data);
+                var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = WeeklyAlarmReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.WeeklyAlarm, start, endDate.Date, fullMd);
@@ -162,70 +162,6 @@ namespace EW_Assistant.Services.Reports
             {
                 LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, null, false, ex.Message, null);
                 throw new ReportGenerationException("生成报警周报失败：" + ex.Message, ex);
-            }
-        }
-
-        internal async Task<ReportInfo> GenerateDailyAsync(ReportType type, DateTime date, CancellationToken token, string prompt = null)
-        {
-            try
-            {
-                // 如果已存在，直接返回元数据，避免重复生成
-                var existing = _storage.GetDailyReportInfo(type, date.Date);
-                if (existing != null)
-                {
-                    return existing;
-                }
-
-                token.ThrowIfCancellationRequested();
-                var md = await _llm.GenerateMarkdownAsync(prompt ?? ReportPromptBuilder.BuildDailyProdPrompt(date), token).ConfigureAwait(false);
-                var path = _storage.SaveReportContent(type, date.Date, md);
-                var info = _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, date.Date, null, path);
-                LogGeneration(type, date.Date, null, path, true, null, md);
-                return info;
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogGeneration(type, date.Date, null, null, false, ex.Message, null);
-                throw new ReportGenerationException("生成日报失败：" + ex.Message, ex);
-            }
-        }
-
-        internal async Task<ReportInfo> GenerateWeeklyAsync(ReportType type, DateTime startDate, DateTime endDate, CancellationToken token, string prompt = null)
-        {
-            try
-            {
-                // 如果已存在，直接返回元数据
-                var existing = _storage.GetWeeklyReportInfo(type, endDate.Date);
-                if (existing != null)
-                {
-                    return existing;
-                }
-
-                token.ThrowIfCancellationRequested();
-                if (prompt == null)
-                {
-                    prompt = type == ReportType.WeeklyProd
-                        ? ReportPromptBuilder.BuildWeeklyProdPrompt(endDate)
-                        : ReportPromptBuilder.BuildWeeklyAlarmPrompt(endDate);
-                }
-                var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
-                var path = _storage.SaveReportContent(type, startDate.Date, endDate.Date, md);
-                var info = _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, startDate.Date, endDate.Date, path);
-                LogGeneration(type, startDate.Date, endDate.Date, path, true, null, md);
-                return info;
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogGeneration(type, startDate.Date, endDate.Date, null, false, ex.Message, null);
-                throw new ReportGenerationException("生成周报失败：" + ex.Message, ex);
             }
         }
 

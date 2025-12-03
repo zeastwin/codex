@@ -70,7 +70,7 @@ namespace EW_Assistant.ViewModels
         public ReportsCenterViewModel()
         {
             _storage = new ReportStorageService();
-            _generator = new ReportGeneratorService(_storage, new LlmReportClient());
+            _generator = new ReportGeneratorService(_storage, new LlmWorkflowClient());
             Reports = new ObservableCollection<ReportInfo>();
             SwitchReportType(ReportType.DailyProd);
         }
@@ -101,13 +101,15 @@ namespace EW_Assistant.ViewModels
                     if (info.Type == ReportType.DailyProd)
                         generated = await _generator.GenerateDailyProdAsync(date, CancellationToken.None);
                     else
-                        generated = await _generator.GenerateDailyAsync(info.Type, date, CancellationToken.None);
+                        generated = await _generator.GenerateDailyAlarmAsync(date, CancellationToken.None);
                 }
                 else if (info.Type == ReportType.WeeklyProd || info.Type == ReportType.WeeklyAlarm)
                 {
                     var start = info.StartDate ?? DateTime.Today.AddDays(-6);
                     var end = info.EndDate ?? DateTime.Today;
-                    generated = await _generator.GenerateWeeklyAsync(info.Type, start, end, CancellationToken.None);
+                    generated = info.Type == ReportType.WeeklyProd
+                        ? await _generator.GenerateWeeklyProdAsync(end, CancellationToken.None)
+                        : await _generator.GenerateWeeklyAlarmAsync(end, CancellationToken.None);
                 }
 
                 LoadReports(info.Type);
