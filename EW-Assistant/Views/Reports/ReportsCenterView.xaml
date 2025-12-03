@@ -361,6 +361,19 @@
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding SelectedReport}" Value="{x:Null}">
                                                 <Setter Property="IsEnabled" Value="False"/>
+                                            <Setter Property="Opacity" Value="0.6"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                            <Button Content="重新生成"
+                                    Click="RegenerateButton_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedReport}" Value="{x:Null}">
+                                                <Setter Property="IsEnabled" Value="False"/>
                                                 <Setter Property="Opacity" Value="0.6"/>
                                             </DataTrigger>
                                         </Style.Triggers>

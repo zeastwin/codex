@@ -78,6 +78,7 @@ namespace EW_Assistant
         private readonly ReportStorageService _reportStorage = new ReportStorageService();
         private readonly ReportGeneratorService _reportGenerator;
         private readonly ReportScheduler _reportScheduler;
+        private readonly CancellationTokenSource _reportSchedulerCts = new CancellationTokenSource();
         public MainWindow()
         {
             InitializeComponent();
@@ -96,6 +97,7 @@ namespace EW_Assistant
             Application.Current.Exit += (_, __) =>
             {
                 try { _serverCts.Cancel(); } catch { }
+                try { _reportSchedulerCts.Cancel(); } catch { }
                 Net.WorkHttpServer.Instance.Stop();
                 _mcpHost.Stop(LogMcpMessage);
             };
@@ -120,6 +122,7 @@ namespace EW_Assistant
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             await InitializeReportsAsync();
+            _ = StartReportSchedulerLoopAsync();
         }
 
         private async Task InitializeReportsAsync()
@@ -137,6 +140,35 @@ namespace EW_Assistant
             catch (Exception ex)
             {
                 PostProgramInfo("报表初始化失败：" + ex.Message, "warn");
+            }
+        }
+
+        private async Task StartReportSchedulerLoopAsync()
+        {
+            var token = _reportSchedulerCts.Token;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    await _reportScheduler.EnsureBasicReportsAsync(token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    PostProgramInfo("自动检查报表失败：" + ex.Message, "warn");
+                }
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(30), token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
         }
         // === 关键：修正无边框窗口最大化时的区域 ===

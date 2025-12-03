@@ -252,20 +252,15 @@
                         </VisualStateManager.VisualStateGroups>
                     </Grid>
                 </Border>
-                <ControlTemplate.Triggers>
-                    <!-- 悬停兜底：即便状态机失效也能变色 -->
-                    <MultiTrigger>
-                        <MultiTrigger.Conditions>
-                            <Condition Property="IsMouseOver" Value="True"/>
-                            <Condition Property="IsChecked" Value="False"/>
-                        </MultiTrigger.Conditions>
-                        <Setter TargetName="Pill" Property="Background" Value="#DFE7FF"/>
-                        <Setter TargetName="IconCircle" Property="Fill" Value="#E8EEFF"/>
-                        <Setter TargetName="IconCircle" Property="Stroke" Value="#698AEC"/>
-                        <Setter TargetName="Glyph" Property="Foreground" Value="#3250B0"/>
-                        <Setter TargetName="Label" Property="Foreground" Value="#0B1220"/>
-                    </MultiTrigger>
-                </ControlTemplate.Triggers>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="#DFE7FF"/>
+                                <Setter TargetName="IconCircle" Property="Fill" Value="#E8EEFF"/>
+                                <Setter TargetName="IconCircle" Property="Stroke" Value="#698AEC"/>
+                                <Setter TargetName="Glyph" Property="Foreground" Value="#3250B0"/>
+                                <Setter TargetName="Label" Property="Foreground" Value="#0B1220"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
             </ControlTemplate>
         </Setter.Value>
     </Setter>

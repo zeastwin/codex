@@ -44,7 +44,7 @@ namespace EW_Assistant.Services.Reports
             return await GenerateWeeklyAsync(ReportType.WeeklyAlarm, start, endDate.Date, token, ReportPromptBuilder.BuildWeeklyAlarmPrompt(endDate)).ConfigureAwait(false);
         }
 
-        private async Task<ReportInfo> GenerateDailyAsync(ReportType type, DateTime date, CancellationToken token, string prompt)
+        internal async Task<ReportInfo> GenerateDailyAsync(ReportType type, DateTime date, CancellationToken token, string prompt = null)
         {
             try
             {
@@ -56,7 +56,7 @@ namespace EW_Assistant.Services.Reports
                 }
 
                 token.ThrowIfCancellationRequested();
-                var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
+                var md = await _llm.GenerateMarkdownAsync(prompt ?? ReportPromptBuilder.BuildDailyProdPrompt(date), token).ConfigureAwait(false);
                 var path = _storage.SaveReportContent(type, date.Date, md);
                 var info = _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, date.Date, null, path);
                 LogGeneration(type, date.Date, null, path, true, null, md);
@@ -73,7 +73,7 @@ namespace EW_Assistant.Services.Reports
             }
         }
 
-        private async Task<ReportInfo> GenerateWeeklyAsync(ReportType type, DateTime startDate, DateTime endDate, CancellationToken token, string prompt)
+        internal async Task<ReportInfo> GenerateWeeklyAsync(ReportType type, DateTime startDate, DateTime endDate, CancellationToken token, string prompt = null)
         {
             try
             {
@@ -85,6 +85,12 @@ namespace EW_Assistant.Services.Reports
                 }
 
                 token.ThrowIfCancellationRequested();
+                if (prompt == null)
+                {
+                    prompt = type == ReportType.WeeklyProd
+                        ? ReportPromptBuilder.BuildWeeklyProdPrompt(endDate)
+                        : ReportPromptBuilder.BuildWeeklyAlarmPrompt(endDate);
+                }
                 var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
                 var path = _storage.SaveReportContent(type, startDate.Date, endDate.Date, md);
                 var info = _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, startDate.Date, endDate.Date, path);

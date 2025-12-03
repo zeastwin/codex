@@ -105,6 +105,26 @@ namespace EW_Assistant.Views.Reports
             }
         }
 
+        private async void RegenerateButton_Click(object sender, RoutedEventArgs e)
+        {
+            var info = _viewModel.SelectedReport;
+            if (info == null)
+            {
+                MessageBox.Show("请选择要重新生成的报表。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                await _viewModel.RegenerateAsync(info);
+                MessageBox.Show("重新生成完成。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("重新生成失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void ReportList_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
             var sv = FindScrollViewer(sender as DependencyObject);

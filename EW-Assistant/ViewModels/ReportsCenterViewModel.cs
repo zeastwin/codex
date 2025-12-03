@@ -85,6 +85,44 @@ namespace EW_Assistant.ViewModels
             LoadReports(type);
         }
 
+        /// <summary>人工触发：按当前选中项重新生成。</summary>
+        public async Task RegenerateAsync(ReportInfo info)
+        {
+            if (info == null) return;
+            if (IsBusy) return;
+
+            IsBusy = true;
+            try
+            {
+                ReportInfo generated = null;
+                if (info.Type == ReportType.DailyProd || info.Type == ReportType.DailyAlarm)
+                {
+                    var date = info.Date ?? DateTime.Today;
+                    generated = await _generator.GenerateDailyAsync(info.Type, date, CancellationToken.None);
+                }
+                else if (info.Type == ReportType.WeeklyProd || info.Type == ReportType.WeeklyAlarm)
+                {
+                    var start = info.StartDate ?? DateTime.Today.AddDays(-6);
+                    var end = info.EndDate ?? DateTime.Today;
+                    generated = await _generator.GenerateWeeklyAsync(info.Type, start, end, CancellationToken.None);
+                }
+
+                LoadReports(info.Type);
+                if (generated != null)
+                {
+                    var target = FindMatchingReport(generated);
+                    if (target != null)
+                    {
+                        SelectedReport = target;
+                    }
+                }
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
         /// <summary>
         /// 触发生成报表并刷新列表。
         /// </summary>

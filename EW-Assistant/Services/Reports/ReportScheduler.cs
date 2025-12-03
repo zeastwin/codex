@@ -33,6 +33,11 @@ namespace EW_Assistant.Services.Reports
             for (int i = 2; i >= 0; i--)
             {
                 var date = today.AddDays(-i);
+                if (date >= today)
+                {
+                    continue; // 当天尚未结束，跳过
+                }
+
                 await EnsureDailyAsync(ReportType.DailyProd, date, token).ConfigureAwait(false);
                 await EnsureDailyAsync(ReportType.DailyAlarm, date, token).ConfigureAwait(false);
             }
