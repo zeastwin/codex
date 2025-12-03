@@ -103,6 +103,8 @@ namespace EW_Assistant.ViewModels
 
             ReportInfo generated = null;
             var today = DateTime.Today;
+            var prevWeekStart = GetPreviousWeekStart(today);
+            var prevWeekEnd = prevWeekStart.AddDays(6);
 
             try
             {
@@ -121,15 +123,15 @@ namespace EW_Assistant.ViewModels
                 }
                 else if (type == ReportType.WeeklyProd)
                 {
-                    needGenerate = !_storage.WeeklyReportExists(type, today);
+                    needGenerate = !_storage.WeeklyReportExists(type, prevWeekEnd);
                     if (needGenerate)
-                        generated = await _generator.GenerateWeeklyProdAsync(today, cts.Token);
+                        generated = await _generator.GenerateWeeklyProdAsync(prevWeekEnd, cts.Token);
                 }
                 else if (type == ReportType.WeeklyAlarm)
                 {
-                    needGenerate = !_storage.WeeklyReportExists(type, today);
+                    needGenerate = !_storage.WeeklyReportExists(type, prevWeekEnd);
                     if (needGenerate)
-                        generated = await _generator.GenerateWeeklyAlarmAsync(today, cts.Token);
+                        generated = await _generator.GenerateWeeklyAlarmAsync(prevWeekEnd, cts.Token);
                 }
 
                 LoadReports(type);
@@ -283,6 +285,15 @@ namespace EW_Assistant.ViewModels
             return Reports.FirstOrDefault(r =>
                 (!string.IsNullOrWhiteSpace(generated.Id) && string.Equals(r.Id, generated.Id, StringComparison.OrdinalIgnoreCase)) ||
                 (!string.IsNullOrWhiteSpace(generated.FilePath) && string.Equals(r.FilePath, generated.FilePath, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private DateTime GetPreviousWeekStart(DateTime referenceDate)
+        {
+            var day = referenceDate.Date;
+            int diff = (int)day.DayOfWeek - (int)DayOfWeek.Monday;
+            if (diff < 0) diff += 7;
+            var currentWeekStart = day.AddDays(-diff);
+            return currentWeekStart.AddDays(-7);
         }
     }
 }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using EW_Assistant.Domain.Reports;
+using EW_Assistant;
 
 namespace EW_Assistant.Services.Reports
 {
@@ -89,16 +90,24 @@ namespace EW_Assistant.Services.Reports
                 var files = Directory.GetFiles(dir, "*.md", SearchOption.TopDirectoryOnly);
                 foreach (var file in files)
                 {
-                    var info = ParseReportInfo(type, file);
-                    if (info != null)
+                    try
                     {
-                        list.Add(info);
+                        var info = ParseReportInfo(type, file);
+                        if (info != null)
+                        {
+                            list.Add(info);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogScanIssue("解析报表文件失败：" + file + "，原因：" + ex.Message);
                     }
                 }
             }
             catch
             {
                 // 扫描失败时返回已收集的数据，避免影响 UI。
+                LogScanIssue("扫描报表目录失败：" + type);
             }
 
             return SortReports(list).ToList();
@@ -375,6 +384,18 @@ namespace EW_Assistant.Services.Reports
             catch
             {
                 return 0;
+            }
+        }
+
+        private void LogScanIssue(string message)
+        {
+            try
+            {
+                MainWindow.PostProgramInfo(message, "warn");
+            }
+            catch
+            {
+                // 吞掉日志异常，避免影响 UI
             }
         }
 

@@ -166,20 +166,20 @@ namespace EW_Assistant.Services.Reports
             return sb.ToString().Replace("{DATE}", dateStr);
         }
 
-        public static string BuildWeeklyProdPrompt(DateTime endDate)
+        public static string BuildWeeklyProdPrompt(DateTime endDate, DateTime? startDateOverride = null)
         {
             var end = endDate.Date;
-            var start = end.AddDays(-6);
+            var start = startDateOverride?.Date ?? end.AddDays(-6);
             var endStr = end.ToString("yyyy-MM-dd");
             var startStr = start.ToString("yyyy-MM-dd");
-            var range = startStr + " ~ " + endStr;
+            var range = startStr + " ~ " + endStr + "（上一自然周，周一至周日）";
 
             var sb = new StringBuilder();
 
-            sb.AppendLine(string.Format("请输出 **{0}（最近7天）** 的产能周报，必须使用 Markdown，禁止 JSON、原始日志或随意发挥。", range));
+            sb.AppendLine(string.Format("请输出 **{0}** 的产能周报（上一自然周，周一 00:00 至 周日 23:59），必须使用 Markdown，禁止 JSON、原始日志或随意发挥。", range));
             sb.AppendLine();
             sb.AppendLine("请按以下步骤执行：");
-            sb.AppendLine(string.Format("1) 仅调用 MCP 工具 GetWeeklyProductionSummary(endDate=\"{0}\")，取得 `summary`（pass/fail/total/yield/avgYield/medianTotal/volatility/lastDay/lastDayDelta/bestDays/worstDays）、`days`（逐日明细）以及 `warnings`。", endStr));
+            sb.AppendLine(string.Format("1) 仅调用 MCP 工具 GetWeeklyProductionSummary(endDate=\"{0}\")，取得上一周（周一~周日）的 `summary`（pass/fail/total/yield/avgYield/medianTotal/volatility/lastDay/lastDayDelta/bestDays/worstDays）、`days`（逐日明细）以及 `warnings`。", endStr));
             sb.AppendLine("2) 所有周度 KPI 必须直接引用 summary；日度表格数据来自 days，不得自行演算或猜测缺失字段。");
             sb.AppendLine("3) 若 warnings 不为空或某天缺 CSV，须在“异常/缺失”章节逐条说明，并在日度表中标注原因。");
             sb.AppendLine("4) 基于 bestDays / worstDays / lastDayDelta 给出有洞见的亮点、薄弱点与改进建议，尽量结合具体日期与数值。");
@@ -221,17 +221,19 @@ namespace EW_Assistant.Services.Reports
             return sb.ToString();
         }
 
-        public static string BuildWeeklyAlarmPrompt(DateTime endDate)
+        public static string BuildWeeklyAlarmPrompt(DateTime endDate, DateTime? startDateOverride = null)
         {
-            var endStr = endDate.ToString("yyyy-MM-dd");
-            var startStr = endDate.AddDays(-6).ToString("yyyy-MM-dd");
-            var range = startStr + " ~ " + endStr;
+            var end = endDate.Date;
+            var start = startDateOverride?.Date ?? end.AddDays(-6);
+            var endStr = end.ToString("yyyy-MM-dd");
+            var startStr = start.ToString("yyyy-MM-dd");
+            var range = startStr + " ~ " + endStr + "（上一自然周，周一至周日）";
             var sb = new StringBuilder();
 
-            sb.AppendLine(string.Format("请输出 **{0}（最近7天）** 的报警周报，仅允许 Markdown 表达，禁止 JSON / 原始日志 / 代码块里的 JSON。", range));
+            sb.AppendLine(string.Format("请输出 **{0}** 的报警周报（上一自然周，周一 00:00 至 周日 23:59），仅允许 Markdown 表达，禁止 JSON / 原始日志 / 代码块里的 JSON。", range));
             sb.AppendLine();
             sb.AppendLine("数据准备：");
-            sb.AppendLine(string.Format("1) 调用 `ProdAlarmTools.GetAlarmImpactSummary(startDate=\"{0}\", endDate=\"{1}\", window=\"\")`，得到：", startStr, endStr));
+            sb.AppendLine(string.Format("1) 调用 `ProdAlarmTools.GetAlarmImpactSummary(startDate=\"{0}\", endDate=\"{1}\", window=\"\")`，得到上一自然周的：", startStr, endStr));
             sb.AppendLine("   - `weeklyTotals.alarmSeconds`：周度去重后的报警总时长（秒，按小时并集 ≤24*3600*7，用于衡量设备真实挂报警时间）；");
             sb.AppendLine("   - `weeklyTotals.activeHours`：有报警秒数的小时数（覆盖小时数）；");
             sb.AppendLine("   - `weeklyTotals.lowYieldRowCount`：低良率小时条数（= lowYield.rows.Count）；");
@@ -240,7 +242,7 @@ namespace EW_Assistant.Services.Reports
             sb.AppendLine("   - `lowYield.rows`：低良率小时明细（含 `date / hour / total / yield / alarmSeconds / alarmCount / topAlarmCode / topAlarmSeconds`）；");
             sb.AppendLine("   - `lowYield.topAlarmCodes`：在低良率时段中累计时长靠前的报警代码。");
             sb.AppendLine();
-            sb.AppendLine(string.Format("2) 调用 `AlarmCsvTools.GetAlarmRangeWindowSummary(startDate=\"{0}\", endDate=\"{1}\", window=\"\", topN=10, sortBy=\"duration\")`，得到：", startStr, endStr));
+            sb.AppendLine(string.Format("2) 调用 `AlarmCsvTools.GetAlarmRangeWindowSummary(startDate=\"{0}\", endDate=\"{1}\", window=\"\", topN=10, sortBy=\"duration\")`，得到上一自然周的：", startStr, endStr));
             sb.AppendLine("   - `totals.count`：报警记录条数（统计口径：CSV 明细行数）；");
             sb.AppendLine("   - `totals.durationSeconds`：报警记录累计时长（可能大于实际时间，用于类别占比和 Top 排序）；");
             sb.AppendLine("   - `byCategory`：各类别的次数 / 时长及占比；");

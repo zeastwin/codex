@@ -21,15 +21,18 @@ namespace EW_Assistant.Services.Reports
         }
 
         /// <summary>
-        /// 确保当天的两份日报与最近 7 天的两份周报已生成，异常仅记录不抛出。
+        /// 确保当天的两份日报与上一自然周的两份周报已生成，异常仅记录不抛出。
         /// </summary>
         public async Task EnsureBasicReportsAsync(CancellationToken token = default(CancellationToken))
         {
             var today = DateTime.Today;
+            var weekStart = GetPreviousWeekStart(today);
+            var weekEnd = weekStart.AddDays(6);
+
             await EnsureDailyAsync(ReportType.DailyProd, today, token).ConfigureAwait(false);
             await EnsureDailyAsync(ReportType.DailyAlarm, today, token).ConfigureAwait(false);
-            await EnsureWeeklyAsync(ReportType.WeeklyProd, today, token).ConfigureAwait(false);
-            await EnsureWeeklyAsync(ReportType.WeeklyAlarm, today, token).ConfigureAwait(false);
+            await EnsureWeeklyAsync(ReportType.WeeklyProd, weekStart, weekEnd, token).ConfigureAwait(false);
+            await EnsureWeeklyAsync(ReportType.WeeklyAlarm, weekStart, weekEnd, token).ConfigureAwait(false);
         }
 
         private async Task EnsureDailyAsync(ReportType type, DateTime date, CancellationToken token)
@@ -60,12 +63,14 @@ namespace EW_Assistant.Services.Reports
             }
         }
 
-        private async Task EnsureWeeklyAsync(ReportType type, DateTime endDate, CancellationToken token)
+        private async Task EnsureWeeklyAsync(ReportType type, DateTime startDate, DateTime endDate, CancellationToken token)
         {
             if (_storage.WeeklyReportExists(type, endDate))
             {
                 return;
             }
+
+            var rangeText = string.Format("{0:yyyy-MM-dd}~{1:yyyy-MM-dd}", startDate, endDate);
 
             try
             {
@@ -84,8 +89,18 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
-                Log("自动生成周报失败：" + ex.Message, "warn");
+                Log("自动生成周报失败（" + rangeText + "）： " + ex.Message, "warn");
             }
+        }
+
+        private DateTime GetPreviousWeekStart(DateTime referenceDate)
+        {
+            // 以周一为自然周起始
+            var day = referenceDate.Date;
+            int diff = (int)day.DayOfWeek - (int)DayOfWeek.Monday;
+            if (diff < 0) diff += 7;
+            var currentWeekStart = day.AddDays(-diff);
+            return currentWeekStart.AddDays(-7);
         }
 
         private void Log(string message, string level)
