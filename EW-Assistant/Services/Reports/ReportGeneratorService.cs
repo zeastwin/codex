@@ -30,13 +30,13 @@ namespace EW_Assistant.Services.Reports
             _weeklyAlarmCalculator = new WeeklyAlarmCalculator();
         }
 
-        public async Task<ReportInfo> GenerateDailyProdAsync(DateTime date, CancellationToken token = default(CancellationToken))
+        public async Task<ReportInfo> GenerateDailyProdAsync(DateTime date, CancellationToken token = default(CancellationToken), bool force = false)
         {
             try
             {
                 // 如果已存在，直接返回
                 var existing = _storage.GetDailyReportInfo(ReportType.DailyProd, date.Date);
-                if (existing != null)
+                if (!force && existing != null)
                 {
                     return existing;
                 }
@@ -64,12 +64,12 @@ namespace EW_Assistant.Services.Reports
             }
         }
 
-        public async Task<ReportInfo> GenerateDailyAlarmAsync(DateTime date, CancellationToken token = default(CancellationToken))
+        public async Task<ReportInfo> GenerateDailyAlarmAsync(DateTime date, CancellationToken token = default(CancellationToken), bool force = false)
         {
             try
             {
                 var existing = _storage.GetDailyReportInfo(ReportType.DailyAlarm, date.Date);
-                if (existing != null)
+                if (!force && existing != null)
                 {
                     return existing;
                 }
@@ -97,13 +97,13 @@ namespace EW_Assistant.Services.Reports
             }
         }
 
-        public async Task<ReportInfo> GenerateWeeklyProdAsync(DateTime endDate, CancellationToken token = default(CancellationToken))
+        public async Task<ReportInfo> GenerateWeeklyProdAsync(DateTime endDate, CancellationToken token = default(CancellationToken), bool force = false)
         {
             var start = endDate.Date.AddDays(-6);
             try
             {
                 var existing = _storage.GetWeeklyReportInfo(ReportType.WeeklyProd, endDate.Date);
-                if (existing != null)
+                if (!force && existing != null)
                 {
                     return existing;
                 }
@@ -131,13 +131,13 @@ namespace EW_Assistant.Services.Reports
             }
         }
 
-        public async Task<ReportInfo> GenerateWeeklyAlarmAsync(DateTime endDate, CancellationToken token = default(CancellationToken))
+        public async Task<ReportInfo> GenerateWeeklyAlarmAsync(DateTime endDate, CancellationToken token = default(CancellationToken), bool force = false)
         {
             var start = endDate.Date.AddDays(-6);
             try
             {
                 var existing = _storage.GetWeeklyReportInfo(ReportType.WeeklyAlarm, endDate.Date);
-                if (existing != null)
+                if (!force && existing != null)
                 {
                     return existing;
                 }

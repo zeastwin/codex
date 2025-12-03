@@ -84,7 +84,7 @@ namespace EW_Assistant.Views.Reports
             var dialog = new SaveFileDialog
             {
                 Filter = "Markdown 文件 (*.md)|*.md|所有文件 (*.*)|*.*",
-                FileName = "客户版_" + (info.FileName ?? "report.md"),
+                FileName = info.FileName ?? "report.md",
                 Title = "导出 Markdown"
             };
 
@@ -97,11 +97,11 @@ namespace EW_Assistant.Views.Reports
             string error;
             if (_viewModel.TryExportReport(info, dialog.FileName, out error))
             {
-                MessageBox.Show("导出成功。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MainWindow.PostProgramInfo("报表已导出：" + dialog.FileName, "ok");
             }
             else
             {
-                MessageBox.Show("导出失败：" + error, "提示", MessageBoxButton.OK, MessageBoxImage.Error);
+                MainWindow.PostProgramInfo("导出失败：" + error, "error");
             }
         }
 
@@ -110,18 +110,18 @@ namespace EW_Assistant.Views.Reports
             var info = _viewModel.SelectedReport;
             if (info == null)
             {
-                MessageBox.Show("请选择要重新生成的报表。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             try
             {
+                MainWindow.PostProgramInfo("开始重新生成报表：" + info.Title, "info");
                 await _viewModel.RegenerateAsync(info);
-                MessageBox.Show("重新生成完成。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MainWindow.PostProgramInfo("报表重新生成完成：" + info.Title, "ok");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("重新生成失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MainWindow.PostProgramInfo("重新生成失败：" + ex.Message, "error");
             }
         }
 

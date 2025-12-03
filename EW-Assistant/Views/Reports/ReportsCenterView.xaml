@@ -211,13 +211,6 @@
                                FontSize="13"
                                FontWeight="SemiBold"
                                Margin="12,0,0,0"/>
-                    <TextBlock Text="生成中..."
-                               VerticalAlignment="Center"
-                               Foreground="#DC2626"
-                               FontWeight="SemiBold"
-                               FontSize="12"
-                               Margin="8,0,0,0"
-                               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 </StackPanel>
             </DockPanel>
         </Border>

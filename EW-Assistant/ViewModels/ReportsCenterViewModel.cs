@@ -99,17 +99,17 @@ namespace EW_Assistant.ViewModels
                 {
                     var date = info.Date ?? DateTime.Today;
                     if (info.Type == ReportType.DailyProd)
-                        generated = await _generator.GenerateDailyProdAsync(date, CancellationToken.None);
+                        generated = await _generator.GenerateDailyProdAsync(date, CancellationToken.None, true);
                     else
-                        generated = await _generator.GenerateDailyAlarmAsync(date, CancellationToken.None);
+                        generated = await _generator.GenerateDailyAlarmAsync(date, CancellationToken.None, true);
                 }
                 else if (info.Type == ReportType.WeeklyProd || info.Type == ReportType.WeeklyAlarm)
                 {
                     var start = info.StartDate ?? DateTime.Today.AddDays(-6);
                     var end = info.EndDate ?? DateTime.Today;
                     generated = info.Type == ReportType.WeeklyProd
-                        ? await _generator.GenerateWeeklyProdAsync(end, CancellationToken.None)
-                        : await _generator.GenerateWeeklyAlarmAsync(end, CancellationToken.None);
+                        ? await _generator.GenerateWeeklyProdAsync(end, CancellationToken.None, true)
+                        : await _generator.GenerateWeeklyAlarmAsync(end, CancellationToken.None, true);
                 }
 
                 LoadReports(info.Type);

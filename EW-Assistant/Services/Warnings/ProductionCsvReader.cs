@@ -128,8 +128,13 @@ namespace EW_Assistant.Warnings
             foreach (var file in dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
                                     .OrderByDescending(f => f.LastWriteTime))
             {
-                if (file.LastWriteTime < start.AddDays(-1)) continue;
-                if (file.LastWriteTime > end.AddDays(1)) continue;
+                // 优先用文件名中的日期判断是否落在查询窗口附近，避免一次性扫描过多历史文件。
+                var fileDay = GuessDateFromFile(file.FullName).Date;
+                if (fileDay < start.Date.AddDays(-1) || fileDay > end.Date.AddDays(1))
+                {
+                    continue;
+                }
+
                 yield return file.FullName;
             }
         }
