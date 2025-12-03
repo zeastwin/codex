@@ -15,15 +15,34 @@ namespace EW_Assistant.Services
     {
         public sealed class DayData
         {
+            /// <summary>日期（仅日期部分）。</summary>
             public DateTime Date { get; set; }
+
+            /// <summary>是否未成功加载该日数据（文件缺失或解析失败）。</summary>
             public bool Missing { get; set; }
+
+            /// <summary>原始单表路径；分表模式下为 OK/NG 其中任意一个可用的路径。</summary>
             public string? FilePath { get; set; }
+
+            /// <summary>分表模式下 OK 表路径。</summary>
             public string? OkFilePath { get; set; }
+
+            /// <summary>分表模式下 NG 表路径。</summary>
             public string? NgFilePath { get; set; }
+
+            /// <summary>按小时聚合的良品数量（0-23）。</summary>
             public int[] HourPass { get; } = new int[24];
+
+            /// <summary>按小时聚合的不良数量（0-23）。</summary>
             public int[] HourFail { get; } = new int[24];
+
+            /// <summary>当日良品总数。</summary>
             public int SumPass => HourPass.Sum();
+
+            /// <summary>当日不良总数。</summary>
             public int SumFail => HourFail.Sum();
+
+            /// <summary>当日总产出。</summary>
             public int Total => SumPass + SumFail;
         }
 
@@ -38,7 +57,7 @@ namespace EW_Assistant.Services
         private static readonly string[] _splitNgHeaders = new[] { "抛料开始时间", "抛料时间", "抛料開始時間" };
 
         /// <summary>
-        /// 加载并缓存最近 N 天的产能 CSV；短时间内重复调用会复用缓存，force=true 时强制重读。
+        /// 加载并缓存最近 N 天的产能 CSV；短时间内重复调用会复用内存快照，force=true 时强制重读磁盘。
         /// </summary>
         public static void LoadRecent(string? root, string filePrefix, int days = 7, bool force = false)
         {
@@ -144,6 +163,9 @@ namespace EW_Assistant.Services
             return list;
         }
 
+        /// <summary>
+        /// 在单表模式下尝试定位指定日期的 CSV；支持 Watch 目录（yyyy-MM-dd 子目录）与根目录模糊匹配。
+        /// </summary>
         private static bool TrySeekCsv(string dir, string prefix, DateTime day, bool watchMode, out string? file)
         {
             file = null;
@@ -178,6 +200,9 @@ namespace EW_Assistant.Services
             }
         }
 
+        /// <summary>
+        /// 在分表模式下尝试定位 OK/NG 两个 CSV，任意存在即视为可加载。
+        /// </summary>
         private static bool TrySeekSplitCsv(string dir, DateTime day, bool watchMode, out string? okFile, out string? ngFile)
         {
             okFile = null; ngFile = null;
@@ -222,6 +247,9 @@ namespace EW_Assistant.Services
             }
         }
 
+        /// <summary>
+        /// 读取单表模式的产能 CSV，根据列名自适应 PASS/FAIL/HOUR 列并累加到 24 小时桶。
+        /// </summary>
         private static bool TryLoadDay(string file, DayData target)
         {
             Array.Clear(target.HourPass, 0, target.HourPass.Length);
@@ -267,6 +295,9 @@ namespace EW_Assistant.Services
             return true;
         }
 
+        /// <summary>
+        /// 读取拆分的 OK/NG 表，按记录时间聚合到 24 小时桶。
+        /// </summary>
         private static bool TryLoadDayFromSplit(string? okFile, string? ngFile, DateTime day, DayData target)
         {
             Array.Clear(target.HourPass, 0, target.HourPass.Length);
@@ -289,6 +320,9 @@ namespace EW_Assistant.Services
             return loaded;
         }
 
+        /// <summary>
+        /// 读取单条 OK/NG 记录表，按时间列归并到指定小时桶，忽略日期不匹配或解析失败的行。
+        /// </summary>
         private static void AggregateRecordFile(string file, string[] timeHeaders, DateTime day, int[] bucket)
         {
             Encoding enc;

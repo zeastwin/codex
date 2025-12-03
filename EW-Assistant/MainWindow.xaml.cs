@@ -26,13 +26,13 @@ namespace EW_Assistant
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
-        // 单例用于静态调用
+        /// <summary>全局唯一的主窗体实例，便于跨线程日志调用。</summary>
         public static MainWindow Instance { get; private set; }
 
-        // 绑定到 ListBox 的数据源
+        /// <summary>信息流列表的数据源，绑定到 UI。</summary>
         public ObservableCollection<ProgramInfoItem> InfoItems { get; } = new ObservableCollection<ProgramInfoItem>();
 
-        // 底部状态文本
+        /// <summary>底部状态栏文本。</summary>
         public string StatusText
         {
             get => _statusText;
@@ -44,7 +44,7 @@ namespace EW_Assistant
         }
         private string _statusText = "就绪";
 
-        // 当前页面标题
+        /// <summary>当前导航标题。</summary>
         public string CurrentPageTitle
         {
             get => _currentPageTitle;
@@ -58,6 +58,7 @@ namespace EW_Assistant
         }
         private string _currentPageTitle = "总览";
 
+        // 主导航映射：标签 -> 对应视图的工厂方法
         private readonly Dictionary<string, Func<UIElement>> _routes = new Dictionary<string, Func<UIElement>>()
         {
             ["总览"] = () => new DashboardView() ,
@@ -87,7 +88,7 @@ namespace EW_Assistant
             _reportGenerator = new ReportGeneratorService(_reportStorage, new LlmWorkflowClient());
             _reportScheduler = new ReportScheduler(_reportStorage, _reportGenerator);
 
-            // 启动 HTTP 服务（常驻）
+            // 启动常驻 HTTP 服务与 MCP 辅助进程
             _serverCts = new CancellationTokenSource();
             var prefix = "http://127.0.0.1:8091/";
             _ = Net.WorkHttpServer.Instance.StartAsync(prefix, _serverCts.Token);
@@ -102,13 +103,13 @@ namespace EW_Assistant
                 _mcpHost.Stop(LogMcpMessage);
             };
 
-            // ✅ 预创建 AI 助手页面：不加到 RightHost，但放入缓存
+            // 预创建 AI 助手页以提前初始化全局实例，避免首次打开时延迟
             if (!_viewCache.ContainsKey("AI助手"))
             {
                 var ai = new EW_Assistant.Views.AIAssistantView();  // 这一步会设置 GlobalInstance
                 _viewCache["AI助手"] = ai;
             }
-            // ✅ 预创建预警中心，使预警引擎启动时即加载，不必等待用户点击
+            // 预创建预警中心，使预警引擎启动时即加载，不必等待用户点击
             if (!_viewCache.ContainsKey("预警中心"))
             {
                 var warning = new WarningCenterView();
@@ -171,7 +172,7 @@ namespace EW_Assistant
                 }
             }
         }
-        // === 关键：修正无边框窗口最大化时的区域 ===
+        // 修正无边框窗口最大化时的可用区域，保证尊重工作区（去掉任务栏）
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
@@ -375,7 +376,7 @@ namespace EW_Assistant
 
         // ===== 日志相关静态字段 =====
         /// <summary>程序信息日志根目录。</summary>
-        private const string ProgramLogRoot = @"D:\Data\AiLog\UI\";   // 你可以改成自己习惯的路径
+        private const string ProgramLogRoot = @"D:\Data\AiLog\UI\";
 
         /// <summary>写日志的锁，防止多线程同时写同一个文件。</summary>
         private static readonly object _programLogLock = new object();
@@ -387,11 +388,11 @@ namespace EW_Assistant
         {
             try
             {
-                // 兜底
+                // 空值兜底，保证日志格式完整
                 if (message == null) message = string.Empty;
                 if (string.IsNullOrWhiteSpace(level)) level = "info";
 
-                // 准备目录 & 文件名（按天分文件）
+                // 准备目录与按天切分的文件名
                 Directory.CreateDirectory(ProgramLogRoot);
                 string fileName = DateTime.Now.ToString("yyyy-MM-dd") + ".log";
                 string filePath = Path.Combine(ProgramLogRoot, fileName);
@@ -411,15 +412,15 @@ namespace EW_Assistant
             }
             catch (Exception ex)
             {
-                // 日志失败绝对不能再影响主程序，这里只写 Debug 输出
+                // 日志失败不应影响主流程，这里仅落到调试输出
                 Debug.WriteLine("[ProgramLog] 写日志失败：" + ex.Message);
             }
         }
 
         // ===== 面向全程序开放的静态接口 =====
         /// <summary>
-        /// 从任意地方/线程抛信息到信息卡 + 落地到日志文件。
-        /// level: "info" | "ok" | "warn" | "error"
+        /// 跨线程安全地写入程序信息日志，同时投递到 UI 信息流。
+        /// level 参数可选："info" | "ok" | "warn" | "error"
         /// </summary>
         public static void PostProgramInfo(string message, string level = "info")
         {
@@ -507,21 +508,39 @@ namespace EW_Assistant
     {
         public DateTime Time { get; set; }
         public string Text { get; set; } = "";
-        /// <summary> "info" | "ok" | "warn" | "error" </summary>
+        /// <summary>等级："info" | "ok" | "warn" | "error"</summary>
         public string Level { get; set; } = "info";
     }
     public class DeviceBrief
     {
-        public string Name { get; set; }            // Handler#001
-        public string Model { get; set; }           // WS-3000A
-        public string Serial { get; set; }          // WS24-002-1156
-        public DateTime? InstallDate { get; set; }  // 2025-09-15
-        public double? RuntimeHours { get; set; }   // 运行小时
+        /// <summary>设备名称（展示用）。</summary>
+        public string Name { get; set; }
+
+        /// <summary>设备型号或机种。</summary>
+        public string Model { get; set; }
+
+        /// <summary>序列号或资产编号。</summary>
+        public string Serial { get; set; }
+
+        /// <summary>安装日期。</summary>
+        public DateTime? InstallDate { get; set; }
+
+        /// <summary>累积运行小时数。</summary>
+        public double? RuntimeHours { get; set; }
+
         public DateTime? LastMaintenance { get; set; }
         public DateTime? NextMaintenance { get; set; }
-        public string Owner { get; set; }           // 张工
-        public string OwnerPhone { get; set; }      // 13800138000
-        public string WarrantyStatus { get; set; }  // 在保 / 过保
-        public string Supplier { get; set; }        // 供应商
+
+        /// <summary>当前责任人。</summary>
+        public string Owner { get; set; }
+
+        /// <summary>责任人联系方式。</summary>
+        public string OwnerPhone { get; set; }
+
+        /// <summary>质保状态描述。</summary>
+        public string WarrantyStatus { get; set; }
+
+        /// <summary>供应商信息。</summary>
+        public string Supplier { get; set; }
     }
 }

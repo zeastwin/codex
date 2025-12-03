@@ -8,7 +8,7 @@ using EW_Assistant.Warnings;
 namespace EW_Assistant.Services.Reports
 {
     /// <summary>
-    /// 本地 CSV 计算当日产能数据。
+    /// 本地 CSV 计算当日产能数据，补齐 24 小时缺口并标记峰值/低谷/停机区间。
     /// </summary>
     public class DailyProdCalculator
     {
@@ -19,6 +19,9 @@ namespace EW_Assistant.Services.Reports
             _reader = reader ?? new ProductionCsvReader();
         }
 
+        /// <summary>
+        /// 汇总指定日期的小时级产能数据，并生成标签、峰谷、停机等辅助信息。
+        /// </summary>
         public DailyProdData Calculate(DateTime date)
         {
             var data = new DailyProdData
@@ -33,6 +36,7 @@ namespace EW_Assistant.Services.Reports
                 var rows = _reader.GetProductionRange(start, end) ?? new List<ProductionHourRecord>();
 
                 var hours = new List<DailyProdHourStat>();
+                // 固定补齐 0-23 点，缺失小时填 0，避免后续图表出现断层
                 for (int h = 0; h < 24; h++)
                 {
                     var rec = rows.FirstOrDefault(r => r.Hour.Hour == h);
@@ -76,6 +80,9 @@ namespace EW_Assistant.Services.Reports
             return data;
         }
 
+        /// <summary>
+        /// 计算变异系数（标准差/均值），用于衡量产能波动。
+        /// </summary>
         private static double CalculateCv(IEnumerable<int> values)
         {
             var arr = values?.ToList() ?? new List<int>();
@@ -87,6 +94,9 @@ namespace EW_Assistant.Services.Reports
             return stddev / mean;
         }
 
+        /// <summary>
+        /// 选取非零小时的前 3 个峰值与低谷，供 UI 标记。
+        /// </summary>
         private static void MarkPeaksAndValleys(IList<DailyProdHourStat> hours, DailyProdData data)
         {
             var nonZero = hours.Where(h => h.Total > 0).OrderByDescending(h => h.Total).ToList();
@@ -94,6 +104,9 @@ namespace EW_Assistant.Services.Reports
             data.ValleyHours = nonZero.OrderBy(h => h.Total).Take(3).ToList();
         }
 
+        /// <summary>
+        /// 检测连续无产出的时段，输出按时长降序的停机窗口。
+        /// </summary>
         private static IList<DowntimeWindow> DetectDowntimes(IList<DailyProdHourStat> hours)
         {
             var list = new List<DowntimeWindow>();
@@ -132,6 +145,9 @@ namespace EW_Assistant.Services.Reports
             return list.OrderByDescending(d => d.DurationHours).ThenBy(d => d.StartHour).ToList();
         }
 
+        /// <summary>
+        /// 为每个小时打上业务标签（停机/峰值/低谷/低良率/稳定）。
+        /// </summary>
         private static void ApplyTags(IList<DailyProdHourStat> hours)
         {
             var peakHours = hours.Where(h => h.Total > 0).OrderByDescending(h => h.Total).Take(3).Select(h => h.Hour).ToHashSet();
@@ -164,7 +180,7 @@ namespace EW_Assistant.Services.Reports
     }
 
     /// <summary>
-    /// 本地 CSV 计算当日报警数据（对齐 MCP 使用的 AlarmCsvReader + 产能合并）。
+    /// 本地 CSV 计算当日报警数据，并与产能数据对齐，用于报表/看板展示。
     /// </summary>
     public class DailyAlarmCalculator
     {
@@ -177,6 +193,9 @@ namespace EW_Assistant.Services.Reports
             _prodReader = prodReader ?? new ProductionCsvReader();
         }
 
+        /// <summary>
+        /// 汇总指定日期的报警与产能，补齐 24 小时空窗并计算均值、峰值等指标。
+        /// </summary>
         public DailyAlarmData Calculate(DateTime date)
         {
             var data = new DailyAlarmData { Date = date.Date };
@@ -249,6 +268,9 @@ namespace EW_Assistant.Services.Reports
             return data;
         }
 
+        /// <summary>
+        /// 按报警时长、均值为小时记录打标签，便于快速辨识高频/长短报警。
+        /// </summary>
         private static void ApplyAlarmTags(IList<DailyAlarmHourStat> hours)
         {
             var nonZero = hours.Where(h => h.AlarmSeconds > 0).OrderByDescending(h => h.AlarmSeconds).Take(3).Select(h => h.Hour).ToHashSet();
@@ -273,6 +295,9 @@ namespace EW_Assistant.Services.Reports
 
     internal static class DailyAlarmStatExtensions
     {
+        /// <summary>
+        /// 计算当前小时的单次平均报警时长（秒），无报警时返回 0。
+        /// </summary>
         public static double AvgSeconds(this DailyAlarmHourStat h)
         {
             if (h == null || h.AlarmCount <= 0) return 0d;
@@ -281,7 +306,7 @@ namespace EW_Assistant.Services.Reports
     }
 
     /// <summary>
-    /// 本地计算周产能（对齐 GetWeeklyProductionSummary 的字段）。
+    /// 本地计算周产能，输出与 MCP 工具一致的字段（总量、均值、波动、峰谷）。
     /// </summary>
     public class WeeklyProdCalculator
     {
@@ -292,6 +317,9 @@ namespace EW_Assistant.Services.Reports
             _reader = reader ?? new ProductionCsvReader();
         }
 
+        /// <summary>
+        /// 汇总起止日期（含）之间的每日产能，计算均值/中位数/波动率等统计。
+        /// </summary>
         public WeeklyProdData Calculate(DateTime start, DateTime end)
         {
             var data = new WeeklyProdData
@@ -384,7 +412,7 @@ namespace EW_Assistant.Services.Reports
     }
 
     /// <summary>
-    /// 本地计算报警周报数据，对齐 MCP 读取方式。
+    /// 本地计算报警周报数据，对齐 MCP 读取方式，输出 TopN 与每日汇总。
     /// </summary>
     public class WeeklyAlarmCalculator
     {
