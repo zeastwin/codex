@@ -1,8 +1,10 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using EW_Assistant.Domain.Reports;
+using EW_Assistant;
 
 namespace EW_Assistant.Services.Reports
 {
@@ -49,7 +51,9 @@ namespace EW_Assistant.Services.Reports
                 token.ThrowIfCancellationRequested();
                 var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
                 var path = _storage.SaveReportContent(type, date.Date, md);
-                return _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, date.Date, null, path);
+                var info = _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, date.Date, null, path);
+                LogGeneration(type, date.Date, null, path, true, null, md);
+                return info;
             }
             catch (OperationCanceledException)
             {
@@ -57,6 +61,7 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
+                LogGeneration(type, date.Date, null, null, false, ex.Message, null);
                 throw new ReportGenerationException("生成日报失败：" + ex.Message, ex);
             }
         }
@@ -68,7 +73,9 @@ namespace EW_Assistant.Services.Reports
                 token.ThrowIfCancellationRequested();
                 var md = await _llm.GenerateMarkdownAsync(prompt, token).ConfigureAwait(false);
                 var path = _storage.SaveReportContent(type, startDate.Date, endDate.Date, md);
-                return _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, startDate.Date, endDate.Date, path);
+                var info = _storage.GetReportInfoByPath(type, path) ?? BuildFallbackInfo(type, startDate.Date, endDate.Date, path);
+                LogGeneration(type, startDate.Date, endDate.Date, path, true, null, md);
+                return info;
             }
             catch (OperationCanceledException)
             {
@@ -76,6 +83,7 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
+                LogGeneration(type, startDate.Date, endDate.Date, null, false, ex.Message, null);
                 throw new ReportGenerationException("生成周报失败：" + ex.Message, ex);
             }
         }
@@ -133,6 +141,77 @@ namespace EW_Assistant.Services.Reports
             if (size >= OneM) return string.Format("{0:0.##} MB", size / OneM);
             if (size >= OneK) return string.Format("{0:0.##} KB", size / OneK);
             return size + " B";
+        }
+
+        /// <summary>记录生成日志，失败不抛出。</summary>
+        private void LogGeneration(ReportType type, DateTime start, DateTime? end, string path, bool success, string message, string content)
+        {
+            try
+            {
+                var display = _storage.GetTypeDisplayName(type);
+                var sb = new StringBuilder();
+                sb.Append(success ? "[生成完成] " : "[生成失败] ");
+                sb.Append(display);
+
+                if (type == ReportType.DailyProd || type == ReportType.DailyAlarm)
+                {
+                    sb.Append(" ").Append(start.ToString("yyyy-MM-dd"));
+                }
+                else if (end.HasValue)
+                {
+                    sb.Append(" ").Append(start.ToString("yyyy-MM-dd")).Append("~").Append(end.Value.ToString("yyyy-MM-dd"));
+                }
+
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    sb.Append(" | 文件: ").Append(path);
+                }
+
+                if (!string.IsNullOrWhiteSpace(message))
+                {
+                    sb.Append(" | 详情: ").Append(message);
+                }
+
+                // 写入程序日志（含文件落盘），避免影响主流程
+                MainWindow.PostProgramInfo(sb.ToString(), success ? "info" : "warn");
+                AppendLocalReportLog(sb.ToString(), content);
+            }
+            catch
+            {
+                // 绝不让日志异常影响生成流程
+            }
+        }
+
+        private void AppendLocalReportLog(string line, string content)
+        {
+            try
+            {
+                var dir = Path.Combine(@"D:\Data", "AiLog", "Reports");
+                Directory.CreateDirectory(dir);
+                var fileName = "report-" + DateTime.Now.ToString("yyyy-MM-dd") + ".log";
+                var path = Path.Combine(dir, fileName);
+                var sb = new StringBuilder();
+                sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] ", DateTime.Now);
+                sb.Append(line ?? string.Empty);
+                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    sb.AppendLine("==== 报表内容 ====");
+                    sb.AppendLine(content.Trim());
+                    sb.AppendLine("==== 结束 ====");
+                }
+
+                using (var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                using (var sw = new StreamWriter(fs, new UTF8Encoding(false)))
+                {
+                    sw.WriteLine(sb.ToString());
+                    sw.Flush();
+                }
+            }
+            catch
+            {
+                // 文件日志失败静默
+            }
         }
     }
 

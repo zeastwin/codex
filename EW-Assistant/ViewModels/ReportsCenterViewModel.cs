@@ -102,24 +102,34 @@ namespace EW_Assistant.ViewModels
             CurrentReportTypeName = _storage.GetTypeDisplayName(type);
 
             ReportInfo generated = null;
+            var today = DateTime.Today;
 
             try
             {
+                var needGenerate = true;
                 if (type == ReportType.DailyProd)
                 {
-                    generated = await _generator.GenerateDailyProdAsync(DateTime.Today, cts.Token);
+                    needGenerate = !_storage.DailyReportExists(type, today);
+                    if (needGenerate)
+                        generated = await _generator.GenerateDailyProdAsync(today, cts.Token);
                 }
                 else if (type == ReportType.DailyAlarm)
                 {
-                    generated = await _generator.GenerateDailyAlarmAsync(DateTime.Today, cts.Token);
+                    needGenerate = !_storage.DailyReportExists(type, today);
+                    if (needGenerate)
+                        generated = await _generator.GenerateDailyAlarmAsync(today, cts.Token);
                 }
                 else if (type == ReportType.WeeklyProd)
                 {
-                    generated = await _generator.GenerateWeeklyProdAsync(DateTime.Today, cts.Token);
+                    needGenerate = !_storage.WeeklyReportExists(type, today);
+                    if (needGenerate)
+                        generated = await _generator.GenerateWeeklyProdAsync(today, cts.Token);
                 }
                 else if (type == ReportType.WeeklyAlarm)
                 {
-                    generated = await _generator.GenerateWeeklyAlarmAsync(DateTime.Today, cts.Token);
+                    needGenerate = !_storage.WeeklyReportExists(type, today);
+                    if (needGenerate)
+                        generated = await _generator.GenerateWeeklyAlarmAsync(today, cts.Token);
                 }
 
                 LoadReports(type);
@@ -130,6 +140,11 @@ namespace EW_Assistant.ViewModels
                     {
                         SelectedReport = target;
                     }
+                }
+                else if (!needGenerate && Reports.Count > 0)
+                {
+                    // 已存在则选择最新一条
+                    SelectedReport = Reports[0];
                 }
             }
             catch (OperationCanceledException)
