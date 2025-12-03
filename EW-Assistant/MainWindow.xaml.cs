@@ -1,5 +1,6 @@
 using EW_Assistant.Views;
 using EW_Assistant.Views.Inventory;
+using EW_Assistant.Views.Reports;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -63,6 +64,7 @@ namespace EW_Assistant
             ["AI文档"] = () => new DocumentAiView(),
             ["产能看板"] = () => new ProductionBoardView(),
             ["报警看板"] = () => new AlarmView(),
+            ["报表中心"] = () => new ReportsCenterView(),
             ["预警中心"] = () => new WarningCenterView(),
             ["机台控制"] = () => new MachineControl(),
             ["库存管理"] = () => new InventoryView(),

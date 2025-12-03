@@ -1,0 +1,203 @@
+<UserControl x:Class="EW_Assistant.Views.Reports.ReportsCenterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:md="clr-namespace:MdXaml;assembly=MdXaml"
+             mc:Ignorable="d"
+             d:DesignHeight="720"
+             d:DesignWidth="1200"
+             Background="#F3F4F6"
+             FontFamily="Microsoft YaHei UI, Microsoft YaHei"
+             FontSize="14">
+    <UserControl.Resources>
+        <Style x:Key="PillButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinWidth" Value="132"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Padding" Value="16,0"/>
+            <Setter Property="Background" Value="#F3F6FF"/>
+            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                CornerRadius="18"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E1E9FF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#90A4F4"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#CBD7FF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#6B82F3"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#12000000" BlurRadius="12" ShadowDepth="2" Opacity="0.28"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部报表类型选择 -->
+        <Border Grid.Row="0"
+                Background="#F8FAFC"
+                BorderBrush="#E5E7EB"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="12"
+                Margin="0,0,0,10">
+            <DockPanel LastChildFill="False">
+                <TextBlock Text="报表类型"
+                           VerticalAlignment="Center"
+                           Foreground="#4B5563"
+                           FontWeight="SemiBold"
+                           Margin="0,0,12,0"/>
+                <WrapPanel DockPanel.Dock="Left">
+                    <Button Content="当日产能报表"
+                            Style="{StaticResource PillButtonStyle}"
+                            Click="DailyProdButton_Click"/>
+                    <Button Content="产能周报"
+                            Style="{StaticResource PillButtonStyle}"
+                            Click="WeeklyProdButton_Click"/>
+                    <Button Content="当日报警报表"
+                            Style="{StaticResource PillButtonStyle}"
+                            Click="DailyAlarmButton_Click"/>
+                    <Button Content="报警周报"
+                            Style="{StaticResource PillButtonStyle}"
+                            Click="WeeklyAlarmButton_Click"/>
+                </WrapPanel>
+                <TextBlock DockPanel.Dock="Right"
+                           Text="{Binding CurrentReportType}"
+                           VerticalAlignment="Center"
+                           Foreground="#111827"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Margin="12,0,0,0"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 主体：左侧列表 + 右侧 Markdown 预览 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,8">
+                        <TextBlock Text="报表列表"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0B1220"/>
+                    </DockPanel>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding ReportItems}"
+                             SelectedItem="{Binding SelectedReport, Mode=TwoWay}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Padding="0"
+                             FontSize="14"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="8,6"/>
+                                <Setter Property="Margin" Value="0,2,0,2"/>
+                                <Setter Property="Background" Value="#F9FAFB"/>
+                                <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Bd"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="10">
+                                                <ContentPresenter VerticalAlignment="Center" Margin="8,4"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#EEF2FF"/>
+                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#C7D2FE"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#E0E7FF"/>
+                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#818CF8"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                        <TextBlock Text="报表预览" FontSize="16" FontWeight="SemiBold" Foreground="#0B1220"/>
+                        <TextBlock Text="（示例 Markdown，占位显示）"
+                                   FontSize="12"
+                                   Foreground="#6B7280"
+                                   Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <md:MarkdownScrollViewer Grid.Row="1"
+                                             Markdown="{Binding PreviewMarkdown}"
+                                             Background="White"
+                                             BorderThickness="0"
+                                             Padding="6"
+                                             VerticalScrollBarVisibility="Auto"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
