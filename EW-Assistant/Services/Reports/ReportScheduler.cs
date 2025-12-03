@@ -29,8 +29,14 @@ namespace EW_Assistant.Services.Reports
             var weekStart = GetPreviousWeekStart(today);
             var weekEnd = weekStart.AddDays(6);
 
-            await EnsureDailyAsync(ReportType.DailyProd, today, token).ConfigureAwait(false);
-            await EnsureDailyAsync(ReportType.DailyAlarm, today, token).ConfigureAwait(false);
+            // 逐日补齐近 3 天（含今天）
+            for (int i = 2; i >= 0; i--)
+            {
+                var date = today.AddDays(-i);
+                await EnsureDailyAsync(ReportType.DailyProd, date, token).ConfigureAwait(false);
+                await EnsureDailyAsync(ReportType.DailyAlarm, date, token).ConfigureAwait(false);
+            }
+
             await EnsureWeeklyAsync(ReportType.WeeklyProd, weekStart, weekEnd, token).ConfigureAwait(false);
             await EnsureWeeklyAsync(ReportType.WeeklyAlarm, weekStart, weekEnd, token).ConfigureAwait(false);
         }
@@ -41,6 +47,8 @@ namespace EW_Assistant.Services.Reports
             {
                 return;
             }
+
+            Log("开始生成日报：" + type + " " + date.ToString("yyyy-MM-dd"), "info");
 
             try
             {
@@ -71,6 +79,7 @@ namespace EW_Assistant.Services.Reports
             }
 
             var rangeText = string.Format("{0:yyyy-MM-dd}~{1:yyyy-MM-dd}", startDate, endDate);
+            Log("开始生成周报：" + type + " " + rangeText, "info");
 
             try
             {

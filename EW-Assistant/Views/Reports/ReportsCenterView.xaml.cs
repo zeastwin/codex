@@ -26,24 +26,24 @@ namespace EW_Assistant.Views.Reports
             DataContext = _viewModel;
         }
 
-        private async void DailyProdButton_Click(object sender, RoutedEventArgs e)
+        private void DailyProdButton_Click(object sender, RoutedEventArgs e)
         {
-            await _viewModel.GenerateReportAsync(ReportType.DailyProd);
+            _viewModel.SwitchReportType(ReportType.DailyProd);
         }
 
-        private async void WeeklyProdButton_Click(object sender, RoutedEventArgs e)
+        private void WeeklyProdButton_Click(object sender, RoutedEventArgs e)
         {
-            await _viewModel.GenerateReportAsync(ReportType.WeeklyProd);
+            _viewModel.SwitchReportType(ReportType.WeeklyProd);
         }
 
-        private async void DailyAlarmButton_Click(object sender, RoutedEventArgs e)
+        private void DailyAlarmButton_Click(object sender, RoutedEventArgs e)
         {
-            await _viewModel.GenerateReportAsync(ReportType.DailyAlarm);
+            _viewModel.SwitchReportType(ReportType.DailyAlarm);
         }
 
-        private async void WeeklyAlarmButton_Click(object sender, RoutedEventArgs e)
+        private void WeeklyAlarmButton_Click(object sender, RoutedEventArgs e)
         {
-            await _viewModel.GenerateReportAsync(ReportType.WeeklyAlarm);
+            _viewModel.SwitchReportType(ReportType.WeeklyAlarm);
         }
 
         private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
