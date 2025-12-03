@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:md="clr-namespace:MdXaml;assembly=MdXaml"
+             xmlns:reports="clr-namespace:EW_Assistant.Domain.Reports"
              mc:Ignorable="d"
              d:DesignHeight="720"
              d:DesignWidth="1200"
@@ -100,7 +101,7 @@
                             Click="WeeklyAlarmButton_Click"/>
                 </WrapPanel>
                 <TextBlock DockPanel.Dock="Right"
-                           Text="{Binding CurrentReportType}"
+                           Text="{Binding CurrentReportTypeName}"
                            VerticalAlignment="Center"
                            Foreground="#111827"
                            FontSize="13"
@@ -130,13 +131,46 @@
                     </DockPanel>
 
                     <ListBox Grid.Row="1"
-                             ItemsSource="{Binding ReportItems}"
+                             ItemsSource="{Binding Reports}"
                              SelectedItem="{Binding SelectedReport, Mode=TwoWay}"
                              BorderThickness="0"
                              Background="Transparent"
                              Padding="0"
                              FontSize="14"
                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type reports:ReportInfo}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}"
+                                               FontWeight="SemiBold"
+                                               Foreground="#111827"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding DateLabel, StringFormat=日期：{0}}"
+                                                   Foreground="#4B5563"
+                                                   FontSize="12"/>
+                                        <TextBlock Text=" · "
+                                                   Foreground="#9CA3AF"
+                                                   FontSize="12"
+                                                   Margin="6,0"/>
+                                        <TextBlock Text="{Binding GeneratedAt, StringFormat=更新：{0:yyyy-MM-dd HH:mm}}"
+                                                   Foreground="#4B5563"
+                                                   FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="{Binding FileSizeText, StringFormat=大小：{0}}"
+                                                   Foreground="#6B7280"
+                                                   FontSize="12"/>
+                                        <TextBlock Text=" · "
+                                                   Foreground="#9CA3AF"
+                                                   FontSize="12"
+                                                   Margin="6,0"/>
+                                        <TextBlock Text="{Binding FileName, StringFormat=文件：{0}}"
+                                                   Foreground="#6B7280"
+                                                   FontSize="12"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -182,13 +216,51 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
-                        <TextBlock Text="报表预览" FontSize="16" FontWeight="SemiBold" Foreground="#0B1220"/>
-                        <TextBlock Text="（示例 Markdown，占位显示）"
-                                   FontSize="12"
-                                   Foreground="#6B7280"
-                                   Margin="8,0,0,0"/>
-                    </StackPanel>
+                    <Grid Grid.Row="0" VerticalAlignment="Center" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Text="{Binding SelectedReport.Title, TargetNullValue=报表预览}"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="#0B1220"/>
+                            <TextBlock Text="{Binding SelectedReport.DateLabel, TargetNullValue=请选择左侧报表后预览}"
+                                       FontSize="12"
+                                       Foreground="#6B7280"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="打开所在文件夹"
+                                    Click="OpenFolderButton_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                        <Setter Property="Margin" Value="0,0,8,0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedReport}" Value="{x:Null}">
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="Opacity" Value="0.6"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="导出 Markdown"
+                                    Click="ExportButton_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedReport}" Value="{x:Null}">
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="Opacity" Value="0.6"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
 
                     <md:MarkdownScrollViewer Grid.Row="1"
                                              Markdown="{Binding PreviewMarkdown}"

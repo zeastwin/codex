@@ -2,36 +2,47 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
+using EW_Assistant.Domain.Reports;
+using EW_Assistant.Services.Reports;
 
 namespace EW_Assistant.ViewModels
 {
     /// <summary>
-    /// 报表中心视图模型，提供示例数据与占位 Markdown。
+    /// 报表中心视图模型，负责绑定本地报表索引与按需加载正文。
     /// </summary>
     public class ReportsCenterViewModel : ViewModelBase
     {
-        private string _currentReportType;
+        private readonly ReportStorageService _storage;
+        private ReportType _currentReportType;
+        private string _currentReportTypeName;
         private string _previewMarkdown;
-        private string _selectedReport;
+        private ReportInfo _selectedReport;
 
-        public ObservableCollection<string> ReportItems { get; private set; }
+        public ObservableCollection<ReportInfo> Reports { get; private set; }
 
         /// <summary>当前选中的报表类型。</summary>
-        public string CurrentReportType
+        public ReportType CurrentReportType
         {
             get { return _currentReportType; }
             set { SetProperty(ref _currentReportType, value); }
         }
 
-        /// <summary>报表列表中选中的示例项。</summary>
-        public string SelectedReport
+        /// <summary>报表类型中文名称，供 UI 展示。</summary>
+        public string CurrentReportTypeName
+        {
+            get { return _currentReportTypeName; }
+            set { SetProperty(ref _currentReportTypeName, value); }
+        }
+
+        /// <summary>当前选中的报表项。</summary>
+        public ReportInfo SelectedReport
         {
             get { return _selectedReport; }
             set
             {
                 if (SetProperty(ref _selectedReport, value))
                 {
-                    UpdatePreviewMarkdown(value, CurrentReportType);
+                    LoadSelectedReportContent(value);
                 }
             }
         }
@@ -45,96 +56,122 @@ namespace EW_Assistant.ViewModels
 
         public ReportsCenterViewModel()
         {
-            ReportItems = new ObservableCollection<string>();
-            SwitchReportType("当日产能报表");
+            _storage = new ReportStorageService();
+            Reports = new ObservableCollection<ReportInfo>();
+            SwitchReportType(ReportType.DailyProd);
         }
 
         /// <summary>
-        /// 切换报表类型并填充假数据。
+        /// 切换报表类型并重新生成索引列表。
         /// </summary>
-        public void SwitchReportType(string type)
+        public void SwitchReportType(ReportType type)
         {
-            if (string.IsNullOrWhiteSpace(type))
-            {
-                type = "当日产能报表";
-            }
-
             CurrentReportType = type;
+            CurrentReportTypeName = _storage.GetTypeDisplayName(type);
+            LoadReports(type);
+        }
 
-            var samples = BuildSamples(type);
+        private void LoadReports(ReportType type)
+        {
+            IList<ReportInfo> reports = null;
+            Reports.Clear();
+            SelectedReport = null;
 
-            ReportItems.Clear();
-            foreach (var item in samples)
+            try
             {
-                ReportItems.Add(item);
+                reports = _storage.GetReportsByType(type);
+            }
+            catch (Exception ex)
+            {
+                PreviewMarkdown = BuildPlaceholderMarkdown("扫描报表目录时出错：" + ex.Message);
+                return;
             }
 
-            if (ReportItems.Count > 0)
+            if (reports != null)
             {
-                SelectedReport = ReportItems[0];
+                foreach (var r in reports)
+                {
+                    Reports.Add(r);
+                }
+            }
+
+            if (Reports.Count > 0)
+            {
+                SelectedReport = Reports[0];
             }
             else
             {
-                SelectedReport = string.Empty;
-                UpdatePreviewMarkdown(string.Empty, type);
+                SelectedReport = null;
+                PreviewMarkdown = BuildPlaceholderMarkdown("当前类型暂无报表文件。");
             }
         }
 
-        private List<string> BuildSamples(string type)
+        private void LoadSelectedReportContent(ReportInfo info)
         {
-            var list = new List<string>();
-
-            if (type == "当日产能报表")
+            if (info == null)
             {
-                list.Add("2025-12-03 当日产能报表（示例）");
-                list.Add("2025-12-02 当日产能报表（示例）");
-                list.Add("2025-12-01 当日产能报表（示例）");
-            }
-            else if (type == "产能周报")
-            {
-                list.Add("2025-48周 产能周报（示例）");
-                list.Add("2025-47周 产能周报（示例）");
-                list.Add("2025-46周 产能周报（示例）");
-            }
-            else if (type == "当日报警报表")
-            {
-                list.Add("2025-12-03 当日报警报表（示例）");
-                list.Add("2025-12-02 当日报警报表（示例）");
-                list.Add("2025-12-01 当日报警报表（示例）");
-            }
-            else if (type == "报警周报")
-            {
-                list.Add("2025-48周 报警周报（示例）");
-                list.Add("2025-47周 报警周报（示例）");
-                list.Add("2025-46周 报警周报（示例）");
-            }
-            else
-            {
-                list.Add("示例报表 A");
-                list.Add("示例报表 B");
+                PreviewMarkdown = BuildPlaceholderMarkdown("请选择左侧报表以查看内容。");
+                return;
             }
 
-            return list;
+            try
+            {
+                var md = _storage.ReadReportContent(info);
+                if (string.IsNullOrWhiteSpace(md))
+                {
+                    PreviewMarkdown = BuildPlaceholderMarkdown("该报表文件为空，等待后续生成内容。", info.Title);
+                }
+                else
+                {
+                    PreviewMarkdown = md;
+                }
+            }
+            catch (Exception ex)
+            {
+                PreviewMarkdown = BuildPlaceholderMarkdown("读取报表失败：" + ex.Message, info.Title);
+            }
         }
 
-        private void UpdatePreviewMarkdown(string selected, string type)
+        private string BuildPlaceholderMarkdown(string message, string title = null)
         {
-            var title = !string.IsNullOrWhiteSpace(selected) ? selected : type + "（示例）";
-
             var sb = new StringBuilder();
-            sb.AppendLine("# " + title);
+            sb.AppendLine("# " + (title ?? CurrentReportTypeName));
             sb.AppendLine();
-            sb.AppendLine("- 当前仅展示示例内容，后续会替换为真实报表数据。");
-            sb.AppendLine("- 报表类型：" + type);
-            sb.AppendLine("- 生成时间：" + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+            sb.AppendLine("> " + message);
             sb.AppendLine();
-            sb.AppendLine("## 关键指标（示例）");
-            sb.AppendLine("- 产能：--");
-            sb.AppendLine("- 良率：--");
-            sb.AppendLine("- 报警次数：--");
-            sb.AppendLine("- 备注：等待数据接入。");
+            sb.AppendLine("- 报表类型：" + CurrentReportTypeName);
+            sb.AppendLine("- 更新时间：" + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+            return sb.ToString();
+        }
 
-            PreviewMarkdown = sb.ToString();
+        /// <summary>
+        /// 导出报表文件，失败时返回错误信息。
+        /// </summary>
+        public bool TryExportReport(ReportInfo info, string targetPath, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            if (info == null)
+            {
+                errorMessage = "未选择报表。";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                errorMessage = "未指定导出路径。";
+                return false;
+            }
+
+            try
+            {
+                _storage.ExportReportFile(info, targetPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return false;
+            }
         }
     }
 }

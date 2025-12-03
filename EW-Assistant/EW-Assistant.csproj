@@ -184,6 +184,7 @@
     <Compile Include="Services\DocumentMindMapParser.cs" />
     <Compile Include="Services\DocumentChecklistParser.cs" />
     <Compile Include="Services\FileWorkflowClient.cs" />
+    <Compile Include="Services\Reports\ReportStorageService.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Services\Warnings\AiWarningAnalysisService.cs" />
     <Compile Include="Services\Warnings\CsvEncoding.cs" />
@@ -201,6 +202,8 @@
     <Compile Include="Domain\Inventory\SparePart.cs" />
     <Compile Include="Domain\Inventory\StockTransaction.cs" />
     <Compile Include="Domain\Inventory\IInventoryRepository.cs" />
+    <Compile Include="Domain\Reports\ReportInfo.cs" />
+    <Compile Include="Domain\Reports\ReportType.cs" />
     <Compile Include="Infrastructure\Inventory\FileInventoryRepository.cs" />
     <Compile Include="Infrastructure\Inventory\InventoryModule.cs" />
     <Compile Include="Views\Inventory\AddPartDialog.xaml.cs">
