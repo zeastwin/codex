@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Windows.Threading;
 
+/// <summary>
+/// UI 线程的节流合并器：在指定间隔内只触发一次 flush，避免频繁刷新造成阻塞。
+/// </summary>
 internal sealed class UiCoalescer : IDisposable
 {
     private readonly Dispatcher _dispatcher;
@@ -9,6 +12,9 @@ internal sealed class UiCoalescer : IDisposable
     private DispatcherTimer _timer;
     private bool _pending;
 
+    /// <summary>
+    /// 创建合并器，flush 必须在 UI 线程可执行，interval 为节流时间。
+    /// </summary>
     public UiCoalescer(Dispatcher dispatcher, TimeSpan interval, Action flush)
     {
         _dispatcher = dispatcher;
@@ -28,6 +34,9 @@ internal sealed class UiCoalescer : IDisposable
         };
     }
 
+    /// <summary>
+    /// 请求一次 flush，若在间隔内已存在待执行的 flush 则忽略。
+    /// </summary>
     public void Request()
     {
         if (_pending) return;
@@ -36,5 +45,6 @@ internal sealed class UiCoalescer : IDisposable
         _timer.Start();
     }
 
+    /// <summary>停止计时器，不再触发 flush。</summary>
     public void Dispose() => _timer?.Stop();
 }

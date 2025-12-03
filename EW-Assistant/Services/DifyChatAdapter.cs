@@ -13,8 +13,8 @@ using System.Xml.Linq;
 namespace EW_Assistant.Services
 {
     /// <summary>
-    /// 适配 Dify 工作流编排【对话型应用】API（SSE流式）
-    /// 负责：发送消息（流式）、处理 SSE 事件、会话续聊、停止响应、文件上传。
+    /// 适配 Dify 工作流编排【对话型应用】API（SSE 流式）。
+    /// 负责：发送消息、处理 SSE 事件、会话续聊、停止响应、文件上传，并写入本地对话日志。
     /// </summary>
     public sealed class DifyChatAdapter
     {
@@ -33,7 +33,7 @@ namespace EW_Assistant.Services
         }
 
         /// <summary>
-        /// 发送一条消息并以 SSE 流式读取结果。
+        /// 发送一条消息并以 SSE 流式读取结果，支持 token 增量、整段替换与事件回调。
         /// </summary>
         public async Task SendStreamingAsync(
     string query,
@@ -170,6 +170,7 @@ namespace EW_Assistant.Services
             }
         }
         private static readonly object s_logLock = new object();
+        /// <summary>将问答过程写入本地聊天日志，失败不抛出异常。</summary>
         public static void WriteLog(string str)
         {
             try
@@ -209,6 +210,10 @@ namespace EW_Assistant.Services
                 System.Diagnostics.Debug.WriteLine($"WriteLog failed: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// 解析单个 SSE JSON 事件并调用对应回调，兼容 message/message_replace/message_file 等事件类型。
+        /// </summary>
         private void HandleSseChunk(string jsonLine,
             Action<string> onToken,
             Action<string> onReplaceAll,

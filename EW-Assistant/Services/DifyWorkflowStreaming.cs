@@ -14,6 +14,10 @@ using System.Windows;
 
 namespace EW_Assistant.Net
 {
+    /// <summary>
+    /// 面向本地 WPF 的 Dify Workflow 流式调用封装，内置并发闸门与日志记录，
+    /// 支持“独占执行”与“尝试触发”两种入口，结果流向 AIAssistantView。
+    /// </summary>
     public static class DifyWorkflowClient
     {
         // ====== 并发闸门（一次只跑一个问答）======
@@ -34,8 +38,7 @@ namespace EW_Assistant.Net
         }
         /// <summary>
         /// 对外入口（单通道）：使用 ConfigService.Current.AutoURL / AutoKey 调用 workflow（streaming）。
-        /// - 忙则直接提示并返回 null（不排队）
-        /// - 只把“大节点”推到信息流；最终文本推到 AIAssistantView
+        /// 忙则直接返回 null（不排队），仅推送大节点到信息流，完整文本由 AIAssistantView 展示。
         /// </summary>
         public static async Task<RunHandle> RunAutoAnalysisExclusiveAsync(
             EW_Assistant.Views.AIAssistantView aiView,
@@ -87,9 +90,8 @@ namespace EW_Assistant.Net
         }
 
         /// <summary>
-        /// 立刻返回：尝试启动一次后台 AI 自动分析（独占闸门）。<br/>
-        /// 返回 true=已受理并在后台执行；false=繁忙或配置不完整。<br/>
-        /// 答案不会返回给调用方，只会在 AIAssistantView 里流式呈现。
+        /// 立刻返回：尝试启动一次后台 AI 自动分析（独占闸门）。
+        /// true=已受理并在后台执行；false=繁忙或配置不完整；结果仅在 AIAssistantView 中呈现。
         /// </summary>
         public static bool TryStartAutoAnalysisNow(
             EW_Assistant.Views.AIAssistantView aiView,

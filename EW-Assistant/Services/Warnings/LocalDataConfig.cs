@@ -19,6 +19,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>报警 CSV 根目录，优先取配置文件。</summary>
         public static string AlarmCsvRoot
         {
             get
@@ -42,6 +43,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>是否启用产能 OK/NG 分表模式（产品/抛料分两个表）。</summary>
         public static bool UseOkNgSplitTables
         {
             get

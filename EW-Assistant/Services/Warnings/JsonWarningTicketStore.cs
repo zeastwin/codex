@@ -28,6 +28,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>读取所有工单，失败或文件缺失返回空列表，自动剔除过期项。</summary>
         public IList<WarningTicketRecord> LoadAll()
         {
             lock (_lock)
@@ -53,6 +54,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>全量覆盖写入工单列表，失败静默，写入前会剔除过期数据。</summary>
         public void SaveAll(IList<WarningTicketRecord> tickets)
         {
             lock (_lock)
@@ -88,6 +90,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>移除超过保留期的工单，避免文件无限增长。</summary>
         private List<WarningTicketRecord> RemoveExpired(IList<WarningTicketRecord> source)
         {
             var list = source == null ? new List<WarningTicketRecord>() : new List<WarningTicketRecord>(source);

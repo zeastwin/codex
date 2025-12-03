@@ -26,6 +26,9 @@ namespace EW_Assistant.Services
             _prompt = string.IsNullOrWhiteSpace(promptOverride) ? DefaultPrompt : promptOverride;
         }
 
+        /// <summary>
+        /// 调用 Workflow 生成 Checklist JSON，并解析为模型对象；日志落盘方便追踪。
+        /// </summary>
         public async Task<DocumentChecklist> ParseAsync(string filePath, CancellationToken token = default(CancellationToken))
         {
             if (string.IsNullOrWhiteSpace(filePath))
@@ -47,6 +50,9 @@ namespace EW_Assistant.Services
             return ParseFromJson(normalized);
         }
 
+        /// <summary>
+        /// 直接解析 Checklist JSON 字符串为模型，适用于缓存/离线重放。
+        /// </summary>
         public DocumentChecklist ParseFromJson(string jsonText)
         {
             var normalized = NormalizeJson(jsonText);

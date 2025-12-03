@@ -8,7 +8,10 @@ using System.Threading.Tasks;
 
 namespace EW_Assistant.Net
 {
-    /// <summary> 常驻的 POST 监听服务：接收 work 请求并调用 DifyWorkflowClient（即刻返回是否受理） </summary>
+    /// <summary>
+    /// 常驻的本地 POST 监听服务：接收外部触发的自动分析请求，转交 DifyWorkflowClient，
+    /// 仅返回“是否受理”，实际结果在 UI 侧流式展示。
+    /// </summary>
     public sealed class WorkHttpServer
     {
         private HttpListener _listener;
@@ -21,7 +24,9 @@ namespace EW_Assistant.Net
 
         public bool IsRunning => _listener != null && _listener.IsListening;
 
-        /// <summary> 程序启动即调用，一直运行直到 App 退出 </summary>
+        /// <summary>
+        /// 启动 HTTP 监听（仅支持 POST），失败会写日志并抛出异常。
+        /// </summary>
         public async Task StartAsync(string prefix, CancellationToken token)
         {
             if (IsRunning) return;
@@ -45,6 +50,7 @@ namespace EW_Assistant.Net
             _ = Task.Run(() => AcceptLoopAsync(), token);
         }
 
+        /// <summary>停止监听并释放底层 HttpListener。</summary>
         public void Stop()
         {
             try { _listener?.Stop(); } catch { }
@@ -52,6 +58,9 @@ namespace EW_Assistant.Net
             _listener = null;
         }
 
+        /// <summary>
+        /// 主循环：串行接受请求，具体处理交给子任务，异常写入信息流。
+        /// </summary>
         private async Task AcceptLoopAsync()
         {
             while (!_token.IsCancellationRequested && IsRunning)
@@ -71,6 +80,9 @@ namespace EW_Assistant.Net
             }
         }
 
+        /// <summary>
+        /// 仅接受 POST，解析 JSON 体并尝试启动自动分析；繁忙时直接返回 429。
+        /// </summary>
         private async Task HandleContextAsync(HttpListenerContext context)
         {
             if (context.Request.HttpMethod != "POST")
@@ -126,6 +138,7 @@ namespace EW_Assistant.Net
             }
         }
 
+        /// <summary>统一 JSON 输出，异常也不抛出到调用方。</summary>
         private static async Task WriteJsonAsync(HttpListenerContext ctx, object obj)
         {
             var bytes = Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(obj));

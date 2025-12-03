@@ -9,6 +9,7 @@ namespace EW_Assistant.Warnings
     /// </summary>
     public static class CsvEncoding
     {
+        /// <summary>打开 CSV 读取器，自动探测编码并支持共享读。</summary>
         public static StreamReader OpenReader(string path)
         {
             var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -17,6 +18,7 @@ namespace EW_Assistant.Warnings
             return new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: false);
         }
 
+        /// <summary>根据 BOM/UTF-8 校验/回退策略探测编码，默认返回 UTF-8。</summary>
         private static Encoding DetectEncoding(FileStream fs)
         {
             try

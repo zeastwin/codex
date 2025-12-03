@@ -190,6 +190,7 @@ namespace EW_Assistant.Warnings
             set { if (_resolveGraceMinutes != value) { _resolveGraceMinutes = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>创建一份带默认阈值的配置，便于初始化或重置。</summary>
         public static WarningRuleOptions CreateDefault()
         {
             return new WarningRuleOptions

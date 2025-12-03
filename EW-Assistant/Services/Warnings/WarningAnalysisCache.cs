@@ -92,7 +92,7 @@ namespace EW_Assistant.Warnings
         }
 
         /// <summary>
-        /// 将当前缓存写回 JSON。
+        /// 将当前缓存写回 JSON。写失败会静默，避免影响预警主流程。
         /// </summary>
         public void Save()
         {
@@ -108,6 +108,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>根据 key 读取缓存，未命中或 key 为空返回 false。</summary>
         public bool TryGet(string key, out WarningAnalysisRecord record)
         {
             if (string.IsNullOrWhiteSpace(key))

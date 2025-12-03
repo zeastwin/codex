@@ -26,6 +26,9 @@ namespace EW_Assistant.Services
             _prompt = string.IsNullOrWhiteSpace(promptOverride) ? DefaultPrompt : promptOverride;
         }
 
+        /// <summary>
+        /// 调用 Workflow 生成思维导图 JSON，并解析为 MindMapNode 树；失败抛出异常。
+        /// </summary>
         public async Task<MindMapNode> ParseAsync(string filePath, CancellationToken token = default(CancellationToken))
         {
             if (string.IsNullOrWhiteSpace(filePath))

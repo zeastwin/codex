@@ -109,6 +109,7 @@ namespace EW_Assistant.Services.Warnings
         }
 
 
+        /// <summary>生成响应日志的概览文本，包含状态码与裁剪后的答案/原文。</summary>
         private static string BuildFriendlyResponseLog(HttpResponseMessage resp, string preview, string body)
         {
             var status = resp == null ? "Unknown" : string.Format("{0}({1})", (int)resp.StatusCode, resp.StatusCode);
@@ -171,6 +172,7 @@ namespace EW_Assistant.Services.Warnings
 
 
 
+        /// <summary>追加请求/响应/异常日志到 WarningAI 目录，失败静默。</summary>
         private static void AppendLog(string stage, string url, string content)
         {
             try

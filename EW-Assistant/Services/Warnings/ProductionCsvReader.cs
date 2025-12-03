@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 namespace EW_Assistant.Warnings
 {
     /// <summary>
-    /// 读取产能 / 良率数据并按小时聚合。
+    /// 读取产能/良率数据并按小时聚合，兼容单表与 OK/NG 分表。
     /// </summary>
     public class ProductionCsvReader
     {
@@ -20,13 +20,14 @@ namespace EW_Assistant.Warnings
             _root = string.IsNullOrWhiteSpace(root) ? LocalDataConfig.ProductionCsvRoot : root;
         }
 
+        /// <summary>取最近 24 小时产能，便于 Dashboard/看板快速刷新。</summary>
         public IList<ProductionHourRecord> GetLast24HoursProduction(DateTime now)
         {
             return GetProductionRange(now.AddHours(-24), now);
         }
 
         /// <summary>
-        /// 指定时间窗内的小时聚合。
+        /// 指定时间窗内的小时聚合，自动判定是否使用分表模式。
         /// </summary>
         public IList<ProductionHourRecord> GetProductionRange(DateTime start, DateTime end)
         {
@@ -77,8 +78,10 @@ namespace EW_Assistant.Warnings
             return result.Values.OrderBy(x => x.Hour).ToList();
         }
 
+        /// <summary>实际使用的产能根目录（为空则取配置路径）。</summary>
         public string Root => _root;
 
+        /// <summary>OK/NG 分表模式下的聚合逻辑，按文件名日期逐日扫描。</summary>
         private IList<ProductionHourRecord> GetProductionRangeFromSplitTables(DateTime start, DateTime end)
         {
             var result = new Dictionary<DateTime, ProductionHourRecord>();
@@ -139,6 +142,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>读取单个 CSV，按列名自适应 PASS/FAIL/PLAN 列并输出行记录。</summary>
         private IEnumerable<ProductionRow> ReadRows(string path)
         {
             if (!File.Exists(path)) yield break;

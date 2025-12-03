@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 namespace EW_Assistant.Warnings
 {
     /// <summary>
-    /// 读取报警记录，并按小时 / 报警码聚合。
+    /// 读取报警记录，并按小时/报警码聚合，兼容 Watch 目录与不同分隔符/编码。
     /// </summary>
     public class AlarmCsvReader
     {
@@ -20,13 +20,14 @@ namespace EW_Assistant.Warnings
             _root = string.IsNullOrWhiteSpace(root) ? LocalDataConfig.AlarmCsvRoot : root;
         }
 
+        /// <summary>取最近 24 小时报警，便于快速生成当天图表。</summary>
         public IList<AlarmHourStat> GetLast24HoursAlarms(DateTime now)
         {
             return GetAlarms(now.AddHours(-24), now);
         }
 
         /// <summary>
-        /// 指定时间范围内的报警按小时聚合。
+        /// 指定时间范围内的报警按小时聚合，优先按文件名日期匹配，缺失字段保持兼容。
         /// </summary>
         public IList<AlarmHourStat> GetAlarms(DateTime start, DateTime end)
         {
@@ -75,8 +76,10 @@ namespace EW_Assistant.Warnings
             return result.Values.OrderBy(x => x.Hour).ToList();
         }
 
+        /// <summary>实际使用的报警根目录（若构造时为空则为配置目录）。</summary>
         public string Root => _root;
 
+        /// <summary>遍历时间范围内可能包含的 CSV 文件，支持 Watch 模式的子目录结构。</summary>
         private IEnumerable<string> EnumerateFiles(DateTime start, DateTime end, bool watchMode)
         {
             if (!Directory.Exists(_root)) yield break;
@@ -102,6 +105,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>Watch 模式：逐日子目录中选择最晚写入的 CSV 文件。</summary>
         private IEnumerable<string> EnumerateWatchModeFiles(DateTime start, DateTime end)
         {
             var startDay = start.Date.AddDays(-1);
@@ -144,6 +148,7 @@ namespace EW_Assistant.Warnings
             return file?.FullName;
         }
 
+        /// <summary>读取单个 CSV，按列名/格式自适应解析并产出 AlarmRow。</summary>
         private IEnumerable<AlarmRow> ReadRows(string path, DateTime fileDate)
         {
             if (!File.Exists(path)) yield break;

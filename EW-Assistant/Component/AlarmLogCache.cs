@@ -15,10 +15,15 @@ namespace EW_Assistant.Warnings
     {
         public sealed class DayRaw
         {
+            /// <summary>日期（仅日期部分）。</summary>
             public DateTime Date { get; set; }
+            /// <summary>是否未找到文件或解析失败。</summary>
             public bool Missing { get; set; }
+            /// <summary>命中的文件路径。</summary>
             public string? FilePath { get; set; }
+            /// <summary>实际使用的编码（探测失败则为 null）。</summary>
             public Encoding? EncodingUsed { get; set; }
+            /// <summary>原始行内容（保留空行，供上层重跑解析）。</summary>
             public string[] LinesAll { get; set; } = Array.Empty<string>();
         }
 
@@ -26,7 +31,7 @@ namespace EW_Assistant.Warnings
         private static IReadOnlyDictionary<DateTime, DayRaw> _byDay = new Dictionary<DateTime, DayRaw>();
 
         /// <summary>
-        /// 读取目录下最近 N 天的报警 CSV，并缓存原始行；失败的日期标记 Missing。
+        /// 读取目录下最近 N 天的报警 CSV，并缓存原始行；失败的日期标记 Missing，便于 UI 显示缺口。
         /// </summary>
         public static void LoadRecent(string? root, int days = 7)
         {

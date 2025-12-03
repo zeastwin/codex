@@ -43,6 +43,9 @@ namespace EW_Assistant.Services
         }
 
 
+        /// <summary>
+        /// 上传文件并运行 Workflow，返回解析后的结果；异常会写程序日志并转换为失败结果。
+        /// </summary>
         public async Task<FileWorkflowResult> RunAsync(FileWorkflowRequest request, CancellationToken ct = default)
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
@@ -97,6 +100,7 @@ namespace EW_Assistant.Services
             }
         }
 
+        /// <summary>上传本地文件到 Dify，返回文件 id，HTTP 非 201/200 视为失败。</summary>
         private async Task<string> UploadFileAsync(string filePath, string userId, CancellationToken ct)
         {
             using var content = new MultipartFormDataContent();

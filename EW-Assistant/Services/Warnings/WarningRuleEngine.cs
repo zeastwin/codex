@@ -71,6 +71,7 @@ namespace EW_Assistant.Warnings
 
         #region 规则实现
 
+        /// <summary>良率绝对阈值规则：样本足够且低于阈值时生成预警。</summary>
         private void ApplyYieldRule(IDictionary<string, WarningItem> bucket, ProductionHourRecord rec, IList<ProductionHourRecord> allProductions)
         {
             if (rec == null || rec.Total < _options.MinYieldSamples) return;
@@ -121,6 +122,7 @@ namespace EW_Assistant.Warnings
             TryAddWarning(bucket, item, (oldVal, newVal) => Math.Min(oldVal, newVal));
         }
 
+        /// <summary>产能规则：对比计划/基线，低于阈值时触发。</summary>
         private void ApplyThroughputRule(IDictionary<string, WarningItem> bucket, ProductionHourRecord rec, BaselineCacheEntry baseline, IList<ProductionHourRecord> allProductions)
         {
             if (rec == null) return;
@@ -184,6 +186,7 @@ namespace EW_Assistant.Warnings
             TryAddWarning(bucket, item, (oldVal, newVal) => Math.Min(oldVal, newVal));
         }
 
+        /// <summary>趋势规则：在窗口内累计多次产能异常则触发。</summary>
         private void ApplyTrendRules(IDictionary<string, WarningItem> bucket, IList<ProductionHourRecord> productions, BaselineCacheEntry baseline, DateTime now)
         {
             var windowEnd = now;
@@ -273,6 +276,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>良率/产能与报警的组合规则：低良率或低产能且有报警时触发。</summary>
         private void ApplyCombinedRules(
             IDictionary<string, WarningItem> bucket,
             ProductionHourRecord rec,
@@ -369,6 +373,7 @@ namespace EW_Assistant.Warnings
             }
         }
 
+        /// <summary>报警单项规则：按报警次数或停机分钟筛选高频/长时报警。</summary>
         private void ApplyAlarmRule(IDictionary<string, WarningItem> bucket, AlarmHourStat stat)
         {
             if (stat == null) return;

@@ -7,7 +7,8 @@ namespace EW_Assistant.Warnings
     /// </summary>
     public class WarningItem
     {
-        public string Key { get; set; }              // 预警唯一键：RuleId + 时间段
+        /// <summary>预警唯一键（通常由 RuleId + 时间段拼接）。</summary>
+        public string Key { get; set; }
         public string RuleId { get; set; }           // 规则标识，例如 LOW_YIELD_ABS
         public string RuleName { get; set; }         // 规则展示名称
 
