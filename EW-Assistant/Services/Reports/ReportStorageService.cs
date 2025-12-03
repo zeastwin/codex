@@ -35,6 +35,35 @@ namespace EW_Assistant.Services.Reports
         }
 
         /// <summary>
+        /// 判断指定日期的日报文件是否已存在。
+        /// </summary>
+        public bool DailyReportExists(ReportType type, DateTime date)
+        {
+            if (type != ReportType.DailyProd && type != ReportType.DailyAlarm)
+            {
+                return false;
+            }
+
+            var path = BuildReportFilePath(type, date.Date, null);
+            return File.Exists(path);
+        }
+
+        /// <summary>
+        /// 判断指定结束日期的周报文件是否已存在（区间=结束日向前 6 天）。
+        /// </summary>
+        public bool WeeklyReportExists(ReportType type, DateTime endDate)
+        {
+            if (type != ReportType.WeeklyProd && type != ReportType.WeeklyAlarm)
+            {
+                return false;
+            }
+
+            var start = endDate.Date.AddDays(-6);
+            var path = BuildReportFilePath(type, start, endDate.Date);
+            return File.Exists(path);
+        }
+
+        /// <summary>
         /// 扫描全部报表类型的索引列表。
         /// </summary>
         public IList<ReportInfo> GetAllReports()

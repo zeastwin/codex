@@ -187,6 +187,7 @@
     <Compile Include="Services\Reports\LlmReportClient.cs" />
     <Compile Include="Services\Reports\ReportGeneratorService.cs" />
     <Compile Include="Services\Reports\ReportPromptBuilder.cs" />
+    <Compile Include="Services\Reports\ReportScheduler.cs" />
     <Compile Include="Services\Reports\ReportStorageService.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Services\Warnings\AiWarningAnalysisService.cs" />

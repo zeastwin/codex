@@ -20,6 +20,7 @@ using System.Windows.Media.Animation;
 using Path = System.IO.Path;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using EW_Assistant.Services.Reports;
 
 namespace EW_Assistant
 {
@@ -74,11 +75,16 @@ namespace EW_Assistant
         private readonly Dictionary<string, UIElement> _viewCache = new Dictionary<string, UIElement>();
         private CancellationTokenSource _serverCts;
         private readonly Services.McpServerProcessHost _mcpHost = Services.McpServerProcessHost.Instance;
+        private readonly ReportStorageService _reportStorage = new ReportStorageService();
+        private readonly ReportGeneratorService _reportGenerator;
+        private readonly ReportScheduler _reportScheduler;
         public MainWindow()
         {
             InitializeComponent();
             Instance = this;
             DataContext = this;
+            _reportGenerator = new ReportGeneratorService(_reportStorage, new LlmReportClient());
+            _reportScheduler = new ReportScheduler(_reportStorage, _reportGenerator);
 
             // 启动 HTTP 服务（常驻）
             _serverCts = new CancellationTokenSource();
@@ -108,6 +114,30 @@ namespace EW_Assistant
             }
 
             NavigateByContent("总览");
+            Loaded += MainWindow_Loaded;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            await InitializeReportsAsync();
+        }
+
+        private async Task InitializeReportsAsync()
+        {
+            try
+            {
+                PostProgramInfo("正在初始化报表...", "info");
+                await _reportScheduler.EnsureBasicReportsAsync();
+                PostProgramInfo("报表初始化完成。", "ok");
+            }
+            catch (OperationCanceledException)
+            {
+                PostProgramInfo("报表初始化已取消。", "warn");
+            }
+            catch (Exception ex)
+            {
+                PostProgramInfo("报表初始化失败：" + ex.Message, "warn");
+            }
         }
         // === 关键：修正无边框窗口最大化时的区域 ===
         protected override void OnSourceInitialized(EventArgs e)
