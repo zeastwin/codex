@@ -4,7 +4,6 @@
 
 ## 语言约定
 - 所有代码注释、技术文档、提交说明一律使用**简体中文**。
-- 在 VS Code “Finished working / 工作日志” 面板中，描述自己执行的步骤时，优先使用简体中文，不要再使用英文步骤标题（如 “Planning Excel export method update”）。
 - 代码中的标识符、API 名称、JSON 字段保持英文；用户可见字符串按 UI 设计需求呈现。
 - 面向开发者的说明、分析、总结全部用简体中文输出。
 - WPF 侧目标框架 net4.8.1（csproj 中 LangVersion=10），保持 .NET Framework 兼容，不要引入 .NET 5+/C# 11+ 特性；如需调整 LangVersion/TargetFramework 先确认。
@@ -48,3 +47,17 @@
 - 本地依赖仅限 Windows（托盘/HttpListener/WinExe），避免引入跨平台不支持的 API。
 - 兼容旧数据：解析 CSV/报警文件时已有较强容错，新增字段时保持向后兼容；不要更改现有文件命名/位置约定（D 盘配置/日志）除非同步更新读取逻辑。
 - MCP 监听端口、WorkHttpServer urlacl 等需要管理员权限时提前处理；慎用破坏性命令（删除配置/覆盖日志）。
+
+
+## 在 WSL 模式下工作（Linux 命令），但本项目的 WPF（EW-Assistant）必须用 Windows MSBuild 编译并在 Windows 上运行。
+
+每次修改完代码后，必须执行：
+1) ./scripts/assistant_build.sh
+2) 若构建成功，再执行 ./scripts/assistant_run.sh
+
+如果构建失败：
+- 打开并分析 artifacts/assistant/errors.txt（这是从 msbuild.log 提取的关键错误）
+- 基于第一个真实 error 做最小修复（不要大重构）
+- 修复后重复 build 直到成功
+
+注意：只编译/运行 EW-Assistant；McpServer 不需要处理。

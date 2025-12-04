@@ -94,13 +94,15 @@ namespace EW_Assistant.Warnings
             }
 
             var dir = new DirectoryInfo(_root);
+            var minDay = start.Date.AddDays(-1);
+            var maxDay = end.Date;
             foreach (var file in dir.EnumerateFiles("*.csv", SearchOption.TopDirectoryOnly)
                                     .OrderByDescending(f => f.LastWriteTime))
             {
                 if (!IsAlarmLogFileName(file.Name)) continue;
                 if (!TryParseDayFromFileName(file.Name, out var day)) continue;
-                if (day < start.Date.AddDays(-1) || day > end.Date) continue;
-                if (file.LastWriteTime < start.AddDays(-1)) continue;
+                if (day < minDay || day > maxDay) continue;
+                // 拷贝文件改名可能保留旧的 LastWriteTime，改用文件名日期过滤
                 yield return file.FullName;
             }
         }
