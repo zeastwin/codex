@@ -32,6 +32,7 @@ namespace EW_Assistant.Services.Reports
 
         public async Task<ReportInfo> GenerateDailyProdAsync(DateTime date, CancellationToken token = default(CancellationToken), bool force = false)
         {
+            string promptText = null;
             try
             {
                 // 如果已存在，直接返回
@@ -45,12 +46,36 @@ namespace EW_Assistant.Services.Reports
 
                 var data = _dailyProdCalculator.Calculate(date.Date);
                 var prompt = DailyProdReportPromptBuilder.BuildPayload(data);
+                if (prompt != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(prompt.CombinedPrompt))
+                    {
+                        promptText = prompt.CombinedPrompt;
+                    }
+                    else
+                    {
+                        var sbPrompt = new StringBuilder();
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportTask))
+                        {
+                            sbPrompt.AppendLine("【REPORT_TASK】");
+                            sbPrompt.AppendLine(prompt.ReportTask.Trim());
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportDataJson))
+                        {
+                            sbPrompt.AppendLine("【REPORT_DATA_JSON】");
+                            sbPrompt.AppendLine(prompt.ReportDataJson.Trim());
+                        }
+
+                        promptText = sbPrompt.Length > 0 ? sbPrompt.ToString() : null;
+                    }
+                }
                 var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = DailyProdReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.DailyProd, date.Date, fullMd);
                 var info = _storage.GetReportInfoByPath(ReportType.DailyProd, path) ?? BuildFallbackInfo(ReportType.DailyProd, date.Date, null, path);
-                LogGeneration(ReportType.DailyProd, date.Date, null, path, true, null, fullMd);
+                LogGeneration(ReportType.DailyProd, date.Date, null, path, true, null, fullMd, promptText);
                 return info;
             }
             catch (OperationCanceledException)
@@ -59,13 +84,14 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
-                LogGeneration(ReportType.DailyProd, date.Date, null, null, false, ex.Message, null);
+                LogGeneration(ReportType.DailyProd, date.Date, null, null, false, ex.Message, null, promptText);
                 throw new ReportGenerationException("生成日报失败：" + ex.Message, ex);
             }
         }
 
         public async Task<ReportInfo> GenerateDailyAlarmAsync(DateTime date, CancellationToken token = default(CancellationToken), bool force = false)
         {
+            string promptText = null;
             try
             {
                 var existing = _storage.GetDailyReportInfo(ReportType.DailyAlarm, date.Date);
@@ -78,12 +104,36 @@ namespace EW_Assistant.Services.Reports
 
                 var data = _dailyAlarmCalculator.Calculate(date.Date);
                 var prompt = DailyAlarmReportPromptBuilder.BuildPayload(data);
+                if (prompt != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(prompt.CombinedPrompt))
+                    {
+                        promptText = prompt.CombinedPrompt;
+                    }
+                    else
+                    {
+                        var sbPrompt = new StringBuilder();
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportTask))
+                        {
+                            sbPrompt.AppendLine("【REPORT_TASK】");
+                            sbPrompt.AppendLine(prompt.ReportTask.Trim());
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportDataJson))
+                        {
+                            sbPrompt.AppendLine("【REPORT_DATA_JSON】");
+                            sbPrompt.AppendLine(prompt.ReportDataJson.Trim());
+                        }
+
+                        promptText = sbPrompt.Length > 0 ? sbPrompt.ToString() : null;
+                    }
+                }
                 var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = DailyAlarmReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.DailyAlarm, date.Date, fullMd);
                 var info = _storage.GetReportInfoByPath(ReportType.DailyAlarm, path) ?? BuildFallbackInfo(ReportType.DailyAlarm, date.Date, null, path);
-                LogGeneration(ReportType.DailyAlarm, date.Date, null, path, true, null, fullMd);
+                LogGeneration(ReportType.DailyAlarm, date.Date, null, path, true, null, fullMd, promptText);
                 return info;
             }
             catch (OperationCanceledException)
@@ -92,7 +142,7 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
-                LogGeneration(ReportType.DailyAlarm, date.Date, null, null, false, ex.Message, null);
+                LogGeneration(ReportType.DailyAlarm, date.Date, null, null, false, ex.Message, null, promptText);
                 throw new ReportGenerationException("生成报警日报失败：" + ex.Message, ex);
             }
         }
@@ -100,6 +150,7 @@ namespace EW_Assistant.Services.Reports
         public async Task<ReportInfo> GenerateWeeklyProdAsync(DateTime endDate, CancellationToken token = default(CancellationToken), bool force = false)
         {
             var start = endDate.Date.AddDays(-6);
+            string promptText = null;
             try
             {
                 var existing = _storage.GetWeeklyReportInfo(ReportType.WeeklyProd, endDate.Date);
@@ -112,12 +163,36 @@ namespace EW_Assistant.Services.Reports
 
                 var data = _weeklyProdCalculator.Calculate(start, endDate.Date);
                 var prompt = WeeklyProdReportPromptBuilder.BuildPayload(data);
+                if (prompt != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(prompt.CombinedPrompt))
+                    {
+                        promptText = prompt.CombinedPrompt;
+                    }
+                    else
+                    {
+                        var sbPrompt = new StringBuilder();
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportTask))
+                        {
+                            sbPrompt.AppendLine("【REPORT_TASK】");
+                            sbPrompt.AppendLine(prompt.ReportTask.Trim());
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportDataJson))
+                        {
+                            sbPrompt.AppendLine("【REPORT_DATA_JSON】");
+                            sbPrompt.AppendLine(prompt.ReportDataJson.Trim());
+                        }
+
+                        promptText = sbPrompt.Length > 0 ? sbPrompt.ToString() : null;
+                    }
+                }
                 var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = WeeklyProdReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.WeeklyProd, start, endDate.Date, fullMd);
                 var info = _storage.GetReportInfoByPath(ReportType.WeeklyProd, path) ?? BuildFallbackInfo(ReportType.WeeklyProd, start, endDate.Date, path);
-                LogGeneration(ReportType.WeeklyProd, start, endDate.Date, path, true, null, fullMd);
+                LogGeneration(ReportType.WeeklyProd, start, endDate.Date, path, true, null, fullMd, promptText);
                 return info;
             }
             catch (OperationCanceledException)
@@ -126,7 +201,7 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
-                LogGeneration(ReportType.WeeklyProd, start, endDate.Date, null, false, ex.Message, null);
+                LogGeneration(ReportType.WeeklyProd, start, endDate.Date, null, false, ex.Message, null, promptText);
                 throw new ReportGenerationException("生成产能周报失败：" + ex.Message, ex);
             }
         }
@@ -134,6 +209,7 @@ namespace EW_Assistant.Services.Reports
         public async Task<ReportInfo> GenerateWeeklyAlarmAsync(DateTime endDate, CancellationToken token = default(CancellationToken), bool force = false)
         {
             var start = endDate.Date.AddDays(-6);
+            string promptText = null;
             try
             {
                 var existing = _storage.GetWeeklyReportInfo(ReportType.WeeklyAlarm, endDate.Date);
@@ -146,12 +222,36 @@ namespace EW_Assistant.Services.Reports
 
                 var data = _weeklyAlarmCalculator.Calculate(start, endDate.Date);
                 var prompt = WeeklyAlarmReportPromptBuilder.BuildPayload(data);
+                if (prompt != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(prompt.CombinedPrompt))
+                    {
+                        promptText = prompt.CombinedPrompt;
+                    }
+                    else
+                    {
+                        var sbPrompt = new StringBuilder();
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportTask))
+                        {
+                            sbPrompt.AppendLine("【REPORT_TASK】");
+                            sbPrompt.AppendLine(prompt.ReportTask.Trim());
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(prompt.ReportDataJson))
+                        {
+                            sbPrompt.AppendLine("【REPORT_DATA_JSON】");
+                            sbPrompt.AppendLine(prompt.ReportDataJson.Trim());
+                        }
+
+                        promptText = sbPrompt.Length > 0 ? sbPrompt.ToString() : null;
+                    }
+                }
                 var analysisMd = await _llm.GenerateMarkdownAsync(prompt.ReportTask, prompt.ReportDataJson, token).ConfigureAwait(false);
                 var fullMd = WeeklyAlarmReportMarkdownFormatter.Render(data, analysisMd);
 
                 var path = _storage.SaveReportContent(ReportType.WeeklyAlarm, start, endDate.Date, fullMd);
                 var info = _storage.GetReportInfoByPath(ReportType.WeeklyAlarm, path) ?? BuildFallbackInfo(ReportType.WeeklyAlarm, start, endDate.Date, path);
-                LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, path, true, null, fullMd);
+                LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, path, true, null, fullMd, promptText);
                 return info;
             }
             catch (OperationCanceledException)
@@ -160,7 +260,7 @@ namespace EW_Assistant.Services.Reports
             }
             catch (Exception ex)
             {
-                LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, null, false, ex.Message, null);
+                LogGeneration(ReportType.WeeklyAlarm, start, endDate.Date, null, false, ex.Message, null, promptText);
                 throw new ReportGenerationException("生成报警周报失败：" + ex.Message, ex);
             }
         }
@@ -220,8 +320,8 @@ namespace EW_Assistant.Services.Reports
             return size + " B";
         }
 
-        /// <summary>记录生成日志，失败不抛出。</summary>
-        private void LogGeneration(ReportType type, DateTime start, DateTime? end, string path, bool success, string message, string content)
+        /// <summary>记录生成日志（含 LLM 请求与生成内容），失败不抛出。</summary>
+        private void LogGeneration(ReportType type, DateTime start, DateTime? end, string path, bool success, string message, string content, string llmRequest)
         {
             try
             {
@@ -251,7 +351,7 @@ namespace EW_Assistant.Services.Reports
 
                 // 写入程序日志（含文件落盘），避免影响主流程
                 MainWindow.PostProgramInfo(sb.ToString(), success ? "info" : "warn");
-                AppendLocalReportLog(sb.ToString(), content);
+                AppendLocalReportLog(sb.ToString(), content, llmRequest);
             }
             catch
             {
@@ -259,7 +359,7 @@ namespace EW_Assistant.Services.Reports
             }
         }
 
-        private void AppendLocalReportLog(string line, string content)
+        private void AppendLocalReportLog(string line, string content, string llmRequest)
         {
             try
             {
@@ -271,6 +371,12 @@ namespace EW_Assistant.Services.Reports
                 sb.AppendFormat("[{0:yyyy-MM-dd HH:mm:ss}] ", DateTime.Now);
                 sb.Append(line ?? string.Empty);
                 sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(llmRequest))
+                {
+                    sb.AppendLine("==== LLM 请求 ====");
+                    sb.AppendLine(llmRequest.Trim());
+                    sb.AppendLine("==== 结束 ====");
+                }
                 if (!string.IsNullOrWhiteSpace(content))
                 {
                     sb.AppendLine("==== 报表内容 ====");
