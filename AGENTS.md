@@ -51,13 +51,22 @@
 
 ## 在 WSL 模式下工作（Linux 命令），但本项目的 WPF（EW-Assistant）必须用 Windows MSBuild 编译并在 Windows 上运行。
 
-每次修改完代码后，必须执行：
-1) ./scripts/assistant_build.sh
-2) 若构建成功，再执行 ./scripts/assistant_run.sh
+> 你正在 WSL 模式（Linux 命令环境）工作，但 EW-Assistant 是 Windows WPF 项目。
+> 因此：**用 WSL 调 Windows 的 MSBuild.exe 编译，用 powershell.exe 启动 exe**。:contentReference[oaicite:4]{index=4}
 
-如果构建失败：
-- 打开并分析 artifacts/assistant/errors.txt（这是从 msbuild.log 提取的关键错误）
-- 基于第一个真实 error 做最小修复（不要大重构）
-- 修复后重复 build 直到成功
+### 0) 只验证 EW-Assistant（硬约束）
+- 仅允许编译/运行：`EW-Assistant`
+- 不对 `McpServer` 做构建/运行/发布/清理等操作（除非用户明确要求）
 
-注意：只编译/运行 EW-Assistant；McpServer 不需要处理。
+### 1) 允许使用的“唯一构建/运行方式”（白名单）
+> 禁止使用 `cmd.exe /C start ...`（WSL + bash 引号极易炸）；统一用 `powershell.exe Start-Process`。:contentReference[oaicite:5]{index=5}
+
+#### 1.1 构建（优先只构建 Assistant，避免牵连 McpServer）
+**优先方案 A（推荐）：只构建 csproj**
+```bash
+'/mnt/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe' \
+  'EW-Assistant/EW-Assistant.csproj' \
+  /t:Restore,Build /m /v:m /nologo \
+  '/p:Configuration=Debug' '/p:Platform=Any CPU'
+
+
