@@ -140,7 +140,7 @@ actionName: "一键点检");
         string action,
         string actionName,
         Dictionary<string, object> args = null,
-        int timeoutMs = 5000,
+        int timeoutMs = 30000,
         CommandTarget target = null,
         Action<CommandCallTrace> traceSink = null)
     {
