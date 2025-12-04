@@ -65,8 +65,9 @@
 **优先方案 A（推荐）：只构建 csproj**
 ```bash
 '/mnt/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe' \
-  'EW-Assistant/EW-Assistant.csproj' \
-  /t:Restore,Build /m /v:m /nologo \
-  '/p:Configuration=Debug' '/p:Platform=Any CPU'
+  'EW-Assistant/EW-Assistant.sln' \
+  -target:EW-Assistant:Build \
+  '/p:Configuration=Debug' '/p:Platform=Any CPU' /m /v:m /nologo
+
 
 
