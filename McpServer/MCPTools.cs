@@ -1,6 +1,7 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Text;
@@ -111,6 +112,22 @@ actionName: "一键点检");
         public object Data { get; set; }
     }
 
+    /// <summary>命令调用的完整追踪信息，便于落盘调试。</summary>
+    public sealed class CommandCallTrace
+    {
+        public string Action { get; set; }
+        public string ActionName { get; set; }
+        public Dictionary<string, object> Args { get; set; }
+        public CommandTarget Target { get; set; }
+        public string RequestJson { get; set; }
+        public HttpStatusCode? HttpStatus { get; set; }
+        public string ResponseText { get; set; }
+        public long ElapsedMs { get; set; }
+        public bool Timeout { get; set; }
+        public string Exception { get; set; }
+        public string ReturnText { get; set; }
+    }
+
     // 小工具：快速构建参数字典（忽略 null）
     public static Dictionary<string, object> PD(params (string Key, object Value)[] items)
     {
@@ -124,8 +141,17 @@ actionName: "一键点检");
         string actionName,
         Dictionary<string, object> args = null,
         int timeoutMs = 5000,
-        CommandTarget target = null)
+        CommandTarget target = null,
+        Action<CommandCallTrace> traceSink = null)
     {
+        var trace = new CommandCallTrace
+        {
+            Action = action,
+            ActionName = actionName,
+            Args = args,
+            Target = target
+        };
+        var sw = Stopwatch.StartNew();
         try
         {
             var req = new CommandRequest
@@ -136,6 +162,7 @@ actionName: "一键点检");
             };
 
             var json = JsonSerializer.Serialize(req, JsonOpt);
+            trace.RequestJson = json;
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             using var httpReq = new HttpRequestMessage(HttpMethod.Post, ApiBaseUrl) { Content = content };
 
@@ -150,14 +177,20 @@ actionName: "一键点检");
                 HttpCompletionOption.ResponseHeadersRead, // 先等到响应头
                 cts.Token
             ).ConfigureAwait(false);
+            trace.HttpStatus = resp.StatusCode;
 
             // 2) 读取响应体（再次做超时保护，兼容旧框架）
             var readTask = resp.Content.ReadAsStringAsync();
             var finished = await Task.WhenAny(readTask, Task.Delay(timeoutMs, cts.Token)).ConfigureAwait(false);
             if (finished != readTask)
-                return $"{actionName}超时（>{timeoutMs}ms，读取响应超时）";
+            {
+                trace.Timeout = true;
+                trace.ReturnText = $"{actionName}超时（>{timeoutMs}ms，读取响应超时）";
+                return trace.ReturnText;
+            }
 
             var text = await readTask.ConfigureAwait(false);
+            trace.ResponseText = text;
 
             if (resp.IsSuccessStatusCode)
             {
@@ -165,26 +198,41 @@ actionName: "一键点检");
                 {
                     var r = JsonSerializer.Deserialize<CommandResponse>(text, JsonOpt);
                     if (r != null && string.Equals(r.Status, "ok", StringComparison.OrdinalIgnoreCase))
-                        return $"{actionName}成功: {(string.IsNullOrEmpty(r.Message) ? "OK" : r.Message)}";
+                    {
+                        trace.ReturnText = $"{actionName}成功: {(string.IsNullOrEmpty(r.Message) ? "OK" : r.Message)}";
+                        return trace.ReturnText;
+                    }
                 }
                 catch { /* 非标准JSON则直接透传 */ }
 
-                return $"{actionName}成功: {text}";
+                trace.ReturnText = $"{actionName}成功: {text}";
+                return trace.ReturnText;
             }
             else
             {
-                return $"{actionName}失败, HTTP 状态码: {resp.StatusCode}, 返回: {text}";
+                trace.ReturnText = $"{actionName}失败, HTTP 状态码: {resp.StatusCode}, 返回: {text}";
+                return trace.ReturnText;
             }
         }
         catch (OperationCanceledException)
         {
-            return $"{actionName}超时（>{timeoutMs}ms）";
+            trace.Timeout = true;
+            trace.Exception = "canceled";
+            trace.ReturnText = $"{actionName}超时（>{timeoutMs}ms）";
+            return trace.ReturnText;
         }
         catch (Exception ex)
         {
-            return $"{actionName}请求异常: {ex.Message}";
+            trace.Exception = ex.Message;
+            trace.ReturnText = $"{actionName}请求异常: {ex.Message}";
+            return trace.ReturnText;
+        }
+        finally
+        {
+            sw.Stop();
+            trace.ElapsedMs = sw.ElapsedMilliseconds;
+            try { traceSink?.Invoke(trace); } catch { }
         }
     }
 
 }
-
