@@ -49,31 +49,7 @@
 - MCP 监听端口、WorkHttpServer urlacl 等需要管理员权限时提前处理；慎用破坏性命令（删除配置/覆盖日志）。
 
 
-## 在 WSL 模式下工作（Linux 命令），但本项目的 WPF（EW-Assistant）必须用 Windows MSBuild 编译并在 Windows 上运行。
 
-> 你正在 WSL 模式（Linux 命令环境）工作，但 EW-Assistant 是 Windows WPF 项目。  
-> 因此：**用 WSL 调 Windows 的 MSBuild.exe 编译，用 powershell.exe 启动 exe**。
-
-### 0) 只验证 EW-Assistant（硬约束），修改EW-Assistant代码后必须编译
-
-- 仅允许编译 / 运行：`EW-Assistant`。
-- 不对 `McpServer` 做构建 / 运行 / 发布 / 清理等操作（除非用户明确要求）。
-- 若构建过程中出现与 McpServer 相关的拷贝 / 锁文件错误，只需在说明中提示用户处理，不得主动尝试发布或强制覆盖 McpServer。
-
-### 1) 允许使用的“唯一构建 / 运行方式”（白名单）
-
-> 禁止使用 `cmd.exe /C start ...`（WSL + bash 引号极易出问题）；统一用 `MSBuild.exe` + `powershell.exe Start-Process`。  
-> 构建命令和运行命令**只能基于下面种**，禁止自行发明新写法。
-
-#### 1.1 构建（只构建 EW-Assistant.csproj，避免牵连 McpServer）
-
-**优先：直接构建 csproj**
-
-```bash
-"/mnt/c/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe" \
-  "EW-Assistant/EW-Assistant.csproj" \
-  /m /v:m /nologo \
-  /p:Configuration=Debug /p:Platform="AnyCPU"
 
 
 
