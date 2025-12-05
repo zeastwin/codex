@@ -54,7 +54,7 @@
 > 你正在 WSL 模式（Linux 命令环境）工作，但 EW-Assistant 是 Windows WPF 项目。  
 > 因此：**用 WSL 调 Windows 的 MSBuild.exe 编译，用 powershell.exe 启动 exe**。
 
-### 0) 只验证 EW-Assistant（硬约束）
+### 0) 只验证 EW-Assistant（硬约束），修改EW-Assistant代码后必须编译
 
 - 仅允许编译 / 运行：`EW-Assistant`。
 - 不对 `McpServer` 做构建 / 运行 / 发布 / 清理等操作（除非用户明确要求）。
@@ -65,7 +65,7 @@
 > 禁止使用 `cmd.exe /C start ...`（WSL + bash 引号极易出问题）；统一用 `MSBuild.exe` + `powershell.exe Start-Process`。  
 > 构建命令和运行命令**只能基于下面种**，禁止自行发明新写法。
 
-#### 1.1 构建（优先只构建 EW-Assistant.csproj，避免牵连 McpServer）
+#### 1.1 构建（只构建 EW-Assistant.csproj，避免牵连 McpServer）
 
 **优先：直接构建 csproj**
 
