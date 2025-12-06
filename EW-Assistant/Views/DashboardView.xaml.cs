@@ -822,11 +822,8 @@ namespace EW_Assistant
                 string? file = candidates.FirstOrDefault();
                 if (file == null)
                 {
-                    // 兜底：找最新的一个 CSV（有些现场命名不含日期）
-                    file = Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly)
-                           .OrderByDescending(File.GetLastWriteTime)
-                           .FirstOrDefault();
-                    if (file == null) { _alarmTodayMissing = true; return; }
+                    _alarmTodayMissing = true;
+                    return;
                 }
 
                 Encoding enc;
@@ -837,12 +834,12 @@ namespace EW_Assistant
                 if (lines.Count == 0) { _alarmTodayMissing = true; return; }
 
                 // 解析表头，寻找“小时/时间/发生时间/时刻”等字段
-                var header = SmartSplitAny(lines[0]);
+                var header = SmartSplitAny(lines[0]).Select(NormalizeCell).ToArray();
                 int idxHour = IndexOf(header, "小时", "Hour", "HOUR", "时间", "发生时间", "时刻", "时段");
 
                 for (int i = 1; i < lines.Count; i++)
                 {
-                    var row = SmartSplitAny(lines[i]);
+                    var row = SmartSplitAny(lines[i]).Select(NormalizeCell).ToArray();
                     if (row.Length == 0) continue;
 
                     int hour = -1;
@@ -886,19 +883,16 @@ namespace EW_Assistant
                                                   .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                                                   .ToArray();
 
-                        string? file = candidates.FirstOrDefault()
-                                     ?? Directory.GetFiles(dir, "*.csv", SearchOption.TopDirectoryOnly)
-                                                 .OrderByDescending(File.GetLastWriteTime)
-                                                 .FirstOrDefault();
+                                string? file = candidates.FirstOrDefault();
 
-                        if (!string.IsNullOrEmpty(file))
-                        {
+                                if (!string.IsNullOrEmpty(file))
+                                {
                             Encoding enc;
                             try { enc = Encoding.GetEncoding("GB2312"); } catch { enc = new UTF8Encoding(false); }
                             var lines = ReadAllLinesShared(file, enc);
                             if (lines.Count > 0)
                             {
-                                var header = SmartSplitAny(lines[0]);
+                                var header = SmartSplitAny(lines[0]).Select(NormalizeCell).ToArray();
                                 int idxCategory = IndexOf(header, "报警类别", "类别", "Category", "Type");
                                 int idxSeconds = IndexOf(header, "报警时间(s)", "报警时长(s)", "持续时间(s)", "Seconds", "Duration");
 
@@ -906,10 +900,10 @@ namespace EW_Assistant
 
                                 for (int i = 1; i < lines.Count; i++)
                                 {
-                                    var row = SmartSplitAny(lines[i]);
+                                    var row = SmartSplitAny(lines[i]).Select(NormalizeCell).ToArray();
                                     if (row.Length == 0) continue;
 
-                                    string cat = (idxCategory >= 0 && idxCategory < row.Length) ? (row[idxCategory] ?? "").Trim() : "Unknown";
+                                    string cat = (idxCategory >= 0 && idxCategory < row.Length) ? (row[idxCategory] ?? "") : "Unknown";
                                     if (string.IsNullOrEmpty(cat)) cat = "Unknown";
 
                                     double sec = 0;
@@ -962,21 +956,39 @@ namespace EW_Assistant
             return new[] { line };
         }
 
+        /// <summary>去掉单双/中英文引号与多余空白，提升表头匹配和数值解析的容错。</summary>
+        private static string NormalizeCell(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+            var t = s.Trim();
+            if (t.Length >= 2)
+            {
+                var first = t[0];
+                var last = t[t.Length - 1];
+                if ((first == '"' && last == '"') || (first == '“' && last == '”') || (first == '\'' && last == '\''))
+                {
+                    t = t.Substring(1, t.Length - 2);
+                    t = t.Replace("\"\"", "\"");
+                }
+            }
+            return t.Trim();
+        }
+
         private static int IndexOf(string[] arr, params string[] keys)
         {
             for (int i = 0; i < arr.Length; i++)
             {
-                var t = arr[i].Trim().ToUpperInvariant();
+                var t = NormalizeCell(arr[i]).ToUpperInvariant();
                 foreach (var k in keys)
-                    if (t == k.Trim().ToUpperInvariant()) return i;
+                    if (t == NormalizeCell(k).ToUpperInvariant()) return i;
             }
             return -1;
         }
 
         private static int ExtractHourLoose(string s)
         {
+            s = NormalizeCell(s);
             if (string.IsNullOrWhiteSpace(s)) return -1;
-            s = s.Trim();
 
             // 直接整数（0-23）
             if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int h) && h >= 0 && h <= 23) return h;
@@ -991,6 +1003,7 @@ namespace EW_Assistant
 
             return -1;
         }
+
 
         private void SkTop5_PaintSurface(object sender, SkiaSharp.Views.Desktop.SKPaintSurfaceEventArgs e)
         {

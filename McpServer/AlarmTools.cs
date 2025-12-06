@@ -272,7 +272,7 @@ public static class AlarmCsvRepository
         var lines = ReadAllLinesWithEncoding(path, CsvEncodingName);
         if (lines.Count == 0) return new List<AlarmRecord>();
 
-        var header = SplitCsvLine(lines[0]).Select(s => (s ?? "").Trim().Trim('"')).ToArray();
+        var header = SplitCsvLine(lines[0]).Select(NormalizeCell).ToArray();
         int idxCode = IndexOf(header, "报警代码", "代码", "Code", "报警编号", "错误编码", "ErrorCode");
         int idxCont = IndexOf(header, "报警内容", "内容", "Desc", "描述", "Content", "错误信息");
         int idxCate = IndexOf(header, "报警类别", "类别", "Category", "错误类型");
@@ -287,7 +287,7 @@ public static class AlarmCsvRepository
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             var cells = SplitCsvLine(line);
-            Func<int, string> get = idx => (idx >= 0 && idx < cells.Length) ? (cells[idx] ?? "").Trim().Trim('"') : "";
+            Func<int, string> get = idx => NormalizeCell(idx >= 0 && idx < cells.Length ? cells[idx] : "");
 
             var code = get(idxCode);
             var cont = get(idxCont);
@@ -382,13 +382,31 @@ public static class AlarmCsvRepository
         return result.ToArray();
     }
 
+    /// <summary>去除单双/中英文引号与多余空白，避免表头或单元格被引号包裹导致匹配失败。</summary>
+    private static string NormalizeCell(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+        var t = s.Trim();
+        if (t.Length >= 2)
+        {
+            var first = t[0];
+            var last = t[t.Length - 1];
+            if ((first == '"' && last == '"') || (first == '“' && last == '”') || (first == '\'' && last == '\''))
+            {
+                t = t.Substring(1, t.Length - 2);
+                t = t.Replace("\"\"", "\"");
+            }
+        }
+        return t.Trim();
+    }
+
     private static int IndexOf(string[] header, params string[] keys)
     {
         for (int i = 0; i < header.Length; i++)
         {
-            var h = (header[i] ?? "").Trim();
+            var h = NormalizeCell(header[i]);
             foreach (var k in keys)
-                if (h.Equals(k, StringComparison.OrdinalIgnoreCase)) return i;
+                if (h.Equals(NormalizeCell(k), StringComparison.OrdinalIgnoreCase)) return i;
         }
         return -1;
     }
@@ -1064,7 +1082,7 @@ public static class AlarmCsvTools
             var header = sr.ReadLine();
             if (header == null) yield break;
 
-            var headers = SplitCsvLine(header).ToArray();
+            var headers = SplitCsvLine(header).Select(NormalizeCell).ToArray();
             int idxCode = IndexOf(headers, "报警代码", "报警代碼", "Code", "报警编号");
             int idxContent = IndexOf(headers, "报警内容", "Content", "描述");
             int idxCategory = IndexOf(headers, "报警类别", "类别", "Category");
@@ -1079,7 +1097,7 @@ public static class AlarmCsvTools
                 var cells = SplitCsvLine(line).ToArray();
                 if (cells.Length == 0) continue;
 
-                Func<int, string> get = i => (i >= 0 && i < cells.Length) ? (cells[i] ?? "").Trim() : "";
+                Func<int, string> get = i => NormalizeCell(i >= 0 && i < cells.Length ? cells[i] : "");
 
                 var code = get(idxCode);
                 var content = get(idxContent);
@@ -1343,13 +1361,31 @@ public static class AlarmCsvTools
         yield return cur.ToString();
     }
 
+    /// <summary>去掉单双/中英文引号与空白，保障表头/单元格匹配。</summary>
+    private static string NormalizeCell(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+        var t = s.Trim();
+        if (t.Length >= 2)
+        {
+            var first = t[0];
+            var last = t[t.Length - 1];
+            if ((first == '"' && last == '"') || (first == '“' && last == '”') || (first == '\'' && last == '\''))
+            {
+                t = t.Substring(1, t.Length - 2);
+                t = t.Replace("\"\"", "\"");
+            }
+        }
+        return t.Trim();
+    }
+
     private static int IndexOf(string[] headers, params string[] candidates)
     {
         for (int i = 0; i < headers.Length; i++)
         {
-            var h = (headers[i] ?? "").Trim();
+            var h = NormalizeCell(headers[i]);
             foreach (var c in candidates)
-                if (h.Equals(c, StringComparison.OrdinalIgnoreCase)) return i;
+                if (h.Equals(NormalizeCell(c), StringComparison.OrdinalIgnoreCase)) return i;
         }
         return -1;
     }
