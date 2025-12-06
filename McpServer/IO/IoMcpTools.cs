@@ -126,48 +126,31 @@ namespace EW_Assistant.McpTools
         }
 
         [McpServerTool, Description(
-     "控制现场设备 IO 点位（例如气缸、电磁阀、继电器）的【打开 / 关闭】动作。\n" +
-     "\n" +
-     "【硬约束 1 —— ioName 必须是完整名称】\n" +
-     " - 参数 ioName 必须与 IO 映射表中的 Name 完全一致，不能擅自改写、缩写或只保留后缀。\n" +
-     " - 例如：用户说「NG抽屉解锁气缸A 打开」，则 ioName 必须是 \"NG抽屉解锁气缸A\"，\n" +
-     "   绝不能只传 \"解锁气缸A\" 或 \"气缸A\"。\n" +
-     " - 如果不确定映射表里的精确名称，应该向用户追问确认，而不是猜测或截断。\n" +
-     "\n" +
-     "【硬约束 2 —— op 只能是打开 / 关闭】\n" +
+     "控制现场设备 IO 点位（如气缸、电磁阀、继电器）的打开/关闭。\n" +
+     "当用户说『打开/关闭 某某气缸/电磁阀/IO』时，应优先调用此工具，而不是清除报警。\n" +
+     "示例：\n" +
+     " - 打开 A未测分料气缸 → IoCommand(ioName=\"A未测分料气缸\", op=\"open\")\n" +
+     " - 关闭 A未测分料气缸 → IoCommand(ioName=\"A未测分料气缸\", op=\"close\")\n" +
+     " - 关闭 NG抽屉解锁气缸A → IoCommand(ioName=\"NG抽屉解锁气缸A\", op=\"close\")\n" +
+     "【硬约束 —— op 只能是打开 / 关闭】\n" +
      " - 参数 op 只能表示两种意图：打开(open) 或 关闭(close)。\n" +
      " - 允许的取值示例：\"open\"、\"close\"，或中文 \"打开\"、\"关闭\"。\n" +
-     " - 禁止使用：toggle/切换/翻转 等模糊意图。\n" +
      "\n" +
-     "【调用时机】\n" +
-     " - 当用户说「打开/关闭 某某气缸/电磁阀/IO」时，应优先调用此工具，而不是清除报警或复位机台。\n" +
-     "\n" +
-     "【示例】\n" +
-     " - 打开 A未测分料气缸 → IoCommand(ioName=\"A未测分料气缸\", op=\"open\")\n" +
-     " - 关闭 NG抽屉解锁气缸A → IoCommand(ioName=\"NG抽屉解锁气缸A\", op=\"close\")\n" +
-     "\n" +
-     "注意：本工具只做 IO 动作，不清除报警、不做机台复位。"
+     "注意：本工具只做 IO 动作，不清除报警或复位机台。"
  )]
         public static async Task<string> IoCommand(
-     [Description(
-        "目标 IO 名称（严格匹配）。\n" +
-        " - 必须与 IO 映射表中的 Name 完全一致。\n" +
-        " - 如果用户说的是「NG抽屉解锁气缸A」，就原样使用 \"NG抽屉解锁气缸A\" 作为 ioName。\n" +
-        " - 不要只保留尾部（例如不要只传 \"气缸A\"），也不要自行增删前缀/后缀。"
-    )]
+     [Description("目标 IO 名称；与 IO 映射表中的 Name 完全一致，例如：\"A未测分料气缸\"")]
     string ioName = null,
 
      [Description(
-        "操作意图，只允许表示两种状态：打开 或 关闭。\n" +
-        " - open：打开、开启、上电、通电、吸合、推出、升起等。\n" +
-        " - close：关闭、关掉、停止、断电、释放、回缩、落下、复位等。\n" +
-        "推荐：\n" +
-        " - 直接把用户原话中的「打开 / 关闭」填入本参数，或翻译为 open / close。\n" +
-        "禁止：\n" +
-        " - 不要默认使用 \"open\"；\n" +
-        " - 不要使用 toggle/切换/翻转 等模糊词。"
+        "操作意图：open=打开 / close=关闭。\n" +
+        "【别名归一】\n" +
+        " - open：\"open\" / \"打开\" / \"开启\" / \"ON\"\n" +
+        " - close：\"close\" / \"关闭\" / \"关掉\" / \"OFF\"\n"
     )]
-    string op = null)
+    string op = null
+ )
+
         {
             LogIoTrace(new { stage = "开始", ioName, op, mapCount = IoMapRepository.Count });
 
