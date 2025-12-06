@@ -176,7 +176,7 @@ namespace EW_Assistant.Warnings
                 var categoryIndex = FindIndex(headers, "category", "类别", "type", "错误类型");
                 var startIndex = FindIndex(headers, "starttime", "开始时间", "start", "起始时间");
                 var endIndex = FindIndex(headers, "endtime", "结束时间", "end");
-                var durationIndex = FindIndex(headers, "duration", "时长", "持续", "durationsec", "时长秒", "持续时间", "维修耗时");
+                var durationIndex = FindIndex(headers, "duration", "时长", "持续", "durationsec", "时长秒", "持续时间", "维修耗时", "报警时间(s)", "报警时长(s)");
 
                 while (!reader.EndOfStream)
                 {
@@ -214,13 +214,32 @@ namespace EW_Assistant.Warnings
         private static string GetCell(string[] cells, int index)
         {
             if (index < 0 || index >= cells.Length) return null;
-            return cells[index];
+            return NormalizeCell(cells[index]);
         }
 
         private static string NormalizeHeader(string header)
         {
             if (header == null) return string.Empty;
-            return header.Trim().Replace(" ", string.Empty).Replace("\t", string.Empty).ToLowerInvariant();
+            var normalized = header.Trim().Trim('"', '\'', '“', '”');
+            return normalized.Replace(" ", string.Empty).Replace("\t", string.Empty).ToLowerInvariant();
+        }
+
+        /// <summary>去除单元格外围引号并做简单的空白清理，避免被双引号包裹时解析失败。</summary>
+        private static string NormalizeCell(string cell)
+        {
+            if (string.IsNullOrWhiteSpace(cell)) return null;
+            var text = cell.Trim();
+            if (text.Length >= 2)
+            {
+                var first = text[0];
+                var last = text[text.Length - 1];
+                if ((first == '"' && last == '"') || (first == '“' && last == '”') || (first == '\'' && last == '\''))
+                {
+                    text = text.Substring(1, text.Length - 2);
+                    text = text.Replace("\"\"", "\"");
+                }
+            }
+            return text.Trim();
         }
 
         private static int FindIndex(string[] headers, params string[] names)
