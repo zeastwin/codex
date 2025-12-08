@@ -18,7 +18,6 @@ namespace EW_Assistant.ViewModels
         private readonly ReportStorageService _storage;
         private readonly ReportGeneratorService _generator;
         private ReportType _currentReportType;
-        private string _currentReportTypeName;
         private string _previewMarkdown;
         private ReportInfo _selectedReport;
         private bool _isBusy;
@@ -31,13 +30,6 @@ namespace EW_Assistant.ViewModels
         {
             get { return _currentReportType; }
             set { SetProperty(ref _currentReportType, value); }
-        }
-
-        /// <summary>报表类型中文名称，供 UI 展示。</summary>
-        public string CurrentReportTypeName
-        {
-            get { return _currentReportTypeName; }
-            set { SetProperty(ref _currentReportTypeName, value); }
         }
 
         /// <summary>当前选中的报表项。</summary>
@@ -81,7 +73,6 @@ namespace EW_Assistant.ViewModels
         public void SwitchReportType(ReportType type)
         {
             CurrentReportType = type;
-            CurrentReportTypeName = _storage.GetTypeDisplayName(type);
             LoadReports(type);
         }
 
@@ -147,7 +138,6 @@ namespace EW_Assistant.ViewModels
             _cts = cts;
             IsBusy = true;
             CurrentReportType = type;
-            CurrentReportTypeName = _storage.GetTypeDisplayName(type);
 
             ReportInfo generated = null;
             var today = DateTime.Today;
@@ -284,12 +274,13 @@ namespace EW_Assistant.ViewModels
 
         private string BuildPlaceholderMarkdown(string message, string title = null)
         {
+            var typeName = GetCurrentTypeDisplayName();
             var sb = new StringBuilder();
-            sb.AppendLine("# " + (title ?? CurrentReportTypeName ?? "报表预览"));
+            sb.AppendLine("# " + (title ?? typeName ?? "报表预览"));
             sb.AppendLine();
             sb.AppendLine("> " + message);
             sb.AppendLine();
-            sb.AppendLine("- 报表类型：" + (CurrentReportTypeName ?? "未选择"));
+            sb.AppendLine("- 报表类型：" + (typeName ?? "未选择"));
             sb.AppendLine("- 更新时间：" + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
             return sb.ToString();
         }
@@ -343,6 +334,11 @@ namespace EW_Assistant.ViewModels
             if (diff < 0) diff += 7;
             var currentWeekStart = day.AddDays(-diff);
             return currentWeekStart.AddDays(-7);
+        }
+
+        private string GetCurrentTypeDisplayName()
+        {
+            return _storage != null ? _storage.GetTypeDisplayName(CurrentReportType) : null;
         }
     }
 }
