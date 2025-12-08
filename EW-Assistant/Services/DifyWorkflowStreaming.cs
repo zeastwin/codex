@@ -50,7 +50,7 @@ namespace EW_Assistant.Net
             CancellationToken ct = default)
         {
             var cfg = EW_Assistant.Services.ConfigService.Current;
-            if (string.IsNullOrWhiteSpace(cfg?.URL+ "/workflows/run") || string.IsNullOrWhiteSpace(cfg?.AutoKey))
+            if (string.IsNullOrWhiteSpace(cfg?.URL) || string.IsNullOrWhiteSpace(cfg?.AutoKey))
             {
                 Post("AutoURL / AutoKey 未配置。", "warn");
                 return null;
@@ -102,7 +102,7 @@ namespace EW_Assistant.Net
             bool onlyMajorNodes = true)
         {
             var cfg = EW_Assistant.Services.ConfigService.Current;
-            if (cfg == null || string.IsNullOrWhiteSpace(cfg.URL + "/workflows/run") || string.IsNullOrWhiteSpace(cfg.AutoKey))
+            if (cfg == null || string.IsNullOrWhiteSpace(cfg.URL) || string.IsNullOrWhiteSpace(cfg.AutoKey))
             {
                 Post("AutoURL / AutoKey 未配置。", "warn");
                 return false;
@@ -236,15 +236,17 @@ namespace EW_Assistant.Net
                     switch (type)
                     {
                         case "workflow_started":
-                            {
-                                runId = d?["id"]?.ToString();
-                                handle.WorkflowRunId = evt.Value<string>("workflow_run_id") ?? runId;
-                                taskId = evt.Value<string>("task_id");
-                                handle.TaskId = taskId;
+                        {
+                            runId = d?["id"]?.ToString();
+                            handle.WorkflowRunId = evt.Value<string>("workflow_run_id") ?? runId;
+                            taskId = evt.Value<string>("task_id");
+                            handle.TaskId = taskId;
+                            _currentRunId = handle.WorkflowRunId;
+                            _currentTaskId = handle.TaskId;
 
-                                Post("▶️ 捕获到异常，进入AI自动分析流程", "error");
-                                break;
-                            }
+                            Post("▶️ 捕获到异常，进入AI自动分析流程", "error");
+                            break;
+                        }
 
                         case "node_started":
                             {
@@ -365,10 +367,15 @@ namespace EW_Assistant.Net
             var taskId = _currentTaskId;
             if (string.IsNullOrEmpty(taskId)) return false;
 
-            var url = $"{ConfigService.Current.URL + "/workflows/run".TrimEnd('/')}/workflows/tasks/{taskId}/stop";
+            var cfg = ConfigService.Current;
+            if (cfg == null || string.IsNullOrWhiteSpace(cfg.URL) || string.IsNullOrWhiteSpace(cfg.AutoKey))
+                return false;
+
+            var baseUrl = cfg.URL.TrimEnd('/');
+            var url = $"{baseUrl}/workflows/tasks/{taskId}/stop";
             using var client = new HttpClient();
             using var req = new HttpRequestMessage(HttpMethod.Post, url);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ConfigService.Current.AutoKey);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", cfg.AutoKey);
             req.Content = new StringContent(JsonConvert.SerializeObject(new { user = "abc-123" }), Encoding.UTF8, "application/json");
 
             using var resp = await client.SendAsync(req, default).ConfigureAwait(false);
