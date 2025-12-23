@@ -35,8 +35,10 @@ namespace EW_Assistant
             {
                 AiAnalysisHistoryStore.Instance.Initialize();
                 PerformanceMonitorService.Instance.Start();
+                PerformanceAutoAnalysisService.Instance.Start();
                 Exit += (_, __) =>
                 {
+                    try { PerformanceAutoAnalysisService.Instance.Stop(); } catch { }
                     try { PerformanceMonitorService.Instance.Stop(); } catch { }
                 };
             }

@@ -190,6 +190,7 @@
     <Compile Include="Services\Performance\AiAnalysisContext.cs" />
     <Compile Include="Services\Performance\AiAnalysisContextBuilder.cs" />
     <Compile Include="Services\Performance\AiAnalysisRecord.cs" />
+    <Compile Include="Services\Performance\AiAnalysisRecordBuilder.cs" />
     <Compile Include="Services\Performance\AiAnalysisHistoryStore.cs" />
     <Compile Include="Services\Performance\AiPerformanceAnalysisService.cs" />
     <Compile Include="Services\Performance\CpuTrendAnalyzer.cs" />
@@ -201,6 +202,7 @@
     <Compile Include="Services\Performance\MemorySnapshot.cs" />
     <Compile Include="Services\Performance\MemoryUsageCollector.cs" />
     <Compile Include="Services\Performance\PerformanceEvent.cs" />
+    <Compile Include="Services\Performance\PerformanceAutoAnalysisService.cs" />
     <Compile Include="Services\Performance\PerformanceMonitorService.cs" />
     <Compile Include="Services\Performance\PerformanceRuleEngine.cs" />
     <!-- LLM Workflow 客户端 -->

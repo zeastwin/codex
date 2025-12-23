@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:md="clr-namespace:MdXaml;assembly=MdXaml"
              mc:Ignorable="d"
              d:DesignHeight="600"
              d:DesignWidth="1000"
@@ -146,7 +147,7 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="Top Processes"
                                    Style="{StaticResource CardTitleStyle}"
@@ -198,54 +199,15 @@
                 <Border Grid.Row="1"
                         Style="{StaticResource CardBorderStyle}"
                         Margin="0,12,0,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <DockPanel Grid.Row="0" LastChildFill="False">
-                            <TextBlock Text="AI 异常分析"
-                                       Style="{StaticResource CardTitleStyle}"/>
-                            <TextBlock DockPanel.Dock="Right"
-                                       Text="分析中..."
-                                       Foreground="#2563EB"
-                                       Visibility="{Binding IsAiAnalyzing, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                        </DockPanel>
-
-                        <Border Grid.Row="1"
-                                Background="#F9FAFB"
-                                BorderBrush="#E5E7EB"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="10"
-                                Margin="0,8,0,0">
-                            <Grid DataContext="{Binding LatestAiRecord}">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Row="0" Grid.Column="1"
-                                           Margin="8,0,0,0"
-                                           Foreground="#6B7280"
-                                           Text="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}, TargetNullValue=--}"/>
-                                <TextBlock Grid.Row="0" Grid.Column="2"
-                                           Text="{Binding SeverityLabel, TargetNullValue=提示}"
-                                           Style="{StaticResource SeverityTextStyle}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                           Margin="0,8,0,0"
-                                           Foreground="#111827"
-                                           TextWrapping="Wrap"
-                                           Text="{Binding Content, TargetNullValue=暂无 AI 分析结果}"/>
-                            </Grid>
-                        </Border>
-                    </Grid>
+                    <Border Background="#F9FAFB"
+                            BorderBrush="#E5E7EB"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="10">
+                        <md:MarkdownScrollViewer VerticalScrollBarVisibility="Auto"
+                                                 Markdown="{Binding SelectedAiMarkdown}"
+                                                 FontSize="13"/>
+                    </Border>
                 </Border>
             </Grid>
 
@@ -305,6 +267,7 @@
                                    Margin="0,0,0,8"/>
                         <DataGrid Grid.Row="1"
                                   ItemsSource="{Binding AiHistory}"
+                                  SelectedItem="{Binding SelectedAiRecord, Mode=TwoWay}"
                                   AutoGenerateColumns="False"
                                   IsReadOnly="True"
                                   CanUserAddRows="False"

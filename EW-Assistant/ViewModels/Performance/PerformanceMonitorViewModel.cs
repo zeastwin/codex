@@ -12,6 +12,7 @@ namespace EW_Assistant.ViewModels
         private const int MaxAiHistory = 200;
         private readonly Dispatcher _dispatcher;
         private readonly PerformanceMonitorService _monitorService;
+        private readonly PerformanceAutoAnalysisService _autoAnalysisService;
         private readonly AiPerformanceAnalysisService _aiService;
         private readonly AiAnalysisContextBuilder _contextBuilder = new AiAnalysisContextBuilder();
         private readonly AiAnalysisHistoryStore _historyStore = AiAnalysisHistoryStore.Instance;
@@ -19,13 +20,14 @@ namespace EW_Assistant.ViewModels
         private string _aiAnalysisResult = string.Empty;
         private bool _isAiAnalyzing;
         private AiAnalysisRecord _latestAiRecord;
+        private AiAnalysisRecord _selectedAiRecord;
+        private string _selectedAiMarkdown = "暂无 AI 分析结果";
         private MemorySnapshot _memorySnapshot;
         private string _cpuAlertMessage = string.Empty;
         private bool _isCpuAlertActive;
         private string _diskAlertMessage = string.Empty;
         private bool _isDiskAlertActive;
         private bool _isSubscribed;
-        private bool _historyLoaded;
 
         public PerformanceMonitorViewModel(Dispatcher dispatcher)
         {
@@ -37,6 +39,7 @@ namespace EW_Assistant.ViewModels
             _memorySnapshot = new MemorySnapshot();
             _aiService = new AiPerformanceAnalysisService();
             _monitorService = PerformanceMonitorService.Instance;
+            _autoAnalysisService = PerformanceAutoAnalysisService.Instance;
         }
 
         public float TotalCpuUsage
@@ -66,6 +69,24 @@ namespace EW_Assistant.ViewModels
         {
             get => _latestAiRecord;
             private set => SetProperty(ref _latestAiRecord, value);
+        }
+
+        public AiAnalysisRecord SelectedAiRecord
+        {
+            get => _selectedAiRecord;
+            set
+            {
+                if (SetProperty(ref _selectedAiRecord, value))
+                {
+                    UpdateSelectedAiMarkdown(value);
+                }
+            }
+        }
+
+        public string SelectedAiMarkdown
+        {
+            get => _selectedAiMarkdown;
+            private set => SetProperty(ref _selectedAiMarkdown, value);
         }
 
         public MemorySnapshot CurrentMemory
@@ -217,6 +238,14 @@ namespace EW_Assistant.ViewModels
             }
         }
 
+        private void OnAutoAnalysisCompleted(object sender, AiAnalysisCompletedEventArgs e)
+        {
+            if (e == null || e.Record == null)
+                return;
+
+            InsertAiRecord(e.Record, false, false);
+        }
+
         private void Subscribe()
         {
             if (_isSubscribed)
@@ -226,6 +255,7 @@ namespace EW_Assistant.ViewModels
             _monitorService.MemorySnapshotUpdated += OnMemorySnapshotUpdated;
             _monitorService.DiskSnapshotUpdated += OnDiskSnapshotUpdated;
             _monitorService.PerformanceEventsRaised += OnPerformanceEventsRaised;
+            _autoAnalysisService.AnalysisCompleted += OnAutoAnalysisCompleted;
             _isSubscribed = true;
         }
 
@@ -238,6 +268,7 @@ namespace EW_Assistant.ViewModels
             _monitorService.MemorySnapshotUpdated -= OnMemorySnapshotUpdated;
             _monitorService.DiskSnapshotUpdated -= OnDiskSnapshotUpdated;
             _monitorService.PerformanceEventsRaised -= OnPerformanceEventsRaised;
+            _autoAnalysisService.AnalysisCompleted -= OnAutoAnalysisCompleted;
             _isSubscribed = false;
         }
 
@@ -300,31 +331,35 @@ namespace EW_Assistant.ViewModels
 
         private void AppendAiRecord(string result, DateTime timestamp)
         {
+            var record = AiAnalysisRecordBuilder.Build(result, timestamp);
+            InsertAiRecord(record, true, true);
+        }
+
+        private void InsertAiRecord(AiAnalysisRecord record, bool persist, bool selectRecord)
+        {
+            if (record == null)
+                return;
+
             if (!_dispatcher.CheckAccess())
             {
-                _dispatcher.BeginInvoke(new Action(() => AppendAiRecord(result, timestamp)));
+                _dispatcher.BeginInvoke(new Action(() => InsertAiRecord(record, persist, selectRecord)));
                 return;
             }
 
-            var content = result ?? string.Empty;
-            var severity = InferSeverity(content);
-            var record = new AiAnalysisRecord
-            {
-                Timestamp = timestamp,
-                Severity = severity,
-                SeverityLabel = BuildSeverityLabel(severity),
-                Content = content,
-                Summary = BuildSummary(content)
-            };
+            if (AiHistory.Count > 0 && AiHistory[0].Timestamp == record.Timestamp && AiHistory[0].Content == record.Content)
+                return;
 
             LatestAiRecord = record;
-            AiAnalysisResult = content;
+            AiAnalysisResult = record.Content ?? string.Empty;
             AiHistory.Insert(0, record);
+            if (selectRecord)
+                SelectedAiRecord = record;
             TrimAiHistory(DateTime.Now);
             if (AiHistory.Count > MaxAiHistory)
                 AiHistory.RemoveAt(AiHistory.Count - 1);
 
-            _historyStore.Append(record);
+            if (persist)
+                _historyStore.Append(record);
         }
 
         private void SetAiAnalyzing(bool value)
@@ -338,46 +373,6 @@ namespace EW_Assistant.ViewModels
             IsAiAnalyzing = value;
         }
 
-        private static string InferSeverity(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return "Info";
-
-            var value = text.ToLowerInvariant();
-            if (value.Contains("严重") || value.Contains("高风险") || value.Contains("高危") || value.Contains("critical") || value.Contains("紧急"))
-                return "Critical";
-            if (value.Contains("警告") || value.Contains("warning") || value.Contains("中风险") || value.Contains("异常"))
-                return "Warning";
-            if (value.Contains("提示") || value.Contains("低风险") || value.Contains("轻微"))
-                return "Info";
-
-            return "Info";
-        }
-
-        private static string BuildSummary(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return "无分析内容";
-
-            var normalized = text.Replace("\r", " ").Replace("\n", " ").Trim();
-            if (normalized.Length <= 120)
-                return normalized;
-
-            return normalized.Substring(0, 120) + "...";
-        }
-
-        private static string BuildSeverityLabel(string severity)
-        {
-            switch (severity)
-            {
-                case "Critical":
-                    return "严重";
-                case "Warning":
-                    return "警告";
-                default:
-                    return "提示";
-            }
-        }
 
         private void TrimAiHistory(DateTime now)
         {
@@ -391,9 +386,6 @@ namespace EW_Assistant.ViewModels
 
         private void LoadAiHistory()
         {
-            if (_historyLoaded)
-                return;
-
             var snapshot = _historyStore.GetSnapshot();
             if (snapshot.Count > 0)
             {
@@ -405,9 +397,23 @@ namespace EW_Assistant.ViewModels
 
                 LatestAiRecord = AiHistory[0];
                 AiAnalysisResult = LatestAiRecord.Content;
+                SelectedAiRecord = LatestAiRecord;
+            }
+            else
+            {
+                SelectedAiRecord = null;
+            }
+        }
+
+        private void UpdateSelectedAiMarkdown(AiAnalysisRecord record)
+        {
+            if (record == null || string.IsNullOrWhiteSpace(record.Content))
+            {
+                SelectedAiMarkdown = "暂无 AI 分析结果";
+                return;
             }
 
-            _historyLoaded = true;
+            SelectedAiMarkdown = record.Content;
         }
 
         public void Dispose()
