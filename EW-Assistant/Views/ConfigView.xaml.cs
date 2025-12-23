@@ -36,7 +36,8 @@ namespace EW_Assistant.Views
                     || string.IsNullOrWhiteSpace(Config.ChatKey)
                     || string.IsNullOrWhiteSpace(Config.DocumentKey)
                     || string.IsNullOrWhiteSpace(Config.ReportKey)
-                    || string.IsNullOrWhiteSpace(Config.EarlyWarningKey))
+                    || string.IsNullOrWhiteSpace(Config.EarlyWarningKey)
+                    || string.IsNullOrWhiteSpace(Config.PerformanceKey))
                 {
                     MainWindow.PostProgramInfo(
                                $"内容不能为空。", "warn");
@@ -71,6 +72,7 @@ namespace EW_Assistant.Views
                     this.Config.DocumentKey = fresh.DocumentKey;
                     this.Config.ReportKey = fresh.ReportKey;
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
+                    this.Config.PerformanceKey = fresh.PerformanceKey;
                     this.Config.FlatFileLayout = fresh.FlatFileLayout;
                     this.Config.UseOkNgSplitTables = fresh.UseOkNgSplitTables;
                     this.Config.WarningOptions = fresh.WarningOptions;
@@ -194,6 +196,13 @@ namespace EW_Assistant.Settings
             get => _earlyWarningKey;
             set { if (_earlyWarningKey != value) { _earlyWarningKey = value; OnPropertyChanged(); } }
         }
+
+        private string _performanceKey = "";
+        public string PerformanceKey
+        {
+            get => _performanceKey;
+            set { if (_performanceKey != value) { _performanceKey = value; OnPropertyChanged(); } }
+        }
         private bool _flatFileLayout;
         [JsonProperty("flatFileLayout")]
         public bool FlatFileLayout
@@ -307,6 +316,7 @@ namespace EW_Assistant.Services
                 _current.DocumentKey = cfg.DocumentKey;
                 _current.ReportKey = cfg.ReportKey;
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
+                _current.PerformanceKey = cfg.PerformanceKey;
                 _current.FlatFileLayout = cfg.FlatFileLayout;
                 _current.UseOkNgSplitTables = cfg.UseOkNgSplitTables;
                 _current.WarningOptions = cfg.WarningOptions ?? WarningRuleOptions.CreateDefault();
@@ -332,6 +342,8 @@ namespace EW_Assistant.Services
                 cfg.MCPServerIP = "127.0.0.1:8081";
             if (cfg.ReportKey == null)
                 cfg.ReportKey = string.Empty;
+            if (cfg.PerformanceKey == null)
+                cfg.PerformanceKey = string.Empty;
             cfg.WarningOptions = WarningRuleOptions.Normalize(cfg.WarningOptions);
         }
 

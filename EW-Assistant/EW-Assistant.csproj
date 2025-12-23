@@ -187,6 +187,19 @@
     <Compile Include="Services\DocumentMindMapParser.cs" />
     <Compile Include="Services\DocumentChecklistParser.cs" />
     <Compile Include="Services\FileWorkflowClient.cs" />
+    <Compile Include="Services\Performance\AiAnalysisContext.cs" />
+    <Compile Include="Services\Performance\AiAnalysisContextBuilder.cs" />
+    <Compile Include="Services\Performance\AiAnalysisRecord.cs" />
+    <Compile Include="Services\Performance\AiPerformanceAnalysisService.cs" />
+    <Compile Include="Services\Performance\CpuTrendAnalyzer.cs" />
+    <Compile Include="Services\Performance\CpuTrendSnapshot.cs" />
+    <Compile Include="Services\Performance\DiskUsageCollector.cs" />
+    <Compile Include="Services\Performance\DiskUsageSnapshot.cs" />
+    <Compile Include="Services\Performance\LocalPerformanceCollector.cs" />
+    <Compile Include="Services\Performance\MemorySnapshot.cs" />
+    <Compile Include="Services\Performance\MemoryUsageCollector.cs" />
+    <Compile Include="Services\Performance\PerformanceEvent.cs" />
+    <Compile Include="Services\Performance\PerformanceRuleEngine.cs" />
     <!-- LLM Workflow 客户端 -->
     <Compile Include="Services\Reports\LlmWorkflowClient.cs" />
     <Compile Include="Services\Reports\ReportGeneratorService.cs" />
@@ -230,8 +243,12 @@
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="ViewModels\ReportsCenterViewModel.cs" />
     <Compile Include="ViewModels\Inventory\InventoryViewModel.cs" />
+    <Compile Include="ViewModels\Performance\PerformanceMonitorViewModel.cs" />
     <Compile Include="Views\AlarmView.xaml.cs">
       <DependentUpon>AlarmView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Performance\PerformanceMonitorView.xaml.cs">
+      <DependentUpon>PerformanceMonitorView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MachineControl.xaml.cs">
       <DependentUpon>MachineControl.xaml</DependentUpon>
@@ -256,6 +273,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\AlarmView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Performance\PerformanceMonitorView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

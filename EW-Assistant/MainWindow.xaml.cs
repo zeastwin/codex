@@ -66,6 +66,7 @@ namespace EW_Assistant
             ["AI文档"] = () => new DocumentAiView(),
             ["产能看板"] = () => new ProductionBoardView(),
             ["报警看板"] = () => new AlarmView(),
+            ["性能监控"] = () => new PerformanceMonitorView(),
             ["报表中心"] = () => new ReportsCenterView(),
             ["预警中心"] = () => new WarningCenterView(),
             ["机台控制"] = () => new MachineControl(),
