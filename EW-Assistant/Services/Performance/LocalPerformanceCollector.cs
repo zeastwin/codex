@@ -49,6 +49,7 @@ namespace EW_Assistant.Services
         private Timer _timer;
         private PerformanceCounter _totalCpuCounter;
         private bool _totalCpuReady;
+        private bool _totalCpuInitFailed;
         private int _capturing;
 
         public LocalPerformanceCollector(Dispatcher dispatcher, TimeSpan? interval = null)
@@ -56,14 +57,7 @@ namespace EW_Assistant.Services
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
             _interval = interval ?? TimeSpan.FromSeconds(2);
 
-            try
-            {
-                _totalCpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            }
-            catch
-            {
-                _totalCpuCounter = null;
-            }
+            _totalCpuCounter = null;
         }
 
         public CpuSnapshot LastSnapshot { get; private set; } = new CpuSnapshot();
@@ -284,6 +278,7 @@ namespace EW_Assistant.Services
 
         private float ReadTotalCpuUsage(float sumCpuUsage)
         {
+            EnsureTotalCpuCounter();
             if (_totalCpuCounter == null)
                 return ClampPercent(sumCpuUsage);
 
@@ -301,6 +296,23 @@ namespace EW_Assistant.Services
             catch
             {
                 return ClampPercent(sumCpuUsage);
+            }
+        }
+
+        private void EnsureTotalCpuCounter()
+        {
+            if (_totalCpuCounter != null || _totalCpuInitFailed)
+                return;
+
+            try
+            {
+                _totalCpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                _totalCpuReady = false;
+            }
+            catch
+            {
+                _totalCpuCounter = null;
+                _totalCpuInitFailed = true;
             }
         }
 

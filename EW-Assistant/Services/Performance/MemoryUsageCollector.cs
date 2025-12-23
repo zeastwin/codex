@@ -22,7 +22,7 @@ namespace EW_Assistant.Services
     {
         private readonly TimeSpan _interval;
         private readonly object _syncRoot = new object();
-        private readonly ComputerInfo _computerInfo = new ComputerInfo();
+        private ComputerInfo _computerInfo;
         private Timer _timer;
         private int _capturing;
 
@@ -108,8 +108,12 @@ namespace EW_Assistant.Services
 
             try
             {
-                var totalBytes = _computerInfo.TotalPhysicalMemory;
-                var availableBytes = _computerInfo.AvailablePhysicalMemory;
+                var info = EnsureComputerInfo();
+                if (info == null)
+                    throw new InvalidOperationException("ComputerInfo 初始化失败。");
+
+                var totalBytes = info.TotalPhysicalMemory;
+                var availableBytes = info.AvailablePhysicalMemory;
                 totalMb = BytesToMb(totalBytes);
                 availableMb = BytesToMb(availableBytes);
             }
@@ -142,6 +146,23 @@ namespace EW_Assistant.Services
             if (value < 0f) return 0f;
             if (value > 100f) return 100f;
             return value;
+        }
+
+        private ComputerInfo EnsureComputerInfo()
+        {
+            if (_computerInfo != null)
+                return _computerInfo;
+
+            try
+            {
+                _computerInfo = new ComputerInfo();
+            }
+            catch
+            {
+                _computerInfo = null;
+            }
+
+            return _computerInfo;
         }
 
         public void Dispose()
