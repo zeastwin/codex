@@ -68,6 +68,59 @@
             </Style.Triggers>
         </Style>
 
+        <!-- 细窄、低存在感的滚动条样式（本控件内所有 ScrollBar 生效） -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <!-- 隐藏上下/左右按钮，只保留拖动条 -->
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.LineUpCommand}"
+                                                  Visibility="Collapsed"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.LineDownCommand}"
+                                                  Visibility="Collapsed"/>
+                                </Track.IncreaseRepeatButton>
+
+                                <Track.Thumb>
+                                    <Thumb x:Name="Thumb" Background="#D1D5DB">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border CornerRadius="3"
+                                                        Background="{TemplateBinding Background}"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <!-- 竖向：控制“粗细”为 6 -->
+                            <Trigger Property="Orientation" Value="Vertical">
+                                <Setter TargetName="PART_Track" Property="Width" Value="6"/>
+                                <Setter TargetName="Thumb" Property="Width" Value="6"/>
+                            </Trigger>
+
+                            <!-- 横向：控制“粗细”为 6 -->
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter TargetName="PART_Track" Property="Height" Value="6"/>
+                                <Setter TargetName="Thumb" Property="Height" Value="6"/>
+                            </Trigger>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Thumb" Property="Background" Value="#9CA3AF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </UserControl.Resources>
 
     <Grid Margin="12">
@@ -199,15 +252,13 @@
                 <Border Grid.Row="1"
                         Style="{StaticResource CardBorderStyle}"
                         Margin="0,12,0,0">
-                    <Border Background="#F9FAFB"
-                            BorderBrush="#E5E7EB"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="10">
-                        <md:MarkdownScrollViewer VerticalScrollBarVisibility="Auto"
-                                                 Markdown="{Binding SelectedAiMarkdown}"
-                                                 FontSize="13"/>
-                    </Border>
+                    <md:MarkdownScrollViewer Markdown="{Binding SelectedAiMarkdown}"
+                                             PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel"
+                                             Background="White"
+                                             BorderThickness="0"
+                                             Padding="12,12,22,12"
+                                             VerticalScrollBarVisibility="Auto"
+                                             FontSize="13"/>
                 </Border>
             </Grid>
 
