@@ -1,50 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace EW_Assistant.Services
 {
     public sealed class PerformanceRuleEngine
     {
-        private const int HistorySeconds = 60;
         private const float HighCpuThreshold = 80f;
-        private static readonly TimeSpan HighCpuDuration = TimeSpan.FromSeconds(30);
-        private static readonly TimeSpan Top1Duration = TimeSpan.FromSeconds(20);
 
         private readonly object _syncRoot = new object();
-        private readonly Queue<CpuSnapshot> _history = new Queue<CpuSnapshot>();
         private readonly List<PerformanceEvent> _events = new List<PerformanceEvent>();
-        private readonly HashSet<string> _whitelist;
-
-        private DateTime? _highCpuStart;
-        private bool _highCpuRaised;
-
-        private int? _top1Pid;
-        private DateTime _top1Start;
-        private bool _top1Raised;
-
-        private HashSet<int> _nonWhitelistTop3 = new HashSet<int>();
-
-        public PerformanceRuleEngine(IEnumerable<string> whitelist = null)
-        {
-            _whitelist = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "Idle",
-                "System"
-            };
-
-            if (whitelist != null)
-            {
-                foreach (var name in whitelist)
-                {
-                    if (!string.IsNullOrWhiteSpace(name))
-                        _whitelist.Add(name.Trim());
-                }
-            }
-        }
-
-        /// <summary>可配置的白名单进程名集合（不包含 .exe）。</summary>
-        public ISet<string> Whitelist => _whitelist;
+        private bool _highCpuActive;
+        private DateTime _highCpuStart;
 
         /// <summary>返回当前事件列表快照。</summary>
         public IReadOnlyList<PerformanceEvent> GetEventsSnapshot()
@@ -52,6 +20,22 @@ namespace EW_Assistant.Services
             lock (_syncRoot)
             {
                 return _events.ToList();
+            }
+        }
+
+        /// <summary>追加外部事件到列表。</summary>
+        public void AppendEvents(IEnumerable<PerformanceEvent> eventsList)
+        {
+            if (eventsList == null)
+                return;
+
+            lock (_syncRoot)
+            {
+                foreach (var evt in eventsList)
+                {
+                    if (evt != null)
+                        _events.Add(evt);
+                }
             }
         }
 
@@ -64,10 +48,7 @@ namespace EW_Assistant.Services
             var newEvents = new List<PerformanceEvent>();
             lock (_syncRoot)
             {
-                AddSnapshot(snapshot);
                 EvaluateHighCpu(snapshot, newEvents);
-                EvaluateTop1(snapshot, newEvents);
-                EvaluateNonWhitelist(snapshot, newEvents);
 
                 if (newEvents.Count > 0)
                     _events.AddRange(newEvents);
@@ -76,123 +57,76 @@ namespace EW_Assistant.Services
             return newEvents;
         }
 
-        private void AddSnapshot(CpuSnapshot snapshot)
+        public string GetHighCpuAlertMessage(CpuSnapshot snapshot)
         {
-            _history.Enqueue(snapshot);
-            var cutoff = snapshot.Timestamp.AddSeconds(-HistorySeconds);
-            while (_history.Count > 0 && _history.Peek().Timestamp < cutoff)
-                _history.Dequeue();
+            if (snapshot == null)
+                return string.Empty;
+
+            if (snapshot.TotalCpuUsage < HighCpuThreshold)
+                return string.Empty;
+
+            var processSummary = BuildProcessSummary(snapshot.TopProcesses, 3);
+            if (string.IsNullOrWhiteSpace(processSummary))
+            {
+                return string.Format("CPU 总占用率 {0:F1}% 超过阈值 {1:F1}%。",
+                    snapshot.TotalCpuUsage, HighCpuThreshold);
+            }
+
+            return string.Format("CPU 总占用率 {0:F1}% 超过阈值 {1:F1}%。高占用进程：{2}",
+                snapshot.TotalCpuUsage, HighCpuThreshold, processSummary);
         }
 
         private void EvaluateHighCpu(CpuSnapshot snapshot, List<PerformanceEvent> newEvents)
         {
-            if (snapshot.TotalCpuUsage > HighCpuThreshold)
+            if (snapshot.TotalCpuUsage >= HighCpuThreshold)
             {
-                if (!_highCpuStart.HasValue)
+                if (!_highCpuActive)
                 {
+                    _highCpuActive = true;
                     _highCpuStart = snapshot.Timestamp;
-                    _highCpuRaised = false;
-                }
-
-                if (!_highCpuRaised && snapshot.Timestamp - _highCpuStart.Value >= HighCpuDuration)
-                {
+                    var description = GetHighCpuAlertMessage(snapshot);
                     newEvents.Add(new PerformanceEvent
                     {
                         EventType = "CPU_TOTAL_HIGH",
-                        StartTime = _highCpuStart.Value,
+                        StartTime = _highCpuStart,
                         RelatedProcess = string.Empty,
-                        Description = string.Format("CPU 总占用率连续 30 秒超过 80%，当前 {0:F1}%。", snapshot.TotalCpuUsage)
+                        Description = description
                     });
-                    _highCpuRaised = true;
                 }
             }
             else
             {
-                _highCpuStart = null;
-                _highCpuRaised = false;
+                _highCpuActive = false;
+                _highCpuStart = DateTime.MinValue;
             }
         }
 
-        private void EvaluateTop1(CpuSnapshot snapshot, List<PerformanceEvent> newEvents)
+        private static string BuildProcessSummary(IReadOnlyList<ProcessSnapshot> processes, int maxCount)
         {
-            var top1 = snapshot.TopProcesses != null && snapshot.TopProcesses.Count > 0
-                ? snapshot.TopProcesses[0]
-                : null;
+            if (processes == null || processes.Count == 0)
+                return string.Empty;
 
-            if (top1 == null)
+            var sb = new StringBuilder();
+            var count = Math.Min(maxCount, processes.Count);
+            for (int i = 0; i < count; i++)
             {
-                ResetTop1();
-                return;
-            }
-
-            if (!_top1Pid.HasValue || _top1Pid.Value != top1.Pid)
-            {
-                _top1Pid = top1.Pid;
-                _top1Start = snapshot.Timestamp;
-                _top1Raised = false;
-            }
-
-            if (!_top1Raised && snapshot.Timestamp - _top1Start >= Top1Duration)
-            {
-                var label = BuildProcessLabel(top1.Name, top1.Pid);
-                newEvents.Add(new PerformanceEvent
-                {
-                    EventType = "TOP1_STREAK",
-                    StartTime = _top1Start,
-                    RelatedProcess = label,
-                    Description = string.Format("进程 {0} 连续 20 秒保持 CPU Top 1。", label)
-                });
-                _top1Raised = true;
-            }
-        }
-
-        private void EvaluateNonWhitelist(CpuSnapshot snapshot, List<PerformanceEvent> newEvents)
-        {
-            var current = new HashSet<int>();
-            if (snapshot.TopProcesses == null)
-            {
-                _nonWhitelistTop3 = current;
-                return;
-            }
-
-            foreach (var proc in snapshot.TopProcesses.Take(3))
-            {
+                var proc = processes[i];
                 if (proc == null)
                     continue;
 
-                var name = proc.Name ?? string.Empty;
-                if (_whitelist.Contains(name))
-                    continue;
+                if (sb.Length > 0)
+                    sb.Append("；");
 
-                current.Add(proc.Pid);
-                if (!_nonWhitelistTop3.Contains(proc.Pid))
-                {
-                    var label = BuildProcessLabel(name, proc.Pid);
-                    newEvents.Add(new PerformanceEvent
-                    {
-                        EventType = "NON_WHITELIST_TOP3",
-                        StartTime = snapshot.Timestamp,
-                        RelatedProcess = label,
-                        Description = string.Format("非白名单进程进入 CPU Top 3：{0}。", label)
-                    });
-                }
+                var name = string.IsNullOrWhiteSpace(proc.Name) ? "未知进程" : proc.Name;
+                sb.Append(name);
+                sb.Append(" (PID=");
+                sb.Append(proc.Pid);
+                sb.Append(") ");
+                sb.Append(proc.CpuUsage.ToString("F1"));
+                sb.Append("%");
             }
 
-            _nonWhitelistTop3 = current;
-        }
-
-        private void ResetTop1()
-        {
-            _top1Pid = null;
-            _top1Raised = false;
-            _top1Start = DateTime.MinValue;
-        }
-
-        private static string BuildProcessLabel(string name, int pid)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return "PID=" + pid;
-            return name + " (PID=" + pid + ")";
+            return sb.ToString();
         }
     }
 }

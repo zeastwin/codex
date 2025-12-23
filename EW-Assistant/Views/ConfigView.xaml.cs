@@ -44,6 +44,12 @@ namespace EW_Assistant.Views
                     return;
                 }
 
+                if (Config.DiskUsageThresholdPercent <= 0f || Config.DiskUsageThresholdPercent > 100f)
+                {
+                    MainWindow.PostProgramInfo("磁盘报警阈值需在 1-100 之间。", "warn");
+                    return;
+                }
+
                 EW_Assistant.Services.ConfigService.Save(Config);
                 MainWindow.PostProgramInfo(
                $"配置已保存：{EW_Assistant.Services.ConfigService.FilePath}", "ok");
@@ -73,6 +79,7 @@ namespace EW_Assistant.Views
                     this.Config.ReportKey = fresh.ReportKey;
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
                     this.Config.PerformanceKey = fresh.PerformanceKey;
+                    this.Config.DiskUsageThresholdPercent = fresh.DiskUsageThresholdPercent;
                     this.Config.FlatFileLayout = fresh.FlatFileLayout;
                     this.Config.UseOkNgSplitTables = fresh.UseOkNgSplitTables;
                     this.Config.WarningOptions = fresh.WarningOptions;
@@ -203,6 +210,21 @@ namespace EW_Assistant.Settings
             get => _performanceKey;
             set { if (_performanceKey != value) { _performanceKey = value; OnPropertyChanged(); } }
         }
+
+        private float _diskUsageThresholdPercent = 90f;
+        public float DiskUsageThresholdPercent
+        {
+            get => _diskUsageThresholdPercent;
+            set
+            {
+                if (Math.Abs(_diskUsageThresholdPercent - value) > 0.01f)
+                {
+                    _diskUsageThresholdPercent = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private bool _flatFileLayout;
         [JsonProperty("flatFileLayout")]
         public bool FlatFileLayout
@@ -317,6 +339,7 @@ namespace EW_Assistant.Services
                 _current.ReportKey = cfg.ReportKey;
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
                 _current.PerformanceKey = cfg.PerformanceKey;
+                _current.DiskUsageThresholdPercent = cfg.DiskUsageThresholdPercent;
                 _current.FlatFileLayout = cfg.FlatFileLayout;
                 _current.UseOkNgSplitTables = cfg.UseOkNgSplitTables;
                 _current.WarningOptions = cfg.WarningOptions ?? WarningRuleOptions.CreateDefault();
@@ -344,6 +367,10 @@ namespace EW_Assistant.Services
                 cfg.ReportKey = string.Empty;
             if (cfg.PerformanceKey == null)
                 cfg.PerformanceKey = string.Empty;
+            if (cfg.DiskUsageThresholdPercent <= 0f)
+                cfg.DiskUsageThresholdPercent = 90f;
+            if (cfg.DiskUsageThresholdPercent > 100f)
+                cfg.DiskUsageThresholdPercent = 100f;
             cfg.WarningOptions = WarningRuleOptions.Normalize(cfg.WarningOptions);
         }
 

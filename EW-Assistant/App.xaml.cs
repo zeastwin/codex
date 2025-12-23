@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using EW_Assistant.Infrastructure.Inventory;
+using EW_Assistant.Services;
+using EW_Assistant.Services;
 
 namespace EW_Assistant
 {
@@ -27,6 +29,20 @@ namespace EW_Assistant
             catch (Exception ex)
             {
                 MessageBox.Show("初始化库存模块失败：" + ex.Message, "启动错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            try
+            {
+                AiAnalysisHistoryStore.Instance.Initialize();
+                PerformanceMonitorService.Instance.Start();
+                Exit += (_, __) =>
+                {
+                    try { PerformanceMonitorService.Instance.Stop(); } catch { }
+                };
+            }
+            catch
+            {
+                // 后台监控失败时不阻断主流程
             }
         }
 

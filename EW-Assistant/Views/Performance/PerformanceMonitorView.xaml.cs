@@ -27,5 +27,10 @@ namespace EW_Assistant.Views
         {
             _viewModel.Stop();
         }
+
+        private async void OnTestCpuAlertClick(object sender, RoutedEventArgs e)
+        {
+            await _viewModel.TriggerTestCpuAlertAndAnalyzeAsync();
+        }
     }
 }

@@ -54,7 +54,7 @@ namespace EW_Assistant.Services
 
         public LocalPerformanceCollector(Dispatcher dispatcher, TimeSpan? interval = null)
         {
-            _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+            _dispatcher = dispatcher;
             _interval = interval ?? TimeSpan.FromSeconds(2);
 
             _totalCpuCounter = null;

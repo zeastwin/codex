@@ -11,18 +11,21 @@ namespace EW_Assistant.ViewModels
     {
         private const int MaxAiHistory = 200;
         private readonly Dispatcher _dispatcher;
-        private readonly LocalPerformanceCollector _collector;
-        private readonly MemoryUsageCollector _memoryCollector;
-        private readonly DiskUsageCollector _diskCollector;
-        private readonly PerformanceRuleEngine _ruleEngine;
+        private readonly PerformanceMonitorService _monitorService;
         private readonly AiPerformanceAnalysisService _aiService;
-        private readonly CpuTrendAnalyzer _trendAnalyzer;
+        private readonly AiAnalysisContextBuilder _contextBuilder = new AiAnalysisContextBuilder();
+        private readonly AiAnalysisHistoryStore _historyStore = AiAnalysisHistoryStore.Instance;
         private float _totalCpuUsage;
         private string _aiAnalysisResult = string.Empty;
         private bool _isAiAnalyzing;
         private AiAnalysisRecord _latestAiRecord;
-        private CpuTrendSnapshot _cpuTrend;
         private MemorySnapshot _memorySnapshot;
+        private string _cpuAlertMessage = string.Empty;
+        private bool _isCpuAlertActive;
+        private string _diskAlertMessage = string.Empty;
+        private bool _isDiskAlertActive;
+        private bool _isSubscribed;
+        private bool _historyLoaded;
 
         public PerformanceMonitorViewModel(Dispatcher dispatcher)
         {
@@ -32,16 +35,8 @@ namespace EW_Assistant.ViewModels
             AiHistory = new ObservableCollection<AiAnalysisRecord>();
             DiskSnapshots = new ObservableCollection<DiskUsageSnapshot>();
             _memorySnapshot = new MemorySnapshot();
-            _cpuTrend = new CpuTrendSnapshot();
-            _collector = new LocalPerformanceCollector(_dispatcher, TimeSpan.FromSeconds(1));
-            _collector.SnapshotUpdated += OnSnapshotUpdated;
-            _memoryCollector = new MemoryUsageCollector(TimeSpan.FromSeconds(1));
-            _memoryCollector.SnapshotUpdated += OnMemorySnapshotUpdated;
-            _diskCollector = new DiskUsageCollector(TimeSpan.FromSeconds(15));
-            _diskCollector.SnapshotUpdated += OnDiskSnapshotUpdated;
-            _ruleEngine = new PerformanceRuleEngine();
             _aiService = new AiPerformanceAnalysisService();
-            _trendAnalyzer = new CpuTrendAnalyzer();
+            _monitorService = PerformanceMonitorService.Instance;
         }
 
         public float TotalCpuUsage
@@ -73,30 +68,61 @@ namespace EW_Assistant.ViewModels
             private set => SetProperty(ref _latestAiRecord, value);
         }
 
-        public CpuTrendSnapshot CpuTrend
-        {
-            get => _cpuTrend;
-            private set => SetProperty(ref _cpuTrend, value);
-        }
-
         public MemorySnapshot CurrentMemory
         {
             get => _memorySnapshot;
             private set => SetProperty(ref _memorySnapshot, value);
         }
 
+        public string CpuAlertMessage
+        {
+            get => _cpuAlertMessage;
+            private set => SetProperty(ref _cpuAlertMessage, value);
+        }
+
+        public bool IsCpuAlertActive
+        {
+            get => _isCpuAlertActive;
+            private set => SetProperty(ref _isCpuAlertActive, value);
+        }
+
+        public async Task TriggerTestCpuAlertAndAnalyzeAsync()
+        {
+            var testSnapshot = _monitorService.TriggerTestCpuAlert();
+            ApplyCpuAlertState();
+
+            if (IsAiAnalyzing)
+                return;
+
+            var eventsSnapshot = _monitorService.GetEventsSnapshot();
+            var averageCpu = _monitorService.AverageCpuUsage5Min;
+            var context = _contextBuilder.Build(testSnapshot, averageCpu, eventsSnapshot);
+            await AnalyzeAsync(context);
+        }
+
+        public string DiskAlertMessage
+        {
+            get => _diskAlertMessage;
+            private set => SetProperty(ref _diskAlertMessage, value);
+        }
+
+        public bool IsDiskAlertActive
+        {
+            get => _isDiskAlertActive;
+            private set => SetProperty(ref _isDiskAlertActive, value);
+        }
+
         public void Start()
         {
-            _collector.Start();
-            _memoryCollector.Start();
-            _diskCollector.Start();
+            _monitorService.Start();
+            Subscribe();
+            LoadAiHistory();
+            RefreshFromService();
         }
 
         public void Stop()
         {
-            _collector.Stop();
-            _memoryCollector.Stop();
-            _diskCollector.Stop();
+            Unsubscribe();
         }
 
         private void OnSnapshotUpdated(object sender, CpuSnapshotEventArgs e)
@@ -116,7 +142,6 @@ namespace EW_Assistant.ViewModels
         private void ApplySnapshot(CpuSnapshot snapshot)
         {
             TotalCpuUsage = snapshot.TotalCpuUsage;
-            CpuTrend = _trendAnalyzer.Update(snapshot.TotalCpuUsage, snapshot.Timestamp);
 
             TopProcesses.Clear();
             foreach (var item in snapshot.TopProcesses)
@@ -124,11 +149,7 @@ namespace EW_Assistant.ViewModels
                 TopProcesses.Add(item);
             }
 
-            var newEvents = _ruleEngine.ProcessSnapshot(snapshot);
-            foreach (var evt in newEvents)
-            {
-                Events.Add(evt);
-            }
+            ApplyCpuAlertState();
         }
 
         private void OnMemorySnapshotUpdated(object sender, MemorySnapshotEventArgs e)
@@ -157,11 +178,11 @@ namespace EW_Assistant.ViewModels
 
             if (!_dispatcher.CheckAccess())
             {
-                _dispatcher.BeginInvoke(new Action(() => UpdateDiskSnapshots(e.Snapshots)));
+                _dispatcher.BeginInvoke(new Action(() => UpdateDiskSnapshotsAndAlert(e.Snapshots)));
                 return;
             }
 
-            UpdateDiskSnapshots(e.Snapshots);
+            UpdateDiskSnapshotsAndAlert(e.Snapshots);
         }
 
         private void UpdateDiskSnapshots(IReadOnlyList<DiskUsageSnapshot> snapshots)
@@ -171,6 +192,93 @@ namespace EW_Assistant.ViewModels
             {
                 DiskSnapshots.Add(snapshots[i]);
             }
+        }
+
+        private void UpdateDiskSnapshotsAndAlert(IReadOnlyList<DiskUsageSnapshot> snapshots)
+        {
+            UpdateDiskSnapshots(snapshots);
+            ApplyDiskAlertState();
+        }
+
+        private void OnPerformanceEventsRaised(object sender, PerformanceEventsEventArgs e)
+        {
+            if (e == null || e.Events == null)
+                return;
+
+            if (!_dispatcher.CheckAccess())
+            {
+                _dispatcher.BeginInvoke(new Action(() => OnPerformanceEventsRaised(sender, e)));
+                return;
+            }
+
+            foreach (var evt in e.Events)
+            {
+                Events.Add(evt);
+            }
+        }
+
+        private void Subscribe()
+        {
+            if (_isSubscribed)
+                return;
+
+            _monitorService.CpuSnapshotUpdated += OnSnapshotUpdated;
+            _monitorService.MemorySnapshotUpdated += OnMemorySnapshotUpdated;
+            _monitorService.DiskSnapshotUpdated += OnDiskSnapshotUpdated;
+            _monitorService.PerformanceEventsRaised += OnPerformanceEventsRaised;
+            _isSubscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            if (!_isSubscribed)
+                return;
+
+            _monitorService.CpuSnapshotUpdated -= OnSnapshotUpdated;
+            _monitorService.MemorySnapshotUpdated -= OnMemorySnapshotUpdated;
+            _monitorService.DiskSnapshotUpdated -= OnDiskSnapshotUpdated;
+            _monitorService.PerformanceEventsRaised -= OnPerformanceEventsRaised;
+            _isSubscribed = false;
+        }
+
+        private void RefreshFromService()
+        {
+            var snapshot = _monitorService.LastCpuSnapshot;
+            if (snapshot != null)
+                ApplySnapshot(snapshot);
+
+            var memory = _monitorService.LastMemorySnapshot;
+            if (memory != null)
+                UpdateMemorySnapshot(memory);
+
+            var disks = _monitorService.LastDiskSnapshots;
+            if (disks != null)
+                UpdateDiskSnapshots(disks);
+            ApplyDiskAlertState();
+
+            ApplyCpuAlertState();
+
+            var eventsSnapshot = _monitorService.GetEventsSnapshot();
+            if (eventsSnapshot != null && eventsSnapshot.Count > 0)
+            {
+                Events.Clear();
+                foreach (var evt in eventsSnapshot)
+                {
+                    Events.Add(evt);
+                }
+            }
+        }
+
+        private void ApplyDiskAlertState()
+        {
+            DiskAlertMessage = _monitorService.DiskAlertMessage ?? string.Empty;
+            IsDiskAlertActive = _monitorService.IsDiskAlertActive;
+        }
+
+        private void ApplyCpuAlertState()
+        {
+            CpuAlertMessage = _monitorService.CpuAlertMessage ?? string.Empty;
+            IsCpuAlertActive = _monitorService.IsCpuAlertActive;
         }
 
         public async Task AnalyzeAsync(AiAnalysisContext context)
@@ -215,6 +323,8 @@ namespace EW_Assistant.ViewModels
             TrimAiHistory(DateTime.Now);
             if (AiHistory.Count > MaxAiHistory)
                 AiHistory.RemoveAt(AiHistory.Count - 1);
+
+            _historyStore.Append(record);
         }
 
         private void SetAiAnalyzing(bool value)
@@ -279,14 +389,30 @@ namespace EW_Assistant.ViewModels
             }
         }
 
+        private void LoadAiHistory()
+        {
+            if (_historyLoaded)
+                return;
+
+            var snapshot = _historyStore.GetSnapshot();
+            if (snapshot.Count > 0)
+            {
+                AiHistory.Clear();
+                for (int i = 0; i < snapshot.Count; i++)
+                {
+                    AiHistory.Add(snapshot[i]);
+                }
+
+                LatestAiRecord = AiHistory[0];
+                AiAnalysisResult = LatestAiRecord.Content;
+            }
+
+            _historyLoaded = true;
+        }
+
         public void Dispose()
         {
-            _collector.SnapshotUpdated -= OnSnapshotUpdated;
-            _collector.Dispose();
-            _memoryCollector.SnapshotUpdated -= OnMemorySnapshotUpdated;
-            _memoryCollector.Dispose();
-            _diskCollector.SnapshotUpdated -= OnDiskSnapshotUpdated;
-            _diskCollector.Dispose();
+            Unsubscribe();
         }
     }
 }

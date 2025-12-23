@@ -12,6 +12,45 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
+        <LinearGradientBrush x:Key="CpuBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#22C55E" Offset="0"/>
+            <GradientStop Color="#0EA5E9" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="MemoryBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#22C55E" Offset="0"/>
+            <GradientStop Color="#16A34A" Offset="1"/>
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="DiskBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#F59E0B" Offset="0"/>
+            <GradientStop Color="#F97316" Offset="1"/>
+        </LinearGradientBrush>
+
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#12000000" BlurRadius="12" ShadowDepth="2" Opacity="0.25"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#374151"/>
+        </Style>
+
+        <Style x:Key="ThinProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Background" Value="#E5E7EB"/>
+        </Style>
+
         <Style x:Key="SeverityTextStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#0F766E"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -28,15 +67,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="StabilityTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#16A34A"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding CpuTrend.StabilityLevel}" Value="Fluctuating">
-                    <Setter Property="Foreground" Value="#D97706"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
     </UserControl.Resources>
 
     <Grid Margin="12">
@@ -46,34 +76,55 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="White"
-                BorderBrush="#E5E7EB"
-                BorderThickness="1"
-                CornerRadius="10"
-                Padding="12"
+                Style="{StaticResource CardBorderStyle}"
                 Margin="0,0,0,12">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="CPU Usage"
-                           FontWeight="SemiBold"
-                           Foreground="#374151"/>
-                <Grid Grid.Row="1" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <ProgressBar Height="14"
-                                 Minimum="0"
-                                 Maximum="100"
-                                 Value="{Binding TotalCpuUsage, Mode=OneWay}"/>
-                    <TextBlock Grid.Column="1"
-                               Margin="10,0,0,0"
-                               VerticalAlignment="Center"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <TextBlock Text="CPU Usage" Style="{StaticResource CardTitleStyle}"/>
+                    <TextBlock Margin="0,6,0,0"
+                               FontSize="28"
+                               FontWeight="SemiBold"
                                Foreground="#111827"
                                Text="{Binding TotalCpuUsage, StringFormat={}{0:F1}%}"/>
+                </StackPanel>
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar Grid.Column="0"
+                                     Style="{StaticResource ThinProgressBarStyle}"
+                                     Foreground="{StaticResource CpuBrush}"
+                                     Height="14"
+                                     Value="{Binding TotalCpuUsage, Mode=OneWay}"/>
+                        <Button Grid.Column="1"
+                                Margin="8,0,0,0"
+                                Padding="10,2"
+                                FontSize="12"
+                                Content="测试报警"
+                                Click="OnTestCpuAlertClick"/>
+                    </Grid>
+                    <Border Grid.Row="1"
+                            Background="#FEF2F2"
+                            BorderBrush="#FECACA"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="8"
+                            Margin="0,8,0,0"
+                            Visibility="{Binding IsCpuAlertActive, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Foreground="#B91C1C"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding CpuAlertMessage}"/>
+                    </Border>
                 </Grid>
             </Grid>
         </Border>
@@ -86,24 +137,19 @@
 
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0"
-                        Background="White"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="12">
+                        Style="{StaticResource CardBorderStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="Top Processes"
-                                   FontWeight="SemiBold"
-                                   Foreground="#374151"
+                                   Style="{StaticResource CardTitleStyle}"
                                    Margin="0,0,0,8"/>
                         <DataGrid Grid.Row="1"
                                   ItemsSource="{Binding TopProcesses}"
@@ -113,17 +159,34 @@
                                   CanUserDeleteRows="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="Horizontal"
-                                  RowHeaderWidth="0">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Process"
-                                                    Binding="{Binding Name}"
-                                                    Width="*"/>
-                                <DataGridTextColumn Header="CPU %"
-                                                    Binding="{Binding CpuUsage, StringFormat={}{0:F1}}"
-                                                    Width="90"/>
-                                <DataGridTextColumn Header="Memory (MB)"
-                                                    Binding="{Binding MemoryMb}"
-                                                    Width="120"/>
+                                  RowHeaderWidth="0"
+                                  MaxHeight="220"
+                                  VerticalAlignment="Top">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Process"
+                                                Binding="{Binding Name}"
+                                                Width="*"/>
+                            <DataGridTemplateColumn Header="CPU %"
+                                                    Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2,0,2">
+                                            <ProgressBar Style="{StaticResource ThinProgressBarStyle}"
+                                                         Foreground="{StaticResource CpuBrush}"
+                                                         Height="8"
+                                                         Value="{Binding CpuUsage}"/>
+                                            <TextBlock HorizontalAlignment="Right"
+                                                       Margin="6,0,0,0"
+                                                       Foreground="#1F2937"
+                                                       FontSize="11"
+                                                       Text="{Binding CpuUsage, StringFormat={}{0:F1}%}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Memory (MB)"
+                                                Binding="{Binding MemoryMb}"
+                                                Width="120"/>
                                 <DataGridTextColumn Header="Uptime"
                                                     Binding="{Binding Uptime, StringFormat={}{0:dd\\.hh\\:mm\\:ss}}"
                                                     Width="140"/>
@@ -133,23 +196,17 @@
                 </Border>
 
                 <Border Grid.Row="1"
-                        Background="White"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="12"
+                        Style="{StaticResource CardBorderStyle}"
                         Margin="0,12,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
                         <DockPanel Grid.Row="0" LastChildFill="False">
                             <TextBlock Text="AI 异常分析"
-                                       FontWeight="SemiBold"
-                                       Foreground="#374151"/>
+                                       Style="{StaticResource CardTitleStyle}"/>
                             <TextBlock DockPanel.Dock="Right"
                                        Text="分析中..."
                                        Foreground="#2563EB"
@@ -162,7 +219,7 @@
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10"
-                                Margin="0,8,0,10">
+                                Margin="0,8,0,0">
                             <Grid DataContext="{Binding LatestAiRecord}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -174,9 +231,6 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Row="0" Grid.Column="0"
-                                           Text="最近一次"
-                                           Foreground="#6B7280"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1"
                                            Margin="8,0,0,0"
                                            Foreground="#6B7280"
@@ -189,50 +243,8 @@
                                            Foreground="#111827"
                                            TextWrapping="Wrap"
                                            Text="{Binding Content, TargetNullValue=暂无 AI 分析结果}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-                                           Margin="0,8,0,0"
-                                           Foreground="#9CA3AF"
-                                           FontSize="11"
-                                           Text="仅供人工决策参考，不触发设备控制。"/>
                             </Grid>
                         </Border>
-
-                        <Grid Grid.Row="2">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Text="历史记录"
-                                       FontWeight="SemiBold"
-                                       Foreground="#374151"
-                                       Margin="0,0,0,6"/>
-                            <DataGrid Grid.Row="1"
-                                      ItemsSource="{Binding AiHistory}"
-                                      AutoGenerateColumns="False"
-                                      IsReadOnly="True"
-                                      CanUserAddRows="False"
-                                      CanUserDeleteRows="False"
-                                      HeadersVisibility="Column"
-                                      GridLinesVisibility="Horizontal"
-                                      RowHeaderWidth="0">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="时间"
-                                                        Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
-                                                        Width="80"/>
-                                    <DataGridTemplateColumn Header="级别" Width="90">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Severity}"
-                                                           Style="{StaticResource SeverityTextStyle}"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                    <DataGridTextColumn Header="摘要"
-                                                        Binding="{Binding Summary}"
-                                                        Width="*"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </Grid>
                     </Grid>
                 </Border>
             </Grid>
@@ -245,11 +257,7 @@
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0"
-                        Background="White"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="12">
+                        Style="{StaticResource CardBorderStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -257,16 +265,15 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="内存使用"
-                                   FontWeight="SemiBold"
-                                   Foreground="#374151"/>
+                                   Style="{StaticResource CardTitleStyle}"/>
                         <Grid Grid.Row="1" Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <ProgressBar Height="12"
-                                         Minimum="0"
-                                         Maximum="100"
+                            <ProgressBar Style="{StaticResource ThinProgressBarStyle}"
+                                         Foreground="{StaticResource MemoryBrush}"
+                                         Height="12"
                                          Value="{Binding CurrentMemory.UsagePercent, Mode=OneWay}"/>
                             <TextBlock Grid.Column="1"
                                        Margin="8,0,0,0"
@@ -286,20 +293,57 @@
                 </Border>
 
                 <Border Grid.Row="1"
-                        Background="White"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="12"
+                        Style="{StaticResource CardBorderStyle}"
+                        Margin="0,12,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="历史记录"
+                                   Style="{StaticResource CardTitleStyle}"
+                                   Margin="0,0,0,8"/>
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding AiHistory}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  RowHeaderWidth="0"
+                                  MaxHeight="220">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="时间"
+                                                    Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"
+                                                    Width="80"/>
+                                <DataGridTemplateColumn Header="级别" Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Severity}"
+                                                       Style="{StaticResource SeverityTextStyle}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="摘要"
+                                                    Binding="{Binding Summary}"
+                                                    Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Style="{StaticResource CardBorderStyle}"
                         Margin="0,12,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="磁盘容量"
-                                   FontWeight="SemiBold"
-                                   Foreground="#374151"
+                                   Style="{StaticResource CardTitleStyle}"
                                    Margin="0,0,0,8"/>
                         <DataGrid Grid.Row="1"
                                   ItemsSource="{Binding DiskSnapshots}"
@@ -309,79 +353,53 @@
                                   CanUserDeleteRows="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="Horizontal"
-                                  RowHeaderWidth="0">
+                                  RowHeaderWidth="0"
+                                  Margin="0,0,0,8">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="盘符"
-                                                    Binding="{Binding DriveLetter}"
-                                                    Width="60"/>
-                                <DataGridTextColumn Header="总量(GB)"
-                                                    Binding="{Binding TotalGb}"
-                                                    Width="80"/>
-                                <DataGridTextColumn Header="剩余(GB)"
-                                                    Binding="{Binding FreeGb}"
-                                                    Width="80"/>
-                                <DataGridTextColumn Header="使用率"
-                                                    Binding="{Binding UsagePercent, StringFormat={}{0:F1}%}"
-                                                    Width="80"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Border>
+                            <DataGridTextColumn Header="盘符"
+                                                Binding="{Binding DriveLetter}"
+                                                Width="60"/>
+                            <DataGridTextColumn Header="总量(GB)"
+                                                Binding="{Binding TotalGb}"
+                                                Width="80"/>
+                            <DataGridTextColumn Header="剩余(GB)"
+                                                Binding="{Binding FreeGb}"
+                                                Width="80"/>
+                            <DataGridTemplateColumn Header="使用率"
+                                                    Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2,0,2">
+                                            <ProgressBar Style="{StaticResource ThinProgressBarStyle}"
+                                                         Foreground="{StaticResource DiskBrush}"
+                                                         Height="8"
+                                                         Value="{Binding UsagePercent}"/>
+                                            <TextBlock HorizontalAlignment="Right"
+                                                       Margin="6,0,0,0"
+                                                       Foreground="#1F2937"
+                                                       FontSize="11"
+                                                       Text="{Binding UsagePercent, StringFormat={}{0:F1}%}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
 
-                <Border Grid.Row="2"
-                        Background="White"
-                        BorderBrush="#E5E7EB"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="12"
-                        Margin="0,12,0,0">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="CPU 趋势"
-                                   FontWeight="SemiBold"
-                                   Foreground="#374151"/>
-                        <Grid Grid.Row="1" Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" Foreground="#4B5563" Text="1 分钟均值："/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Foreground="#111827"
-                                       Text="{Binding CpuTrend.Avg1Min, StringFormat={}{0:F1}%}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Foreground="#4B5563" Text="5 分钟均值："/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Foreground="#111827"
-                                       Text="{Binding CpuTrend.Avg5Min, StringFormat={}{0:F1}%}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="0" Foreground="#4B5563" Text="15 分钟均值："/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Foreground="#111827"
-                                       Text="{Binding CpuTrend.Avg15Min, StringFormat={}{0:F1}%}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="0" Foreground="#4B5563" Text="最大值："/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Foreground="#111827"
-                                       Text="{Binding CpuTrend.Max, StringFormat={}{0:F1}%}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="0" Foreground="#4B5563" Text="最小值："/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Foreground="#111827"
-                                       Text="{Binding CpuTrend.Min, StringFormat={}{0:F1}%}"/>
-                            <TextBlock Grid.Row="5" Grid.Column="0" Foreground="#4B5563" Text="波动幅度："/>
-                            <TextBlock Grid.Row="5" Grid.Column="1" Foreground="#111827"
-                                       Text="{Binding CpuTrend.Fluctuation, StringFormat={}{0:F1}%}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="0" Foreground="#4B5563" Text="稳定性："/>
-                            <TextBlock Grid.Row="6" Grid.Column="1"
-                                       Text="{Binding CpuTrend.StabilityLevel}"
-                                       Style="{StaticResource StabilityTextStyle}"/>
-                        </Grid>
-                    </Grid>
-                </Border>
+                        <Border Grid.Row="2"
+                                Background="#FEF2F2"
+                                BorderBrush="#FECACA"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="8"
+                                Visibility="{Binding IsDiskAlertActive, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Foreground="#B91C1C"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding DiskAlertMessage}"/>
+                        </Border>
+                </Grid>
+            </Border>
+
             </Grid>
         </Grid>
     </Grid>
