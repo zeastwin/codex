@@ -1,0 +1,638 @@
+<Window x:Class="StressTest.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:StressTest"
+        mc:Ignorable="d"
+        Title="StressTest · Workflow 压测"
+        Width="1200"
+        Height="760"
+        MinWidth="1024"
+        MinHeight="640"
+        FontFamily="HarmonyOS Sans SC, Microsoft YaHei UI"
+        Background="{DynamicResource AppBg}"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <SolidColorBrush x:Key="AppBg" Color="#EEF2F7" />
+        <SolidColorBrush x:Key="CardBg" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="CardBorder" Color="#E2E8F0" />
+        <SolidColorBrush x:Key="MutedText" Color="#64748B" />
+        <SolidColorBrush x:Key="DarkText" Color="#0F172A" />
+        <SolidColorBrush x:Key="AccentBlue" Color="#0EA5E9" />
+        <SolidColorBrush x:Key="AccentTeal" Color="#14B8A6" />
+        <SolidColorBrush x:Key="AccentOrange" Color="#EF4444" />
+        <SolidColorBrush x:Key="AccentRed" Color="#EF4444" />
+        <SolidColorBrush x:Key="ChartAxisBrush" Color="#CBD5E1" />
+        <SolidColorBrush x:Key="StatusIdleBg" Color="#1D4ED8" />
+        <SolidColorBrush x:Key="StatusRunningBg" Color="#22C55E" />
+        <SolidColorBrush x:Key="StatusStoppingBg" Color="#DC2626" />
+        <SolidColorBrush x:Key="StatusDoneBg" Color="#38BDF8" />
+        <SolidColorBrush x:Key="HeaderTagBg" Color="#2563EB" />
+        <LinearGradientBrush x:Key="HeaderBg" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0EA5E9" Offset="0" />
+            <GradientStop Color="#14B8A6" Offset="1" />
+        </LinearGradientBrush>
+        <DropShadowEffect x:Key="CardShadow" Color="#33000000" BlurRadius="16" ShadowDepth="0" Opacity="0.18" />
+
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBg}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Effect" Value="{StaticResource CardShadow}" />
+        </Style>
+
+        <Style x:Key="ChartCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+            <Setter Property="MinHeight" Value="160" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource DarkText}" />
+        </Style>
+
+        <Style x:Key="MutedTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource MutedText}" />
+        </Style>
+
+        <Style x:Key="InputBoxStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Background" Value="#F8FAFC" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBlue}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.7" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBlue}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.5" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+            <Setter Property="Background" Value="{StaticResource AccentOrange}" />
+        </Style>
+
+        <Style x:Key="GhostButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F1F5F9" />
+            <Setter Property="Foreground" Value="{StaticResource DarkText}" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RangeToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#E2E8F0" />
+            <Setter Property="Foreground" Value="{StaticResource DarkText}" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="12,2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="{StaticResource AccentBlue}" />
+                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBlue}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="KpiValueStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource DarkText}" />
+        </Style>
+
+        <Style x:Key="LeftKpiValueStyle" TargetType="TextBlock" BasedOn="{StaticResource KpiValueStyle}">
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+
+        <Style x:Key="HintTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+
+        <Style x:Key="GridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#F8FAFC" />
+            <Setter Property="Foreground" Value="{StaticResource MutedText}" />
+            <Setter Property="BorderBrush" Value="{StaticResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="6,4" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource HeaderBg}"
+                CornerRadius="16"
+                Padding="18">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="StressTest / Workflow 压测"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="White" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Border Background="{StaticResource HeaderTagBg}" CornerRadius="6" Padding="8,2" Margin="0,0,8,0">
+                            <TextBlock Text="SSE 流式" Foreground="White" FontSize="12" />
+                        </Border>
+                        <Border Background="{StaticResource HeaderTagBg}" CornerRadius="6" Padding="8,2">
+                            <TextBlock Text="Dify Workflow" Foreground="White" FontSize="12" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="模拟多台 EW-Assistant 并发调用 /workflows/run"
+                               Margin="0,8,0,0"
+                               Foreground="#E0F2FE" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Margin="0,0,16,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Style="{StaticResource CardStyle}" Grid.Row="0">
+                    <StackPanel>
+                        <TextBlock Text="压测配置" Style="{StaticResource SectionTitleStyle}" />
+                        <StackPanel Margin="0,10,0,0">
+                            <TextBlock Text="压测时长（秒）" Style="{StaticResource MutedTextStyle}" />
+                            <TextBox x:Name="DurationTextBox" Style="{StaticResource InputBoxStyle}" Margin="0,4,0,0" Text="300" />
+                            <TextBlock Text="达到时长自动停止" Style="{StaticResource HintTextStyle}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <StackPanel Margin="0,10,0,0">
+                            <TextBlock Text="模拟设备数" Style="{StaticResource MutedTextStyle}" />
+                            <TextBox x:Name="DeviceCountTextBox" Style="{StaticResource InputBoxStyle}" Margin="0,4,0,0" Text="4" />
+                            <TextBlock Text="并发虚拟设备数量，单设备串行" Style="{StaticResource HintTextStyle}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button x:Name="StartButton"
+                                    Width="120"
+                                    Margin="0,0,12,0"
+                                    Content="开始"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Click="StartButton_Click" />
+                            <Button x:Name="StopButton"
+                                    Width="120"
+                                    Content="停止"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    IsEnabled="False"
+                                    Click="StopButton_Click" />
+                        </StackPanel>
+
+                        <Border Height="1" Background="#E5E7EB" Margin="0,12,0,12" />
+
+                        <TextBlock Text="AppConfig.json" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource DarkText}" />
+                        <TextBlock Text="路径：D:\AppConfig.json" Style="{StaticResource MutedTextStyle}" FontSize="11" Margin="0,4,0,0" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="URL" Style="{StaticResource MutedTextStyle}" Margin="0,0,8,6" />
+                            <TextBlock x:Name="ConfigUrlText" Grid.Column="1" Text="-" FontWeight="SemiBold" Foreground="{StaticResource DarkText}" TextWrapping="Wrap" />
+                            <TextBlock Text="AutoKey" Style="{StaticResource MutedTextStyle}" Grid.Row="1" Margin="0,0,8,0" />
+                            <TextBlock x:Name="ConfigKeyText" Grid.Row="1" Grid.Column="1" Text="-" FontWeight="SemiBold" Foreground="{StaticResource DarkText}" TextWrapping="Wrap" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button x:Name="OpenDocButton"
+                                    Content="打开说明"
+                                    Style="{StaticResource GhostButtonStyle}"
+                                    Click="OpenDocButton_Click" />
+                            <Button x:Name="OpenHistoryButton"
+                                    Content="历史分析"
+                                    Margin="8,0,0,0"
+                                    Style="{StaticResource GhostButtonStyle}"
+                                    Click="OpenHistoryButton_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}" Grid.Row="1" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="实时指标" Style="{StaticResource SectionTitleStyle}" />
+                        <UniformGrid Columns="3" Margin="0,10,0,0">
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="总请求" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="TotalRequestsText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="成功" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="SuccessRequestsText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="失败" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="FailedRequestsText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="取消" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="CanceledRequestsText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="并发数" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="InflightText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="当前RPS" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="CurrentRpsText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="平均RPS" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="AvgRpsText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="平均耗时" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="AvgLatencyText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="P95耗时" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="P95LatencyText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="平均TTFB" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="AvgTtfbText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="P95TTFB" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="P95TtfbText" Text="0" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,6">
+                                <TextBlock Text="错误率" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="ErrorRateText" Text="0%" Style="{StaticResource LeftKpiValueStyle}" />
+                            </StackPanel>
+                        </UniformGrid>
+                        <Border Background="#F8FAFC" CornerRadius="8" Padding="8" Margin="0,10,0,0">
+                            <TextBlock Text="指标说明：RPS=每秒请求数，P95耗时=95分位响应时间，TTFB=首包延迟，错误率=失败/取消占比。"
+                                       Style="{StaticResource HintTextStyle}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}" Grid.Row="3" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="运行状态" Style="{StaticResource SectionTitleStyle}" />
+                        <Border x:Name="StatusBadge"
+                                Background="{StaticResource StatusIdleBg}"
+                                CornerRadius="6"
+                                Padding="10,4"
+                                Margin="0,10,0,0"
+                                HorizontalAlignment="Left">
+                            <TextBlock x:Name="StatusText"
+                                       Text="未开始"
+                                       Foreground="White"
+                                       FontWeight="SemiBold" />
+                        </Border>
+                        <TextBlock x:Name="ElapsedText"
+                                   Text="已运行 00:00"
+                                   Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,8,0,0" />
+                        <TextBlock x:Name="RemainingText"
+                                   Text="剩余 00:00"
+                                   Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="3*" />
+                    <RowDefinition Height="2*" />
+                </Grid.RowDefinitions>
+
+                <Grid x:Name="ChartsPanel" Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,12">
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,12,0">
+                            <StackPanel>
+                                <TextBlock Text="当前 RPS" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="RpsValueText" Text="0" Style="{StaticResource KpiValueStyle}" />
+                                <TextBlock Text="请求/秒" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,12,0">
+                            <StackPanel>
+                                <TextBlock Text="P95 耗时 (ms)" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="LatencyValueText" Text="0" Style="{StaticResource KpiValueStyle}" />
+                                <TextBlock Text="响应耗时" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}" Margin="0,0,12,0">
+                            <StackPanel>
+                                <TextBlock Text="平均 TTFB (ms)" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="TtfbValueText" Text="0" Style="{StaticResource KpiValueStyle}" />
+                                <TextBlock Text="首包延迟" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="错误率" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock x:Name="ErrorValueText" Text="0" Style="{StaticResource KpiValueStyle}" />
+                                <TextBlock Text="失败/取消" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <DockPanel Grid.Row="1" Margin="0,0,0,12">
+                        <TextBlock Text="曲线范围" Style="{StaticResource MutedTextStyle}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="RangeHintText" Text="最近 60 秒" Style="{StaticResource MutedTextStyle}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <ToggleButton x:Name="Last60Toggle"
+                                          Content="最近 60 秒"
+                                          Margin="0,0,8,0"
+                                          Style="{StaticResource RangeToggleStyle}"
+                                          Click="RangeToggle_Click"
+                                          IsChecked="True" />
+                            <ToggleButton x:Name="AllToggle"
+                                          Content="全部"
+                                          Style="{StaticResource RangeToggleStyle}"
+                                          Click="RangeToggle_Click" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <UniformGrid Grid.Row="2" Rows="2" Columns="2">
+                        <Border Style="{StaticResource ChartCardStyle}" Margin="0,0,12,12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="RPS 曲线" Style="{StaticResource SectionTitleStyle}" FontSize="14" />
+                                    <TextBlock x:Name="RpsChartValueText" Grid.Column="1" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Canvas x:Name="RpsChartCanvas"
+                                        Grid.Row="1"
+                                        Background="#F1F5F9"
+                                        SizeChanged="ChartCanvas_SizeChanged">
+                                    <Line x:Name="RpsAxisX" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Line x:Name="RpsAxisY" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="RpsAxisMaxText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="RpsAxisMinText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="RpsAxisStartText" Style="{StaticResource HintTextStyle}" Width="60" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="RpsAxisEndText" Style="{StaticResource HintTextStyle}" Width="60" TextAlignment="Right" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Polyline x:Name="RpsPolyline" Stroke="{StaticResource AccentBlue}" StrokeThickness="2" Panel.ZIndex="2" />
+                                    <Rectangle x:Name="RpsStartMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBlue}" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Rectangle x:Name="RpsEndMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBlue}" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="RpsStartValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="RpsEndValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" TextAlignment="Right" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                </Canvas>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ChartCardStyle}" Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="P95 耗时曲线" Style="{StaticResource SectionTitleStyle}" FontSize="14" />
+                                    <TextBlock x:Name="LatencyChartValueText" Grid.Column="1" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Canvas x:Name="LatencyChartCanvas"
+                                        Grid.Row="1"
+                                        Background="#F1F5F9"
+                                        SizeChanged="ChartCanvas_SizeChanged">
+                                    <Line x:Name="LatencyAxisX" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Line x:Name="LatencyAxisY" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="LatencyAxisMaxText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="LatencyAxisMinText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="LatencyAxisStartText" Style="{StaticResource HintTextStyle}" Width="60" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="LatencyAxisEndText" Style="{StaticResource HintTextStyle}" Width="60" TextAlignment="Right" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Polyline x:Name="LatencyPolyline" Stroke="#0F766E" StrokeThickness="2" Panel.ZIndex="2" />
+                                    <Rectangle x:Name="LatencyStartMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="#0F766E" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Rectangle x:Name="LatencyEndMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="#0F766E" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="LatencyStartValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="LatencyEndValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" TextAlignment="Right" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                </Canvas>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ChartCardStyle}" Margin="0,0,12,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="TTFB 曲线" Style="{StaticResource SectionTitleStyle}" FontSize="14" />
+                                    <TextBlock x:Name="TtfbChartValueText" Grid.Column="1" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Canvas x:Name="TtfbChartCanvas"
+                                        Grid.Row="1"
+                                        Background="#F1F5F9"
+                                        SizeChanged="ChartCanvas_SizeChanged">
+                                    <Line x:Name="TtfbAxisX" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Line x:Name="TtfbAxisY" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="TtfbAxisMaxText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="TtfbAxisMinText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="TtfbAxisStartText" Style="{StaticResource HintTextStyle}" Width="60" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="TtfbAxisEndText" Style="{StaticResource HintTextStyle}" Width="60" TextAlignment="Right" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Polyline x:Name="TtfbPolyline" Stroke="#EA580C" StrokeThickness="2" Panel.ZIndex="2" />
+                                    <Rectangle x:Name="TtfbStartMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="#EA580C" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Rectangle x:Name="TtfbEndMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="#EA580C" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="TtfbStartValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="TtfbEndValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" TextAlignment="Right" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                </Canvas>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource ChartCardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="错误率曲线" Style="{StaticResource SectionTitleStyle}" FontSize="14" />
+                                    <TextBlock x:Name="ErrorChartValueText" Grid.Column="1" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" />
+                                </Grid>
+                                <Canvas x:Name="ErrorChartCanvas"
+                                        Grid.Row="1"
+                                        Background="#F1F5F9"
+                                        SizeChanged="ChartCanvas_SizeChanged">
+                                    <Line x:Name="ErrorAxisX" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Line x:Name="ErrorAxisY" Stroke="{StaticResource ChartAxisBrush}" StrokeThickness="1" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="ErrorAxisMaxText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="ErrorAxisMinText" Style="{StaticResource HintTextStyle}" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="ErrorAxisStartText" Style="{StaticResource HintTextStyle}" Width="60" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="ErrorAxisEndText" Style="{StaticResource HintTextStyle}" Width="60" TextAlignment="Right" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Polyline x:Name="ErrorPolyline" Stroke="#DC2626" StrokeThickness="2" Panel.ZIndex="2" />
+                                    <Rectangle x:Name="ErrorStartMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="#DC2626" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <Rectangle x:Name="ErrorEndMarker" Width="6" Height="6" RadiusX="2" RadiusY="2" Fill="#DC2626" Panel.ZIndex="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="ErrorStartValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <TextBlock x:Name="ErrorEndValueText" Style="{StaticResource HintTextStyle}" FontWeight="SemiBold" Width="80" TextAlignment="Right" Panel.ZIndex="4" Visibility="Collapsed" IsHitTestVisible="False" />
+                                </Canvas>
+                            </Grid>
+                        </Border>
+                    </UniformGrid>
+                </Grid>
+
+                <Grid Grid.Row="1">
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="秒级明细" Style="{StaticResource SectionTitleStyle}" FontSize="14" />
+                            <DataGrid x:Name="TimeSeriesGrid"
+                                      Grid.Row="1"
+                                      Margin="0,10,0,0"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserResizeRows="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      RowHeaderWidth="0"
+                                      GridLinesVisibility="None"
+                                      FontSize="12"
+                                      AlternatingRowBackground="#F8FAFC"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      Loaded="TimeSeriesGrid_Loaded"
+                                      ColumnHeaderStyle="{StaticResource GridHeaderStyle}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="秒" Binding="{Binding Second}" Width="50" />
+                                    <DataGridTextColumn Header="RPS" Binding="{Binding Count}" Width="60" />
+                                    <DataGridTextColumn Header="成功" Binding="{Binding Success}" Width="60" />
+                                    <DataGridTextColumn Header="失败" Binding="{Binding Fail}" Width="60" />
+                                    <DataGridTextColumn Header="P95(ms)" Binding="{Binding P95LatencyMs, StringFormat={}{0:0.0}}" Width="90" />
+                                    <DataGridTextColumn Header="平均(ms)" Binding="{Binding AvgLatencyMs, StringFormat={}{0:0.0}}" Width="90" />
+                                    <DataGridTextColumn Header="TTFB(ms)" Binding="{Binding AvgTtfbMs, StringFormat={}{0:0.0}}" Width="90" />
+                                    <DataGridTextColumn Header="错误率" Binding="{Binding ErrorRate, StringFormat={}{0:0.0}%}" Width="80" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

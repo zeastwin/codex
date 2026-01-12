@@ -1,0 +1,43 @@
+<Window x:Class="AlarmAITool.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AlarmAITool"
+        mc:Ignorable="d"
+        Title="报警文件自动处理" Height="620" Width="960">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="Excel 文件：" VerticalAlignment="Center"/>
+            <TextBox x:Name="InputPathBox" Width="640" Margin="8,0,8,0" IsReadOnly="True"/>
+            <Button Content="选择Excel" Width="120" Click="SelectInput_Click"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="保存路径：" VerticalAlignment="Center"/>
+            <TextBox x:Name="OutputPathBox" Width="640" Margin="8,0,8,0" IsReadOnly="True"/>
+            <Button Content="另存为" Width="120" Click="SelectOutput_Click"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button x:Name="StartButton" Content="开始" Width="120" IsEnabled="False" Click="Start_Click"/>
+            <Button x:Name="CancelButton" Content="取消" Width="120" Margin="8,0,0,0" IsEnabled="False" Click="Cancel_Click"/>
+            <CheckBox x:Name="OverwriteCheck" Content="覆盖已有值" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="False"/>
+            <TextBlock x:Name="ProgressText" Margin="16,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <ProgressBar x:Name="ProgressBar" Grid.Row="3" Height="16" Minimum="0" Maximum="100"/>
+
+        <GroupBox Grid.Row="4" Header="状态信息">
+            <ListBox x:Name="StatusList" ItemsSource="{Binding StatusItems}"/>
+        </GroupBox>
+    </Grid>
+</Window>
