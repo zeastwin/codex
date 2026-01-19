@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,6 +39,63 @@ namespace EW_Assistant.Services
 
     public sealed class LocalPerformanceCollector : IDisposable
     {
+        private const int ProcessQueryInformation = 0x0400;
+        private const int ProcessQueryLimitedInformation = 0x1000;
+        private const int ProcessVmRead = 0x0010;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FILETIME
+        {
+            public uint dwLowDateTime;
+            public uint dwHighDateTime;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct PROCESS_MEMORY_COUNTERS
+        {
+            public int cb;
+            public int PageFaultCount;
+            public long PeakWorkingSetSize;
+            public long WorkingSetSize;
+            public long QuotaPeakPagedPoolUsage;
+            public long QuotaPagedPoolUsage;
+            public long QuotaPeakNonPagedPoolUsage;
+            public long QuotaNonPagedPoolUsage;
+            public long PagefileUsage;
+            public long PeakPagefileUsage;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(int desiredAccess, bool inheritHandle, int processId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetProcessTimes(
+            IntPtr hProcess,
+            out FILETIME creationTime,
+            out FILETIME exitTime,
+            out FILETIME kernelTime,
+            out FILETIME userTime);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool QueryFullProcessImageName(
+            IntPtr hProcess,
+            int flags,
+            StringBuilder exeName,
+            ref int size);
+
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetProcessMemoryInfo(
+            IntPtr hProcess,
+            out PROCESS_MEMORY_COUNTERS counters,
+            int size);
+
         private sealed class ProcessCpuSample
         {
             public DateTime SampleTimeUtc { get; set; }
@@ -159,18 +219,11 @@ namespace EW_Assistant.Services
                     var pid = process.Id;
                     alivePids.Add(pid);
 
-                    string name;
-                    try
-                    {
-                        name = process.ProcessName ?? string.Empty;
-                    }
-                    catch
-                    {
-                        name = string.Empty;
-                    }
+                    string name = string.Empty;
+                    TryGetProcessName(pid, out name);
 
                     float cpuUsage = 0f;
-                    if (TryGetTotalProcessorTime(process, out var processCpuTime))
+                    if (TryGetTotalProcessorTime(pid, out var processCpuTime))
                     {
                         if (_lastProcessSamples.TryGetValue(pid, out var lastSample))
                         {
@@ -238,21 +291,14 @@ namespace EW_Assistant.Services
                 if (item == null)
                     continue;
 
-                try
-                {
-                    using var proc = Process.GetProcessById(item.Pid);
+                if (TryGetWorkingSet(item.Pid, out var workingSet))
+                    item.MemoryMb = workingSet / 1024 / 1024;
 
-                    if (TryGetWorkingSet(proc, out var workingSet))
-                        item.MemoryMb = workingSet / 1024 / 1024;
-
-                    if (TryGetStartTime(proc, out var startTime))
-                    {
-                        if (startTime <= now)
-                            item.Uptime = now - startTime;
-                    }
-                }
-                catch
+                if (TryGetStartTime(item.Pid, out var startTimeUtc))
                 {
+                    var startTime = startTimeUtc.ToLocalTime();
+                    if (startTime <= now)
+                        item.Uptime = now - startTime;
                 }
             }
         }
@@ -323,45 +369,122 @@ namespace EW_Assistant.Services
             return value;
         }
 
-        private static bool TryGetTotalProcessorTime(Process process, out TimeSpan totalCpu)
+        private static bool TryOpenProcess(int pid, int access, out IntPtr handle)
         {
+            handle = OpenProcess(access, false, pid);
+            if (handle != IntPtr.Zero)
+                return true;
+
+            if ((access & ProcessQueryLimitedInformation) != 0)
+            {
+                var fallbackAccess = (access & ~ProcessQueryLimitedInformation) | ProcessQueryInformation;
+                handle = OpenProcess(fallbackAccess, false, pid);
+            }
+
+            return handle != IntPtr.Zero;
+        }
+
+        private static long FileTimeToTicks(FILETIME time)
+        {
+            return ((long)time.dwHighDateTime << 32) | time.dwLowDateTime;
+        }
+
+        private static bool TryGetProcessTimes(int pid, out TimeSpan totalCpu, out DateTime startTimeUtc)
+        {
+            totalCpu = TimeSpan.Zero;
+            startTimeUtc = DateTime.MinValue;
+
+            if (!TryOpenProcess(pid, ProcessQueryLimitedInformation, out var handle))
+                return false;
+
             try
             {
-                totalCpu = process.TotalProcessorTime;
+                if (!GetProcessTimes(handle, out var creation, out _, out var kernel, out var user))
+                    return false;
+
+                var totalTicks = FileTimeToTicks(kernel) + FileTimeToTicks(user);
+                if (totalTicks < 0)
+                    totalTicks = 0;
+                totalCpu = TimeSpan.FromTicks(totalTicks);
+
+                var creationTicks = FileTimeToTicks(creation);
+                if (creationTicks > 0)
+                    startTimeUtc = DateTime.FromFileTimeUtc(creationTicks);
+
                 return true;
             }
-            catch
+            finally
             {
-                totalCpu = TimeSpan.Zero;
-                return false;
+                CloseHandle(handle);
             }
         }
 
-        private static bool TryGetWorkingSet(Process process, out long workingSet)
+        private static bool TryGetTotalProcessorTime(int pid, out TimeSpan totalCpu)
         {
+            return TryGetProcessTimes(pid, out totalCpu, out _);
+        }
+
+        private static bool TryGetWorkingSet(int pid, out long workingSet)
+        {
+            workingSet = 0;
+
+            if (!TryOpenProcess(pid, ProcessQueryLimitedInformation | ProcessVmRead, out var handle))
+                return false;
+
             try
             {
-                workingSet = process.WorkingSet64;
-                return true;
+                var counters = new PROCESS_MEMORY_COUNTERS
+                {
+                    cb = Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS))
+                };
+
+                if (!GetProcessMemoryInfo(handle, out counters, counters.cb))
+                    return false;
+
+                workingSet = counters.WorkingSetSize;
+                return workingSet >= 0;
             }
-            catch
+            finally
             {
-                workingSet = 0;
-                return false;
+                CloseHandle(handle);
             }
         }
 
-        private static bool TryGetStartTime(Process process, out DateTime startTime)
+        private static bool TryGetStartTime(int pid, out DateTime startTimeUtc)
         {
+            if (!TryGetProcessTimes(pid, out _, out startTimeUtc))
+                return false;
+
+            return startTimeUtc != DateTime.MinValue;
+        }
+
+        private static bool TryGetProcessName(int pid, out string name)
+        {
+            name = string.Empty;
+
+            if (!TryOpenProcess(pid, ProcessQueryLimitedInformation, out var handle))
+                return false;
+
             try
             {
-                startTime = process.StartTime;
+                var builder = new StringBuilder(512);
+                var size = builder.Capacity;
+                if (!QueryFullProcessImageName(handle, 0, builder, ref size) || size <= 0)
+                    return false;
+
+                var path = builder.ToString(0, size);
+                if (string.IsNullOrWhiteSpace(path))
+                    return false;
+
+                name = Path.GetFileNameWithoutExtension(path);
+                if (string.IsNullOrEmpty(name))
+                    name = path;
+
                 return true;
             }
-            catch
+            finally
             {
-                startTime = DateTime.MinValue;
-                return false;
+                CloseHandle(handle);
             }
         }
 
