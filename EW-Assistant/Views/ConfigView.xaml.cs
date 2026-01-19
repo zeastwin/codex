@@ -37,7 +37,7 @@ namespace EW_Assistant.Views
                     || string.IsNullOrWhiteSpace(Config.DocumentKey)
                     || string.IsNullOrWhiteSpace(Config.ReportKey)
                     || string.IsNullOrWhiteSpace(Config.EarlyWarningKey)
-                    || string.IsNullOrWhiteSpace(Config.PerformanceKey))
+                    || (Config.EnablePerformanceMonitor && string.IsNullOrWhiteSpace(Config.PerformanceKey)))
                 {
                     MainWindow.PostProgramInfo(
                                $"内容不能为空。", "warn");
@@ -79,6 +79,7 @@ namespace EW_Assistant.Views
                     this.Config.ReportKey = fresh.ReportKey;
                     this.Config.EarlyWarningKey = fresh.EarlyWarningKey;
                     this.Config.PerformanceKey = fresh.PerformanceKey;
+                    this.Config.EnablePerformanceMonitor = fresh.EnablePerformanceMonitor;
                     this.Config.DiskUsageThresholdPercent = fresh.DiskUsageThresholdPercent;
                     this.Config.FlatFileLayout = fresh.FlatFileLayout;
                     this.Config.UseOkNgSplitTables = fresh.UseOkNgSplitTables;
@@ -211,6 +212,13 @@ namespace EW_Assistant.Settings
             set { if (_performanceKey != value) { _performanceKey = value; OnPropertyChanged(); } }
         }
 
+        private bool _enablePerformanceMonitor = true;
+        public bool EnablePerformanceMonitor
+        {
+            get => _enablePerformanceMonitor;
+            set { if (_enablePerformanceMonitor != value) { _enablePerformanceMonitor = value; OnPropertyChanged(); } }
+        }
+
         private float _diskUsageThresholdPercent = 90f;
         public float DiskUsageThresholdPercent
         {
@@ -339,6 +347,7 @@ namespace EW_Assistant.Services
                 _current.ReportKey = cfg.ReportKey;
                 _current.EarlyWarningKey = cfg.EarlyWarningKey;
                 _current.PerformanceKey = cfg.PerformanceKey;
+                _current.EnablePerformanceMonitor = cfg.EnablePerformanceMonitor;
                 _current.DiskUsageThresholdPercent = cfg.DiskUsageThresholdPercent;
                 _current.FlatFileLayout = cfg.FlatFileLayout;
                 _current.UseOkNgSplitTables = cfg.UseOkNgSplitTables;

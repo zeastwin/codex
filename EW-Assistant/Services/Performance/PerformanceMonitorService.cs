@@ -73,6 +73,10 @@ namespace EW_Assistant.Services
 
         public void Start()
         {
+            var cfg = ConfigService.Current;
+            if (cfg != null && !cfg.EnablePerformanceMonitor)
+                return;
+
             lock (_syncRoot)
             {
                 if (_started)

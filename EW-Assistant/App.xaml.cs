@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using EW_Assistant.Infrastructure.Inventory;
 using EW_Assistant.Services;
-using EW_Assistant.Services;
+using EW_Assistant.Settings;
 
 namespace EW_Assistant
 {
@@ -34,10 +34,11 @@ namespace EW_Assistant
             try
             {
                 AiAnalysisHistoryStore.Instance.Initialize();
-                PerformanceMonitorService.Instance.Start();
-                PerformanceAutoAnalysisService.Instance.Start();
+                UpdatePerformanceMonitorState(ConfigService.Current);
+                ConfigService.ConfigChanged += OnConfigChanged;
                 Exit += (_, __) =>
                 {
+                    ConfigService.ConfigChanged -= OnConfigChanged;
                     try { PerformanceAutoAnalysisService.Instance.Stop(); } catch { }
                     try { PerformanceMonitorService.Instance.Stop(); } catch { }
                 };
@@ -100,6 +101,26 @@ namespace EW_Assistant
 
             // 如果不希望因为这个导致进程终止：
             e.SetObserved();
+        }
+
+        private void OnConfigChanged(object sender, AppConfig cfg)
+        {
+            UpdatePerformanceMonitorState(cfg);
+        }
+
+        private void UpdatePerformanceMonitorState(AppConfig cfg)
+        {
+            var enabled = cfg?.EnablePerformanceMonitor ?? true;
+            if (enabled)
+            {
+                PerformanceMonitorService.Instance.Start();
+                PerformanceAutoAnalysisService.Instance.Start();
+            }
+            else
+            {
+                PerformanceAutoAnalysisService.Instance.Stop();
+                PerformanceMonitorService.Instance.Stop();
+            }
         }
     }
 }
