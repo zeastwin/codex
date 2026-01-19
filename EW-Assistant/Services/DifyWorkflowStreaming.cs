@@ -310,7 +310,7 @@ namespace EW_Assistant.Net
                                 handle.FinalText = finalText ?? string.Empty;
 
                                 if (aiView != null)
-                                    Ui(() => aiView.AddBotMarkdown(string.IsNullOrWhiteSpace(handle.FinalText)
+                                    Ui(() => aiView.AddBotMarkdownFinal(string.IsNullOrWhiteSpace(handle.FinalText)
                                         ? "*（无文本输出）*" : handle.FinalText));
 
                                 var elapsedText = FormatElapsed(stopwatch.Elapsed);

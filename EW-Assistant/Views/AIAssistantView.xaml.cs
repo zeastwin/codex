@@ -427,6 +427,20 @@ namespace EW_Assistant.Views
             return msg;
         }
 
+        /// <summary>直接添加最终 Markdown（不走流式）。</summary>
+        public void AddBotMarkdownFinal(string md)
+        {
+            Messages.Add(new MessageItem
+            {
+                IsUser = false,
+                Timestamp = DateTime.Now,
+                Markdown = md,
+                StreamText = null,
+                IsFinal = true
+            });
+            ScrollToEnd();
+        }
+
         private void ShareButton_Click(object sender, RoutedEventArgs e)
         {
             // 导出当前机器人回复为 Markdown 文件
