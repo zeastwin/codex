@@ -201,6 +201,101 @@
                                                  VerticalScrollBarVisibility="Disabled"
                                                  HorizontalScrollBarVisibility="Disabled"
                                                  Visibility="Collapsed"/>
+
+                        <!-- 等待中提示（仅机器人消息且未开始流式时显示） -->
+                        <StackPanel x:Name="WaitingPanel" Visibility="Collapsed" Margin="2">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="生成中" FontSize="16" FontWeight="SemiBold" Foreground="#1E3A8A"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Ellipse x:Name="Dot1" Width="9" Height="9" Fill="#6BA7F7" Opacity="0.4" Margin="0,0,8,0"
+                                             RenderTransformOrigin="0.5,0.5">
+                                        <Ellipse.RenderTransform>
+                                            <TranslateTransform/>
+                                        </Ellipse.RenderTransform>
+                                    </Ellipse>
+                                    <Ellipse x:Name="Dot2" Width="9" Height="9" Fill="#6BA7F7" Opacity="0.4" Margin="0,0,8,0"
+                                             RenderTransformOrigin="0.5,0.5">
+                                        <Ellipse.RenderTransform>
+                                            <TranslateTransform/>
+                                        </Ellipse.RenderTransform>
+                                    </Ellipse>
+                                    <Ellipse x:Name="Dot3" Width="9" Height="9" Fill="#6BA7F7" Opacity="0.4"
+                                             RenderTransformOrigin="0.5,0.5">
+                                        <Ellipse.RenderTransform>
+                                            <TranslateTransform/>
+                                        </Ellipse.RenderTransform>
+                                    </Ellipse>
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="Dot1"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.4" To="0.9"
+                                                         Duration="0:0:0.5"
+                                                         AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Dot1"
+                                                         Storyboard.TargetProperty="RenderTransform.(TranslateTransform.Y)"
+                                                         From="0" To="-8"
+                                                         Duration="0:0:0.5"
+                                                         AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Dot2"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.4" To="0.9"
+                                                         Duration="0:0:0.5"
+                                                         BeginTime="0:0:0.33"
+                                                         AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Dot2"
+                                                         Storyboard.TargetProperty="RenderTransform.(TranslateTransform.Y)"
+                                                         From="0" To="-8"
+                                                         Duration="0:0:0.5"
+                                                         BeginTime="0:0:0.33"
+                                                         AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Dot3"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.4" To="0.9"
+                                                         Duration="0:0:0.5"
+                                                         BeginTime="0:0:0.66"
+                                                         AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="Dot3"
+                                                         Storyboard.TargetProperty="RenderTransform.(TranslateTransform.Y)"
+                                                         From="0" To="-8"
+                                                         Duration="0:0:0.5"
+                                                         BeginTime="0:0:0.66"
+                                                         AutoReverse="True">
+                                            <DoubleAnimation.EasingFunction>
+                                                <SineEase EasingMode="EaseInOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            </StackPanel.Triggers>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -224,6 +319,7 @@
                 <DataTrigger Binding="{Binding IsFinal}" Value="True">
                     <Setter TargetName="StreamView" Property="UIElement.Visibility" Value="Collapsed"/>
                     <Setter TargetName="Md" Property="UIElement.Visibility" Value="Visible"/>
+                    <Setter TargetName="WaitingPanel" Property="UIElement.Visibility" Value="Collapsed"/>
                 </DataTrigger>
 
                 <!-- 用户消息样式（两套视图颜色保持一致） -->
@@ -249,6 +345,30 @@
                         <Condition Binding="{Binding IsMouseOver, ElementName=ShareButton}" Value="True"/>
                     </MultiDataTrigger.Conditions>
                     <Setter TargetName="ShareButton" Property="UIElement.Visibility" Value="Visible"/>
+                </MultiDataTrigger>
+
+                <!-- 未开始流式时显示等待动画 -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsUser}" Value="False"/>
+                        <Condition Binding="{Binding IsFinal}" Value="False"/>
+                        <Condition Binding="{Binding StreamText}" Value=""/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="WaitingPanel" Property="UIElement.Visibility" Value="Visible"/>
+                    <Setter TargetName="StreamView" Property="UIElement.Visibility" Value="Collapsed"/>
+                    <Setter TargetName="Bubble" Property="BorderBrush" Value="#C7DCFF"/>
+                    <Setter TargetName="Bubble" Property="Background" Value="#E8F1FF"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsUser}" Value="False"/>
+                        <Condition Binding="{Binding IsFinal}" Value="False"/>
+                        <Condition Binding="{Binding StreamText}" Value="{x:Null}"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter TargetName="WaitingPanel" Property="UIElement.Visibility" Value="Visible"/>
+                    <Setter TargetName="StreamView" Property="UIElement.Visibility" Value="Collapsed"/>
+                    <Setter TargetName="Bubble" Property="BorderBrush" Value="#C7DCFF"/>
+                    <Setter TargetName="Bubble" Property="Background" Value="#E8F1FF"/>
                 </MultiDataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
