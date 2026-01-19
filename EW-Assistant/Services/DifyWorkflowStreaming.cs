@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using EW_Assistant.Warnings;
 
 namespace EW_Assistant.Net
 {
@@ -169,13 +170,26 @@ namespace EW_Assistant.Net
 
             WriteLog(prompt);
 
+            var ioInput = string.Empty;
+            var alarmContext = string.Empty;
+            AlarmIoKnowledgeItem matchedAlarm = null;
+            BuildAlarmContext(prompt, out ioInput, out alarmContext, out matchedAlarm);
+
+            var triggerLog = BuildAutoTriggerLog(machineCode, prompt);
+            if (!string.IsNullOrWhiteSpace(triggerLog))
+            {
+                Post(triggerLog, "error");
+            }
+
             var body = new
             {
                 inputs = new
                 {
                     ErrorCode = errorCode,
                     ErrorDesc = prompt,
-                    machineCode = machineCode
+                    machineCode = machineCode,
+                    IOInput = ioInput,
+                    alarm_context = alarmContext
                 },
                 response_mode = "streaming",
                 user = "abc-123"
@@ -464,6 +478,79 @@ namespace EW_Assistant.Net
             catch { }
         }
 
+        private static void BuildAlarmContext(string errorDesc, out string ioInput, out string alarmContext, out AlarmIoKnowledgeItem matchedItem)
+        {
+            ioInput = string.Empty;
+            alarmContext = string.Empty;
+            matchedItem = null;
+
+            if (string.IsNullOrWhiteSpace(errorDesc))
+            {
+                return;
+            }
+
+            EnsureAlarmKnowledgeLoaded();
+
+            if (!AlarmIoKnowledgeRepository.TryMatchByErrorDesc(errorDesc, out var item) || item == null)
+            {
+                return;
+            }
+
+            matchedItem = item;
+
+            var doList = item.DoList ?? Array.Empty<string>();
+            var cleanDoList = doList
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x.Trim())
+                .ToArray();
+
+            ioInput = cleanDoList.Length > 0 ? string.Join(",", cleanDoList) : string.Empty;
+
+            var ctx = new
+            {
+                alarm_code = item.AlarmCode ?? string.Empty,
+                alarm_name = item.AlarmName ?? string.Empty,
+                goal = item.Goal ?? string.Empty,
+                do_list = cleanDoList,
+                di_list = item.DiList ?? Array.Empty<string>(),
+                io_meaning = item.IoMeaning ?? string.Empty,
+                expectation = item.Expectation ?? string.Empty
+            };
+            alarmContext = JsonConvert.SerializeObject(ctx, Formatting.None);
+        }
+
+        private static void EnsureAlarmKnowledgeLoaded()
+        {
+            if (AlarmIoKnowledgeRepository.Count > 0)
+            {
+                return;
+            }
+
+            var ioMapPath = ConfigService.Current?.IoMapCsvPath;
+            if (string.IsNullOrWhiteSpace(ioMapPath))
+            {
+                return;
+            }
+
+            AlarmIoKnowledgeRepository.TryLoadFromIoMapPath(ioMapPath, out _);
+        }
+
+        private static string BuildAutoTriggerLog(string machineCode, string errorDesc)
+        {
+            var safeDesc = FormatLogValue(errorDesc);
+            var safeMachine = FormatLogValue(machineCode);
+
+            return string.Format(
+                "⚡ AUTO触发：machineCode={0}。捕获到机台报警：报警代码为：{1}，进入AI分析流程。",
+                safeMachine,
+                safeDesc
+            );
+        }
+
+        private static string FormatLogValue(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "空" : value;
+        }
 
     }
 }

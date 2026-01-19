@@ -215,6 +215,7 @@
     <Compile Include="Services\Reports\ReportPromptBuilders.cs" />
     <Compile Include="Services\McpServerProcessHost.cs" />
     <Compile Include="Services\Warnings\AiWarningAnalysisService.cs" />
+    <Compile Include="Services\Warnings\AlarmIoKnowledgeRepository.cs" />
     <Compile Include="Services\Warnings\CsvEncoding.cs" />
     <Compile Include="Services\Warnings\WarningAnalysisCache.cs" />
     <Compile Include="ViewModels\WarningCenterViewModel.cs" />

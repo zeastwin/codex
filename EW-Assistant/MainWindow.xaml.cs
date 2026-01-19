@@ -21,6 +21,7 @@ using Path = System.IO.Path;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using EW_Assistant.Services.Reports;
+using EW_Assistant.Warnings;
 
 namespace EW_Assistant
 {
@@ -123,8 +124,39 @@ namespace EW_Assistant
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            try
+            {
+                var ioMapPath = Services.ConfigService.Current?.IoMapCsvPath;
+                if (AlarmIoKnowledgeRepository.TryLoadFromIoMapPath(ioMapPath, out var message))
+                {
+                    PostProgramInfo(message, "ok");
+                    LogAlarmKnowledgeItems();
+                }
+                else if (!string.IsNullOrWhiteSpace(message))
+                {
+                    PostProgramInfo(message, "warn");
+                }
+            }
+            catch (Exception ex)
+            {
+                PostProgramInfo("读取报警知识库IO失败：" + ex.Message, "warn");
+            }
+
             await InitializeReportsAsync();
             _ = StartReportSchedulerLoopAsync();
+        }
+
+        private void LogAlarmKnowledgeItems()
+        {
+            var items = AlarmIoKnowledgeRepository.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var line = AlarmIoKnowledgeRepository.FormatItemForLog(items[i]);
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    PostProgramInfo(string.Format("[{0}] {1}", i + 1, line), "info");
+                }
+            }
         }
 
         private async Task InitializeReportsAsync()
