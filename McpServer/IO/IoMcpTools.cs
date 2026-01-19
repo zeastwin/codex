@@ -3,10 +3,12 @@ using EW_Assistant.Io;
 using ModelContextProtocol.Server;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using McpServer;
@@ -317,9 +319,11 @@ namespace EW_Assistant.McpTools
                 ioName = entry.Name,
                 intent,
                 targetAddress,
+                bitIndex = entry.CheckIndex,
                 expected,
                 statusWord,
                 bits = parsed.bits16,
+                bitValue,
                 actual = bitValue,
                 verdict,
                 raw = TrimForLog(writeRaw)
@@ -328,6 +332,378 @@ namespace EW_Assistant.McpTools
             return res;
         }
 
+        [McpServerTool, Description(
+            "查询多个 IO 的当前状态。\n" +
+            "输入参数 ioNames 是 IO 名称数组。\n" +
+            "该工具只做状态读取，不做任何 IO 写入。"
+        )]
+        public static async Task<string> IoQueryStatus(
+            [Description("要查询的 IO 名称数组，例如：[\"A未测分料气缸\",\"NG抽屉解锁气缸A\"]")]
+            string[] ioNames = null
+        )
+        {
+            LogIoTrace(new { stage = "开始查询", ioNames = ioNames ?? Array.Empty<string>(), mapCount = IoMapRepository.Count });
+
+            if (ioNames == null || ioNames.Length == 0)
+            {
+                var err = Err("IoQueryStatus", "请提供 ioNames。");
+                LogIoTrace(new { stage = "校验失败", reason = "缺少 ioNames", ioNames });
+                ToolCallLogger.Log(nameof(IoQueryStatus), new { ioNames }, null, "缺少 ioNames");
+                return err;
+            }
+
+            var trimmedNames = ioNames
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim())
+                .ToList();
+
+            if (trimmedNames.Count == 0)
+            {
+                var err = Err("IoQueryStatus", "ioNames 为空或全为空白。");
+                LogIoTrace(new { stage = "校验失败", reason = "ioNames 为空", ioNames });
+                ToolCallLogger.Log(nameof(IoQueryStatus), new { ioNames }, null, "ioNames 为空");
+                return err;
+            }
+
+            var orderedNames = new List<string>();
+            var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in trimmedNames)
+            {
+                if (seenNames.Add(name))
+                {
+                    orderedNames.Add(name);
+                }
+            }
+
+            if (IoMapRepository.Count == 0)
+            {
+                var resNoMap = BuildIoQueryResult(orderedNames, null);
+                LogIoTrace(new { stage = "校验失败", reason = "IO 映射未加载", ioNames = orderedNames });
+                ToolCallLogger.Log(nameof(IoQueryStatus), new { ioNames }, resNoMap, "IO 映射未加载");
+                return resNoMap;
+            }
+
+            var missingNames = new List<string>();
+            var missingCheckAddress = new List<string>();
+            var items = new List<(string name, IoEntry entry, List<string> addresses)>();
+            foreach (var name in orderedNames)
+            {
+                if (!IoMapRepository.TryGetEntry(name, out IoEntry entry) || entry == null)
+                {
+                    missingNames.Add(name);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.CheckAddress))
+                {
+                    missingCheckAddress.Add(entry.Name);
+                    continue;
+                }
+
+                var addresses = ExpandCheckAddresses(entry.CheckAddress);
+                if (addresses.Count == 0)
+                {
+                    missingCheckAddress.Add(entry.Name);
+                    continue;
+                }
+
+                items.Add((name, entry, addresses));
+            }
+
+            var checkAddresses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items)
+            {
+                foreach (var address in item.addresses)
+                {
+                    if (!string.IsNullOrWhiteSpace(address))
+                    {
+                        checkAddresses.Add(address.Trim());
+                    }
+                }
+            }
+
+            if (checkAddresses.Count == 0)
+            {
+                var resNoAddr = BuildIoQueryResult(orderedNames, null);
+                LogIoTrace(new { stage = "校验失败", reason = "读回地址为空", missingNames, missingCheckAddress, ioNames = orderedNames });
+                ToolCallLogger.Log(nameof(IoQueryStatus), new { ioNames }, resNoAddr, "读回地址为空");
+                return resNoAddr;
+            }
+
+            var pd = Tool.PD(
+                ("checkAddresses", checkAddresses.ToArray()),
+                ("checkAddress", checkAddresses.Count == 1 ? checkAddresses.First() : null)
+            );
+
+            LogIoTrace(new
+            {
+                stage = "准备发送",
+                ioNames = orderedNames,
+                checkAddresses = checkAddresses.ToArray(),
+                missingNames,
+                missingCheckAddress
+            });
+
+            Tool.CommandCallTrace trace = null;
+            var readRaw = await Tool.SendCommand(
+                action: "IoRead",
+                actionName: "IO查询",
+                args: pd,
+                traceSink: t => trace = t
+            ).ConfigureAwait(false);
+
+            LogIoTrace(new
+            {
+                stage = "下发完成",
+                ioNames = orderedNames,
+                checkAddresses = checkAddresses.ToArray(),
+                httpStatus = trace?.HttpStatus?.ToString(),
+                elapsedMs = trace?.ElapsedMs,
+                timeout = trace?.Timeout,
+                exception = trace?.Exception,
+                request = TrimForLog(trace?.RequestJson),
+                response = TrimForLog(trace?.ResponseText),
+                returned = TrimForLog(trace?.ReturnText ?? readRaw)
+            });
+
+            if (readRaw.Contains("超时", StringComparison.OrdinalIgnoreCase) ||
+                readRaw.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+            {
+                var resTimeout = BuildIoQueryResult(orderedNames, null);
+                LogIoTrace(new
+                {
+                    stage = "超时/无响应",
+                    ioNames = orderedNames,
+                    checkAddresses = checkAddresses.ToArray(),
+                    raw = TrimForLog(readRaw),
+                    elapsedMs = trace?.ElapsedMs
+                });
+                ToolCallLogger.Log(nameof(IoQueryStatus), new { ioNames }, resTimeout, "timeout/no response");
+                return resTimeout;
+            }
+
+            var statusByAddress = ParseIoReadResponse(readRaw);
+            var stateByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var bitDetails = new List<object>();
+
+            foreach (var item in items)
+            {
+                int hit = 0;
+                bool? state0Bit = null;
+                bool? state1Bit = null;
+                bool? directBit = null;
+                var hasState0Addr = item.addresses.Any(a => a.StartsWith("3010", StringComparison.OrdinalIgnoreCase));
+                var hasState1Addr = item.addresses.Any(a => a.StartsWith("3012", StringComparison.OrdinalIgnoreCase));
+                var useDual = hasState0Addr && hasState1Addr;
+                var bitRows = new List<object>();
+                foreach (var addr in item.addresses)
+                {
+                    var role = GetAddressRole(addr);
+                    if (statusByAddress.TryGetValue(addr, out var word))
+                    {
+                        bool bitValue = GetBit((ushort)(word & 0xFFFF), item.entry.CheckIndex, msbIndexing: true);
+                        bool? bitValueBoxed = bitValue;
+                        int? wordBoxed = word;
+                        if (role == "state0") state0Bit = bitValue;
+                        else if (role == "state1") state1Bit = bitValue;
+                        else directBit = bitValue;
+                        bitRows.Add(new
+                        {
+                            address = addr,
+                            role,
+                            bitIndex = item.entry.CheckIndex,
+                            bitValue = bitValueBoxed,
+                            statusWord = wordBoxed
+                        });
+                        hit++;
+                    }
+                    else
+                    {
+                        bitRows.Add(new
+                        {
+                            address = addr,
+                            role,
+                            bitIndex = item.entry.CheckIndex,
+                            bitValue = (bool?)null,
+                            statusWord = (int?)null
+                        });
+                    }
+                }
+
+                // 3010=0态、3012=1态，需要综合判断；3014 类地址直接取值
+                string ioValue = "error";
+                if (useDual)
+                {
+                    if (state0Bit.HasValue && state1Bit.HasValue)
+                    {
+                        if (state0Bit.Value != state1Bit.Value)
+                        {
+                            ioValue = state1Bit.Value ? "true" : "false";
+                        }
+                    }
+                }
+                else
+                {
+                    if (directBit.HasValue)
+                    {
+                        ioValue = directBit.Value ? "true" : "false";
+                    }
+                }
+
+                if (hit == 0) ioValue = "error";
+                stateByName[item.name] = ioValue;
+                bitDetails.Add(new
+                {
+                    name = item.name,
+                    bitIndex = item.entry.CheckIndex,
+                    ioValue,
+                    bits = bitRows
+                });
+            }
+
+            var res = BuildIoQueryResult(orderedNames, stateByName);
+
+            LogIoTrace(new
+            {
+                stage = "解析完成",
+                ioNames = orderedNames,
+                results = stateByName,
+                bitDetails,
+                missing = new
+                {
+                    names = missingNames,
+                    checkAddress = missingCheckAddress
+                },
+                parsedCount = statusByAddress.Count,
+            });
+            ToolCallLogger.Log(nameof(IoQueryStatus), new { ioNames }, res, null);
+            return res;
+        }
+
+        private static string BuildIoQueryResult(IEnumerable<string> orderedNames, IDictionary<string, string> stateByName)
+        {
+            var results = new JObject();
+            if (orderedNames != null)
+            {
+                foreach (var name in orderedNames)
+                {
+                    var state = "error";
+                    if (stateByName != null &&
+                        stateByName.TryGetValue(name, out var value) &&
+                        !string.IsNullOrWhiteSpace(value))
+                    {
+                        state = value;
+                    }
+
+                    results[name] = state;
+                }
+            }
+
+            var root = new JObject { ["results"] = results };
+            return root.ToString(Formatting.None);
+        }
+
+        // 3010/3012 双读回地址扩展（仅在前缀匹配时才扩展）
+        private static List<string> ExpandCheckAddresses(string? checkAddress)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrWhiteSpace(checkAddress)) return list;
+
+            var addr = checkAddress.Trim();
+            list.Add(addr);
+
+            if (addr.StartsWith("3010", StringComparison.OrdinalIgnoreCase))
+            {
+                list.Add("3012" + addr.Substring(4));
+            }
+            else if (addr.StartsWith("3012", StringComparison.OrdinalIgnoreCase))
+            {
+                list.Add("3010" + addr.Substring(4));
+            }
+
+            return list.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        // ===== 解析 IoRead 返回的状态字（仅支持 {地址:十进制} 形式）=====
+        private static Dictionary<string, int> ParseIoReadResponse(string? raw)
+        {
+            var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(raw)) return result;
+
+            try
+            {
+                var json = TryExtractJsonObject(raw);
+                if (string.IsNullOrWhiteSpace(json)) return result;
+
+                var settings = new JsonLoadSettings
+                {
+                    DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error,
+                    CommentHandling = CommentHandling.Load
+                };
+                var jo = JObject.Parse(json, settings);
+                if (jo.DescendantsAndSelf().Any(t => t.Type == JTokenType.Comment))
+                {
+                    return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                }
+                foreach (var prop in jo.Properties())
+                {
+                    if (!IsLikelyAddress(prop.Name)) return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    if (!TryParseStatusWord(prop.Value, out var word)) return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    result[prop.Name] = word;
+                }
+            }
+            catch
+            {
+                return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return result;
+        }
+
+        private static bool TryParseStatusWord(JToken token, out int word)
+        {
+            word = 0;
+            if (token == null) return false;
+
+            if (token.Type == JTokenType.Integer)
+            {
+                var value = token.Value<long>();
+                if (value < 0 || value > 65535) return false;
+                word = (int)value;
+                return true;
+            }
+
+            var s = token.Type == JTokenType.String
+                ? token.Value<string>()
+                : token.ToString();
+
+            if (string.IsNullOrWhiteSpace(s)) return false;
+
+            if (!long.TryParse(s.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)) return false;
+            if (parsed < 0 || parsed > 65535) return false;
+            word = (int)parsed;
+            return true;
+
+            return false;
+        }
+
+        private static bool IsLikelyAddress(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (!char.IsDigit(name[i])) return false;
+            }
+            return true;
+        }
+
+        private static string GetAddressRole(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address)) return "direct";
+            if (address.StartsWith("3010", StringComparison.OrdinalIgnoreCase)) return "state0";
+            if (address.StartsWith("3012", StringComparison.OrdinalIgnoreCase)) return "state1";
+            return "direct";
+        }
 
         // ===== 解析 IoWrite 返回的 16位状态字（从 "status" 字段）=====
         private static (int? statusWord, string? bits16, bool? bitValue)

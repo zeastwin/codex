@@ -52,7 +52,9 @@ namespace EW_Assistant.Io
         {
             if (!File.Exists(xlsxPath)) throw new FileNotFoundException(xlsxPath);
 
-            using var wb = new XLWorkbook(xlsxPath);
+            // 允许其他进程同时打开 Excel
+            using var stream = new FileStream(xlsxPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var wb = new XLWorkbook(stream);
             var ws = string.IsNullOrWhiteSpace(sheetName) ? wb.Worksheets.FirstOrDefault()
                                                           : wb.Worksheet(sheetName);
             if (ws == null) throw new InvalidDataException("未找到工作表");
