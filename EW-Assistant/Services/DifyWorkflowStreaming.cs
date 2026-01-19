@@ -3,6 +3,8 @@ using EW_Assistant.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -167,14 +169,13 @@ namespace EW_Assistant.Net
             ct.ThrowIfCancellationRequested();
 
             var handle = new RunHandle();
+            var stopwatch = Stopwatch.StartNew();
 
             WriteLog(prompt);
 
             var ioInput = string.Empty;
             var alarmContext = string.Empty;
-            AlarmIoKnowledgeItem matchedAlarm = null;
-            BuildAlarmContext(prompt, out ioInput, out alarmContext, out matchedAlarm);
-
+            BuildAlarmContext(prompt, out ioInput, out alarmContext);
             var triggerLog = BuildAutoTriggerLog(machineCode, prompt);
             if (!string.IsNullOrWhiteSpace(triggerLog))
             {
@@ -206,8 +207,9 @@ namespace EW_Assistant.Net
             if (!resp.IsSuccessStatusCode)
             {
                 var err = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-                Post($"❌ HTTP {(int)resp.StatusCode}: {err}", "error");
                 handle.FinalText = $"HTTP {(int)resp.StatusCode}: {err}";
+                var elapsedText = FormatElapsed(stopwatch.Elapsed);
+                Post($"❌ AUTO分析失败（耗时 {elapsedText}）", "error");
                 return handle;
             }
 
@@ -257,17 +259,12 @@ namespace EW_Assistant.Net
                             handle.TaskId = taskId;
                             _currentRunId = handle.WorkflowRunId;
                             _currentTaskId = handle.TaskId;
-
-                            Post("▶️ 捕获到异常，进入AI自动分析流程", "error");
                             break;
                         }
 
                         case "node_started":
                             {
                                 if (!ShouldReportNode(d, onlyMajorNodes)) break;
-
-                                var title = d?["title"]?.ToString();
-                                if (string.IsNullOrWhiteSpace(title)) title = "执行阶段";
                                 break;
                             }
 
@@ -294,13 +291,6 @@ namespace EW_Assistant.Net
                                         finalText = outText;
                                 }
 
-                                // —— 下面是原有的大节点进度上报逻辑（保留不变）——
-                                var status = d?["status"]?.ToString() ?? "succeeded";
-                                var ok = string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase);
-                                var took = d?["elapsed_time"]?.ToString();
-                                var phaseTitle = string.IsNullOrWhiteSpace(title) ? "执行阶段" : title;
-                                var suffix = string.IsNullOrEmpty(took) ? "" : $" ({took}s)";
-                                Post($"{(ok ? "☑" : "❌")} {phaseTitle}{suffix}", ok ? "ok" : "warn");
                             }
                             break;
 
@@ -323,7 +313,9 @@ namespace EW_Assistant.Net
                                     Ui(() => aiView.AddBotMarkdown(string.IsNullOrWhiteSpace(handle.FinalText)
                                         ? "*（无文本输出）*" : handle.FinalText));
 
-                                Post($"{(handle.Succeeded ? "✅" : "⏹")} 结束（{status}）", handle.Succeeded ? "ok" : "warn");
+                                var elapsedText = FormatElapsed(stopwatch.Elapsed);
+                                var prefix = handle.Succeeded ? "✅" : "⚠";
+                                Post($"{prefix} AUTO分析完成（耗时 {elapsedText}）", handle.Succeeded ? "ok" : "warn");
                                 WriteLog(handle.FinalText);
                             }
                             break;
@@ -478,11 +470,10 @@ namespace EW_Assistant.Net
             catch { }
         }
 
-        private static void BuildAlarmContext(string errorDesc, out string ioInput, out string alarmContext, out AlarmIoKnowledgeItem matchedItem)
+        private static void BuildAlarmContext(string errorDesc, out string ioInput, out string alarmContext)
         {
             ioInput = string.Empty;
             alarmContext = string.Empty;
-            matchedItem = null;
 
             if (string.IsNullOrWhiteSpace(errorDesc))
             {
@@ -495,8 +486,6 @@ namespace EW_Assistant.Net
             {
                 return;
             }
-
-            matchedItem = item;
 
             var doList = item.DoList ?? Array.Empty<string>();
             var cleanDoList = doList
@@ -535,10 +524,23 @@ namespace EW_Assistant.Net
             AlarmIoKnowledgeRepository.TryLoadFromIoMapPath(ioMapPath, out _);
         }
 
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            var totalSeconds = Math.Max(0, elapsed.TotalSeconds);
+            if (totalSeconds >= 60)
+            {
+                var minutes = Math.Floor(totalSeconds / 60d);
+                var seconds = totalSeconds - (minutes * 60d);
+                return string.Format(CultureInfo.InvariantCulture, "{0}分{1:0.000}秒", minutes, seconds);
+            }
+
+            return string.Format(CultureInfo.InvariantCulture, "{0:0.000}秒", totalSeconds);
+        }
+
         private static string BuildAutoTriggerLog(string machineCode, string errorDesc)
         {
-            var safeDesc = FormatLogValue(errorDesc);
             var safeMachine = FormatLogValue(machineCode);
+            var safeDesc = FormatLogValue(errorDesc);
 
             return string.Format(
                 "⚡ AUTO触发：machineCode={0}。捕获到机台报警：报警代码为：{1}，进入AI分析流程。",
