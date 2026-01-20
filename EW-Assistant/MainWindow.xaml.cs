@@ -130,7 +130,6 @@ namespace EW_Assistant
                 if (AlarmIoKnowledgeRepository.TryLoadFromIoMapPath(ioMapPath, out var message))
                 {
                     PostProgramInfo(message, "ok");
-                    LogAlarmKnowledgeItems();
                 }
                 else if (!string.IsNullOrWhiteSpace(message))
                 {
@@ -144,19 +143,6 @@ namespace EW_Assistant
 
             await InitializeReportsAsync();
             _ = StartReportSchedulerLoopAsync();
-        }
-
-        private void LogAlarmKnowledgeItems()
-        {
-            var items = AlarmIoKnowledgeRepository.Items;
-            for (int i = 0; i < items.Count; i++)
-            {
-                var line = AlarmIoKnowledgeRepository.FormatItemForLog(items[i]);
-                if (!string.IsNullOrWhiteSpace(line))
-                {
-                    PostProgramInfo(string.Format("[{0}] {1}", i + 1, line), "info");
-                }
-            }
         }
 
         private async Task InitializeReportsAsync()
