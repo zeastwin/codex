@@ -103,8 +103,8 @@
   <text class="link" x="1150" y="306" text-anchor="middle">API</text>
 
   <!-- 工具调用：Dify <-> MCP -->
-  <polyline class="conn" points="1200,520 790,520 790,505" stroke="#22c55e" stroke-width="3.5" marker-end="url(#arrowGreen)"/>
-  <line class="conn" x1="790" y1="542" x2="1200" y2="542" stroke="#22c55e" stroke-width="3.5" marker-end="url(#arrowGreen)"/>
+  <polyline class="conn" points="1200,520 770,520 770,505" stroke="#22c55e" stroke-width="3.5" marker-end="url(#arrowGreen)"/>
+  <line class="conn" x1="770" y1="542" x2="1200" y2="542" stroke="#22c55e" stroke-width="3.5" marker-end="url(#arrowGreen)"/>
   <text class="link" x="1005" y="494" text-anchor="middle">MCP 工具</text>
 
   <!-- 本机通信：MCP <-> 上位机程序 -->
