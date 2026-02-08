@@ -105,7 +105,6 @@
   <!-- 工具调用：Dify <-> MCP -->
   <polyline class="conn" points="1200,520 770,520 770,505" stroke="#22c55e" stroke-width="3.5" marker-end="url(#arrowGreen)"/>
   <line class="conn" x1="770" y1="542" x2="1200" y2="542" stroke="#22c55e" stroke-width="3.5" marker-end="url(#arrowGreen)"/>
-  <text class="link" x="1005" y="494" text-anchor="middle">MCP 工具</text>
 
   <!-- 本机通信：MCP <-> 上位机程序 -->
   <line class="conn" x1="440" y1="356" x2="520" y2="356" stroke="#a855f7" stroke-width="3.2" marker-end="url(#arrowPurple)"/>
@@ -115,5 +114,5 @@
   <!-- PLC 通信：上位机程序 <-> PLC -->
   <line class="conn" x1="290" y1="505" x2="290" y2="565" stroke="#3b82f6" stroke-width="3.5" marker-end="url(#arrowBlue)"/>
   <line class="conn" x1="315" y1="565" x2="315" y2="505" stroke="#3b82f6" stroke-width="3.5" marker-end="url(#arrowBlue)"/>
-  <text class="link" x="300" y="530" text-anchor="middle">PLC 通信</text>
+  <text class="link" x="340" y="548" text-anchor="start">PLC 通信</text>
 </svg>
